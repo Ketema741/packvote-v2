@@ -1,178 +1,231 @@
 .winner-page {
   min-height: 100vh;
+  background-color: white;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', sans-serif;
+  align-items: center;
+  gap: 2rem;
 }
 
-.header {
-  text-align: center;
-  padding: 2rem;
-  background-color: #f8f9fa;
+/* Confetti animation */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
-.header h1 {
-  font-size: 2.5rem;
-  color: #2d3748;
-  margin-bottom: 0.5rem;
+.confetti-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(
+    circle,
+    #ff0000 2px,
+    transparent 2px
+  ), radial-gradient(
+    circle,
+    #00ff00 2px,
+    transparent 2px
+  ), radial-gradient(
+    circle,
+    #0000ff 2px,
+    transparent 2px
+  ), radial-gradient(
+    circle,
+    #ffff00 2px,
+    transparent 2px
+  ), radial-gradient(
+    circle,
+    #ff00ff 2px,
+    transparent 2px
+  );
+  background-size: 50px 50px;
+  animation: confetti-fall 10s linear infinite;
+  opacity: 0.6;
 }
 
-.header p {
-  font-size: 1.2rem;
-  color: #4a5568;
+@keyframes confetti-fall {
+  0% {
+    background-position: 0 -100vh;
+  }
+  100% {
+    background-position: 0 100vh;
+  }
 }
 
-.main-content {
-  flex: 1;
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+/* Logo */
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  z-index: 2;
+}
+
+/* Status Badge */
+.status-badge {
+  background-color: #4CAF50;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 2;
+}
+
+/* Trip Card */
+.trip-card {
   width: 100%;
-}
-
-.winner-card {
-  background-color: white;
-  border-radius: 0.5rem;
+  max-width: 800px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 2;
 }
 
-.winner-image {
+.trip-image {
   position: relative;
-  height: 300px;
+  width: 100%;
+  height: 400px;
 }
 
-.winner-image img {
+.trip-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.winner-badge {
+.trip-details-overlay {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background-color: #48bb78;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 2rem;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-.winner-details {
+  bottom: 0;
+  left: 0;
+  right: 0;
   padding: 2rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: white;
 }
 
-.winner-details h2 {
-  font-size: 1.75rem;
-  color: #2d3748;
-  margin-bottom: 1rem;
+.trip-details-overlay h1 {
+  font-size: 2rem;
+  margin: 0 0 1rem 0;
 }
 
-.description {
-  color: #4a5568;
-  margin-bottom: 1.5rem;
-  line-height: 1.5;
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  background-color: #f8f9fa;
-  padding: 1rem;
-  border-radius: 0.375rem;
-}
-
-.stat {
-  text-align: center;
-}
-
-.stat .label {
-  display: block;
-  color: #4a5568;
-  font-size: 0.875rem;
-  margin-bottom: 0.25rem;
-}
-
-.stat .value {
-  display: block;
-  color: #2d3748;
-  font-weight: 600;
-  font-size: 1.25rem;
-}
-
-.actions {
+.trip-info {
   display: flex;
-  justify-content: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+}
+
+/* Next Steps Section */
+.next-steps {
+  width: 100%;
+  max-width: 800px;
+  text-align: center;
+  z-index: 2;
+}
+
+.next-steps h2 {
+  font-size: 1.5rem;
+  color: #333;
   margin-bottom: 2rem;
 }
 
-.share-button,
-.donate-button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.375rem;
-  font-weight: 600;
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.share-button {
-  background-color: #4299e1;
+.action-button .button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share {
+  background-color: #4263eb;
   color: white;
-  border: none;
 }
 
-.share-button:hover {
-  background-color: #3182ce;
+.share:hover {
+  background-color: #364fc7;
 }
 
-.donate-button {
-  background-color: #48bb78;
-  color: white;
-  border: none;
+.download {
+  background-color: #f1f3f5;
+  color: #495057;
 }
 
-.donate-button:hover {
-  background-color: #38a169;
+.download:hover {
+  background-color: #e9ecef;
 }
 
-.next-steps {
-  background-color: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
+.coffee {
+  background-color: #f1f3f5;
+  color: #495057;
 }
 
-.next-steps h3 {
-  color: #2d3748;
-  margin-bottom: 1rem;
+.coffee:hover {
+  background-color: #e9ecef;
 }
 
-.next-steps ul {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
+/* Footer */
+.footer {
+  text-align: center;
+  color: #666;
+  margin-top: auto;
+  z-index: 2;
 }
 
-.next-steps li {
-  color: #4a5568;
-  margin-bottom: 0.5rem;
-  padding-left: 1.5rem;
-  position: relative;
+.footer p {
+  margin: 0.25rem 0;
 }
 
-.next-steps li:before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  color: #48bb78;
+.footer .subtitle {
+  font-size: 0.875rem;
+  color: #999;
 }
 
-.share-button:focus,
-.donate-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+/* Responsive Design */
+@media (max-width: 640px) {
+  .winner-page {
+    padding: 1rem;
+  }
+
+  .trip-image {
+    height: 300px;
+  }
+
+  .trip-details-overlay h1 {
+    font-size: 1.5rem;
+  }
+
+  .trip-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 } 

@@ -9,6 +9,7 @@ import VotingPage from './pages/VotingPage';
 import DashboardPage from './pages/DashboardPage';
 import SocialSharePage from './pages/SocialSharePage';
 import TripSurvey from './pages/TripSurvey';
+import WinnerPage from './pages/WinnerPage';
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/share" element={<SocialSharePage />} />
         <Route path="/survey" element={<TripSurvey />} />
+        <Route path="/winner" element={<WinnerPage />} />
       </Routes>
     </>
   );

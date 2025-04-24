@@ -1,99 +1,105 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import '../styles/VotingPage.css';
 
 const VotingPage = () => {
   const navigate = useNavigate();
-  const [selectedDestination, setSelectedDestination] = useState(null);
-  const [votingStatus, setVotingStatus] = useState({
-    totalVotes: 5,
-    currentVotes: 3,
-    timeRemaining: '2 days',
-  });
+  const [destinations, setDestinations] = useState([
+    {
+      id: '1',
+      name: 'Paris, France',
+      image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34',
+    },
+    {
+      id: '2',
+      name: 'Tokyo, Japan',
+      image: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26',
+    },
+    {
+      id: '3',
+      name: 'New York, USA',
+      image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9',
+    },
+  ]);
 
-  const destinations = [
-    {
-      id: 1,
-      name: 'Bali, Indonesia',
-      image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4',
-      votes: 2,
-    },
-    {
-      id: 2,
-      name: 'Kyoto, Japan',
-      image: 'https://images.unsplash.com/photo-1492571350019-22de08371fd3',
-      votes: 1,
-    },
-    {
-      id: 3,
-      name: 'Barcelona, Spain',
-      image: 'https://images.unsplash.com/photo-1583422409516-289eea28cbc5',
-      votes: 0,
-    },
-  ];
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
 
-  const handleVote = (destinationId) => {
-    setSelectedDestination(destinationId);
-    // TODO: Implement API call to submit vote
+    const items = Array.from(destinations);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setDestinations(items);
   };
 
   const handleSubmitVote = () => {
-    if (selectedDestination) {
-      // TODO: Implement API call to finalize vote
-      navigate('/winner');
-    }
+    // TODO: Implement API call to submit rankings
+    console.log('Rankings submitted:', destinations);
   };
 
   return (
     <div className="voting-page">
-      <header className="header">
-        <h1>Vote for Your Favorite Destination</h1>
-        <div className="voting-status">
-          <span>{votingStatus.currentVotes} of {votingStatus.totalVotes} votes in</span>
-          <span>Time remaining: {votingStatus.timeRemaining}</span>
-        </div>
-      </header>
+      <div className="back-button" onClick={() => navigate(-1)}>
+        ← Back
+      </div>
+      
+      <h1>Rank Destinations</h1>
+      
+      <div className="voting-deadline">
+        <span className="clock-icon">🕐</span>
+        Voting ends in 23h
+      </div>
 
-      <main className="main-content">
-        <div className="destinations-grid">
-          {destinations.map((destination) => (
+      <p className="drag-instruction">Drag and drop to rank your preferences</p>
+
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="destinations">
+          {(provided) => (
             <div
-              key={destination.id}
-              className={`destination-card ${selectedDestination === destination.id ? 'selected' : ''}`}
-              onClick={() => handleVote(destination.id)}
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="destinations-list"
             >
-              <div className="card-image">
-                <img src={destination.image} alt={destination.name} />
-                <div className="vote-count">
-                  {destination.votes} {destination.votes === 1 ? 'vote' : 'votes'}
-                </div>
-              </div>
-              <div className="card-content">
-                <h3>{destination.name}</h3>
-                {selectedDestination === destination.id && (
-                  <div className="selected-indicator">Your Vote</div>
-                )}
-              </div>
+              {destinations.map((destination, index) => (
+                <Draggable
+                  key={destination.id}
+                  draggableId={destination.id}
+                  index={index}
+                >
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={`destination-item ${snapshot.isDragging ? 'dragging' : ''}`}
+                    >
+                      <div {...provided.dragHandleProps} className="drag-handle">
+                        ⋮⋮
+                      </div>
+                      <div className="destination-image">
+                        <img src={destination.image} alt={destination.name} />
+                      </div>
+                      <div className="destination-name">{destination.name}</div>
+                      <div className="rank-arrows">
+                        <button className="rank-arrow up" aria-label="Move up">↑</button>
+                        <button className="rank-arrow down" aria-label="Move down">↓</button>
+                      </div>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
             </div>
-          ))}
-        </div>
+          )}
+        </Droppable>
+      </DragDropContext>
 
-        <div className="voting-actions">
-          <button
-            className="submit-vote-button"
-            onClick={handleSubmitVote}
-            disabled={!selectedDestination}
-          >
-            Submit Vote
-          </button>
-          <button
-            className="share-button"
-            onClick={() => navigate('/share')}
-          >
-            Share with Friends
-          </button>
-        </div>
-      </main>
+      <div className="submit-section">
+        <button className="submit-vote-button" onClick={handleSubmitVote}>
+          Submit my vote
+        </button>
+        <p className="edit-note">You can edit until the deadline</p>
+      </div>
     </div>
   );
 };

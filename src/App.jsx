@@ -13,6 +13,7 @@ import WinnerPage from './pages/WinnerPage';
 import DonationPage from './pages/DonationPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ContactPage from './pages/ContactPage';
+import DocsPage from './pages/DocsPage';
 
 const App = () => {
   return (
@@ -31,6 +32,7 @@ const App = () => {
         <Route path="/donate" element={<DonationPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/docs" element={<DocsPage />} />
       </Routes>
     </>
   );

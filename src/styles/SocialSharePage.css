@@ -1,163 +1,396 @@
 .social-share-page {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.share-modal {
+  background: white;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: auto;
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', sans-serif;
 }
 
-.header {
-  text-align: center;
-  padding: 2rem;
-  background-color: #f8f9fa;
-}
-
-.header h1 {
-  font-size: 2rem;
-  color: #2d3748;
-  margin-bottom: 0.5rem;
-}
-
-.header p {
-  font-size: 1.1rem;
+.close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
   color: #4a5568;
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+  border-radius: 0.375rem;
+  z-index: 10;
 }
 
-.main-content {
-  flex: 1;
-  padding: 2rem;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
+.close-button:hover {
+  background-color: #f7fafc;
 }
 
 .share-card {
-  background-color: white;
-  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  border-radius: 0.75rem;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin: 0;
 }
 
-.card-image {
+.card-illustration {
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 aspect ratio */
   position: relative;
-  height: 300px;
+  overflow: hidden;
 }
 
-.card-image img {
+.card-illustration img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
 }
 
-.overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+.card-content {
   padding: 2rem;
-  color: white;
 }
 
-.overlay h2 {
-  font-size: 1.75rem;
+.card-content h1 {
+  font-size: 1.25rem;
+  color: #2d3748;
   margin-bottom: 0.5rem;
+  font-weight: 500;
 }
 
-.overlay p {
-  margin: 0.25rem 0;
-  opacity: 0.9;
+.destination {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #3182ce;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .share-options {
-  padding: 1.5rem;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  padding: 0 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.share-button {
+.caption-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.caption-section label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.caption-section textarea {
+  width: 100%;
   padding: 0.75rem;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  resize: vertical;
+  min-height: 100px;
+  font-size: 0.875rem;
+  color: #2d3748;
+}
+
+.caption-section textarea:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.download-button,
+.copy-link-button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-}
-
-.share-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
-}
-
-.facebook {
-  background-color: #1877f2;
-}
-
-.facebook:hover {
-  background-color: #166fe5;
-}
-
-.twitter {
-  background-color: #1da1f2;
-}
-
-.twitter:hover {
-  background-color: #1a94e0;
-}
-
-.instagram {
-  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-}
-
-.instagram:hover {
-  opacity: 0.9;
-}
-
-.whatsapp {
-  background-color: #25d366;
-}
-
-.whatsapp:hover {
-  background-color: #22c35e;
-}
-
-.copy-link {
-  padding: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.link-input {
-  flex: 1;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  color: #4a5568;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
 }
 
-.copy-button {
-  padding: 0.75rem 1.5rem;
+.download-button {
   background-color: #4299e1;
   color: white;
   border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
 }
 
-.copy-button:hover {
+.download-button:hover {
   background-color: #3182ce;
 }
 
-.copy-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+.copy-link-button {
+  background-color: #edf2f7;
+  color: #2d3748;
+  border: none;
+}
+
+.copy-link-button:hover {
+  background-color: #e2e8f0;
+}
+
+.button-icon {
+  font-size: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .social-share-page {
+    padding: 1rem;
+  }
+
+  .share-modal {
+    max-height: 95vh;
+  }
+
+  .card-content {
+    padding: 1.5rem;
+  }
+
+  .share-options {
+    padding: 0 1.5rem 1.5rem;
+  }
+
+  .destination {
+    font-size: 2rem;
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+}
+
+.close-button {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.share-preview {
+  background-color: #e8f4f4;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  height: 280px;
+  margin-bottom: 24px;
+}
+
+.preview-illustration {
+  height: 100%;
+  position: relative;
+}
+
+.illustration-elements {
+  position: relative;
+  height: 100%;
+}
+
+.balloons {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(90deg, #ff6b6b 0%, #ffd93d 25%, #6decf0 50%, #4dabf7 75%);
+  opacity: 0.6;
+  filter: blur(2px);
+}
+
+.scene {
+  position: relative;
+  height: 100%;
+}
+
+.palm-trees {
+  position: absolute;
+  left: 40px;
+  bottom: 60px;
+  width: 80px;
+  height: 120px;
+  background-color: #2d8659;
+  clip-path: polygon(50% 0, 0 100%, 100% 100%);
+}
+
+.beach-chair {
+  position: absolute;
+  left: 60px;
+  bottom: 40px;
+  width: 40px;
+  height: 20px;
+  background-color: #ff9f43;
+}
+
+.building {
+  position: absolute;
+  right: 60px;
+  bottom: 40px;
+  width: 80px;
+  height: 100px;
+  background-color: #ffeaa7;
+  border-radius: 8px 8px 0 0;
+}
+
+.sun {
+  position: absolute;
+  right: 40px;
+  top: 40px;
+  width: 60px;
+  height: 60px;
+  background-color: #ffd43b;
+  border-radius: 50%;
+}
+
+.preview-text {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.9), transparent);
+}
+
+.text-container {
+  text-align: center;
+}
+
+.heading {
+  font-size: 18px;
+  color: #333;
+  margin: 0;
+}
+
+.destination {
+  font-size: 32px;
+  font-weight: bold;
+  color: #4263eb;
+  margin: 4px 0 0 0;
+}
+
+.share-form {
+  margin-top: 24px;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.caption-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 80px;
+  font-size: 14px;
+}
+
+.share-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.download-button,
+.share-button {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-button {
+  background-color: #4263eb;
+  color: white;
+}
+
+.download-button:hover {
+  background-color: #364fc7;
+}
+
+.share-button {
+  background-color: #f1f3f5;
+  color: #495057;
+}
+
+.share-button:hover {
+  background-color: #e9ecef;
+}
+
+.download-icon,
+.link-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 } 

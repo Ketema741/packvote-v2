@@ -7,6 +7,7 @@ import TripLinks from './pages/TripLinks';
 import AIRecommendationsPage from './pages/AIRecommendationsPage';
 import VotingPage from './pages/VotingPage';
 import DashboardPage from './pages/DashboardPage';
+import SocialSharePage from './pages/SocialSharePage';
 
 const App = () => {
   return (
@@ -19,6 +20,7 @@ const App = () => {
         <Route path="/recommendations" element={<AIRecommendationsPage />} />
         <Route path="/voting" element={<VotingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/share" element={<SocialSharePage />} />
       </Routes>
     </>
   );

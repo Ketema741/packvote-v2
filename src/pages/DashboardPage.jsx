@@ -4,77 +4,130 @@ import '../styles/DashboardPage.css';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const trips = [
-    {
-      id: 1,
-      name: 'Summer 2024 Adventure',
-      destination: 'Bali, Indonesia',
-      status: 'Voting Complete',
-      date: 'June 15-22, 2024',
-      groupSize: 5,
-      image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4',
+  
+  const tripData = {
+    title: 'Summer Group Trip 2025',
+    progress: {
+      completed: 3,
+      total: 6
     },
-    {
-      id: 2,
-      name: 'Fall Getaway',
-      destination: 'Kyoto, Japan',
-      status: 'In Progress',
-      date: 'October 10-15, 2024',
-      groupSize: 4,
-      image: 'https://images.unsplash.com/photo-1492571350019-22de08371fd3',
+    participants: [
+      { id: 1, name: 'Mike Thompson', image: 'https://i.pravatar.cc/150?img=1', responded: false },
+      { id: 2, name: 'Sarah Wilson', image: 'https://i.pravatar.cc/150?img=2', responded: false },
+      { id: 3, name: 'Emma Davis', image: 'https://i.pravatar.cc/150?img=3', responded: true }
+    ],
+    budget: {
+      amount: 1200,
+      currency: 'USD'
     },
-    {
-      id: 3,
-      name: 'Winter Escape',
-      destination: 'Barcelona, Spain',
-      status: 'Planning',
-      date: 'December 20-27, 2024',
-      groupSize: 6,
-      image: 'https://images.unsplash.com/photo-1583422409516-289eea28cbc5',
+    dateRange: {
+      start: 'July 15',
+      end: '22, 2025',
+      window: '7 days window'
     },
-  ];
-
-  const handleCreateTrip = () => {
-    navigate('/create-trip');
+    activities: ['Beach', 'Hiking', 'Food Tours']
   };
 
-  const handleViewTrip = (tripId) => {
-    navigate(`/trip/${tripId}`);
+  const handleResendSMS = (participantId) => {
+    console.log('Resending SMS to participant:', participantId);
+    // TODO: Implement SMS resend functionality
+  };
+
+  const handleGetAIDestinations = () => {
+    navigate('/recommendations');
   };
 
   return (
     <div className="dashboard-page">
-      <header className="header">
-        <h1>My Trips</h1>
-        <button className="create-trip-button" onClick={handleCreateTrip}>
-          Create New Trip
+      <div className="dashboard-header">
+        <h1>{tripData.title}</h1>
+        <button className="share-button">
+          <span className="share-icon">↗</span>
+          Share
         </button>
-      </header>
+      </div>
 
-      <main className="main-content">
-        <div className="trips-grid">
-          {trips.map((trip) => (
-            <div
-              key={trip.id}
-              className="trip-card"
-              onClick={() => handleViewTrip(trip.id)}
-            >
-              <div className="card-image">
-                <img src={trip.image} alt={trip.destination} />
-                <div className="status-badge">{trip.status}</div>
+      <div className="progress-bar">
+        <div 
+          className="progress-fill" 
+          style={{ width: `${(tripData.progress.completed / tripData.progress.total) * 100}%` }}
+        />
+        <span className="progress-text">{tripData.progress.completed}/{tripData.progress.total} completed</span>
+      </div>
+
+      <div className="dashboard-grid">
+        <div className="dashboard-card">
+          <div className="card-header">
+            <span className="card-icon">💰</span>
+            <h2>Median Budget</h2>
+          </div>
+          <div className="card-content">
+            <div className="budget-amount">${tripData.budget.amount}</div>
+            <div className="budget-label">per person</div>
+          </div>
+        </div>
+
+        <div className="dashboard-card">
+          <div className="card-header">
+            <span className="card-icon">📅</span>
+            <h2>Date Overlap</h2>
+          </div>
+          <div className="card-content">
+            <div className="date-range">{tripData.dateRange.start}-{tripData.dateRange.end}</div>
+            <div className="date-window">{tripData.dateRange.window}</div>
+          </div>
+        </div>
+
+        <div className="dashboard-card">
+          <div className="card-header">
+            <span className="card-icon">⭐</span>
+            <h2>Top Activities</h2>
+          </div>
+          <div className="card-content">
+            <div className="activities-list">
+              {tripData.activities.map((activity, index) => (
+                <span key={index} className="activity-tag">{activity}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="waiting-section">
+        <h2>Waiting on responses from...</h2>
+        <div className="participants-list">
+          {tripData.participants.map(participant => (
+            <div key={participant.id} className="participant-item">
+              <div className="participant-info">
+                <img 
+                  src={participant.image} 
+                  alt={participant.name} 
+                  className="participant-avatar"
+                />
+                <span className="participant-name">{participant.name}</span>
               </div>
-              <div className="card-content">
-                <h3>{trip.name}</h3>
-                <p className="destination">{trip.destination}</p>
-                <div className="trip-details">
-                  <span className="date">{trip.date}</span>
-                  <span className="group-size">{trip.groupSize} travelers</span>
-                </div>
-              </div>
+              <button 
+                className="resend-button"
+                onClick={() => handleResendSMS(participant.id)}
+              >
+                <span className="resend-icon">↗</span>
+                Resend SMS
+              </button>
             </div>
           ))}
         </div>
-      </main>
+      </div>
+
+      <div className="ai-destinations-section">
+        <button 
+          className="ai-destinations-button"
+          onClick={handleGetAIDestinations}
+        >
+          <span className="ai-icon">✨</span>
+          Get AI Destination Picks
+        </button>
+        <p className="ai-note">Enabled when 50% or more have responded</p>
+      </div>
     </div>
   );
 };

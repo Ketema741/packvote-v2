@@ -1,0 +1,163 @@
+.donation-page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background-color: #f8f9fa;
+  margin-top: 64px;
+}
+
+.donation-container {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1rem;
+}
+
+.donation-header {
+  text-align: center;
+}
+
+.donation-header h1 {
+  font-size: 2rem;
+  color: #1a1a1a;
+  margin: 0;
+  margin-bottom: 0.5rem;
+}
+
+.donation-header .subtitle {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+}
+
+.donation-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.coffee-icon {
+  color: #4263eb;
+  background-color: #edf2ff;
+  padding: 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donation-text {
+  text-align: center;
+}
+
+.donation-text p {
+  color: #4a5568;
+  line-height: 1.6;
+  margin: 0 0 1.5rem 0;
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.features-list li {
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.donate-button {
+  background-color: #ffc439;
+  color: #253b80;
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  justify-content: center;
+  max-width: 300px;
+}
+
+.donate-button:hover {
+  background-color: #ffbb24;
+}
+
+.paypal-logo {
+  height: 24px;
+  width: auto;
+}
+
+.thank-you-note {
+  text-align: center;
+  color: #666;
+}
+
+.thank-you-note p {
+  margin: 0;
+}
+
+.thank-you-note .small-text {
+  font-size: 0.875rem;
+  color: #888;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .donation-page {
+    padding: 1rem;
+  }
+
+  .donation-card {
+    padding: 1.5rem;
+  }
+
+  .donation-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .features-list {
+    font-size: 0.9rem;
+  }
+}
+
+.features-list.costs {
+  text-align: left;
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin: 1rem 0;
+}
+
+.features-list.costs li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4a5568;
+}
+
+.support-message {
+  font-size: 1.1rem;
+  color: #2d3748;
+  font-weight: 500;
+  margin-top: 1.5rem !important;
+  padding: 0 1rem;
+} 

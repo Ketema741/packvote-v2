@@ -258,6 +258,7 @@ const LandingPage = () => {
             </Box>
             <Button 
               variant="contained" 
+              onClick={() => navigate('/donate')}
               sx={{ 
                 bgcolor: 'white',
                 color: '#6366F1',

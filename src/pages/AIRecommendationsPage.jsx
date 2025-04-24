@@ -1,87 +1,100 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AIRecommendationsPage.css';
 
 const AIRecommendationsPage = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [recommendations, setRecommendations] = useState([
+  const destinations = [
     {
       id: 1,
       destination: 'Bali, Indonesia',
       image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4',
-      description: 'Perfect for adventure and relaxation with beautiful beaches and cultural experiences.',
-      matchScore: 95,
-      price: '$1200',
-      duration: '7 days',
+      fit: 92,
+      pricePerPerson: 1200,
+      temperature: '82°F',
+      flag: '🇮🇩',
     },
     {
       id: 2,
-      destination: 'Kyoto, Japan',
-      image: 'https://images.unsplash.com/photo-1492571350019-22de08371fd3',
-      description: 'Rich cultural heritage, amazing food, and beautiful temples.',
-      matchScore: 88,
-      price: '$1500',
-      duration: '5 days',
+      destination: 'Barcelona, Spain',
+      image: 'https://images.unsplash.com/photo-1583422409516-289eea28cbc5',
+      fit: 88,
+      pricePerPerson: 1400,
+      temperature: '75°F',
+      flag: '🇪🇸',
     },
     {
       id: 3,
-      destination: 'Barcelona, Spain',
-      image: 'https://images.unsplash.com/photo-1583422409516-289eea28cbc5',
-      description: 'Vibrant city life, amazing architecture, and Mediterranean beaches.',
-      matchScore: 85,
-      price: '$1000',
-      duration: '4 days',
+      destination: 'Phuket, Thailand',
+      image: 'https://images.unsplash.com/photo-1589394815804-964ed0be2eb5',
+      fit: 85,
+      pricePerPerson: 1100,
+      temperature: '86°F',
+      flag: '🇹🇭',
     },
-  ]);
+  ];
 
-  const handleVote = (destinationId) => {
-    // TODO: Implement API call to submit vote
+  const handleViewDetails = (destinationId) => {
+    // TODO: Navigate to destination details page
+    console.log('View details for destination:', destinationId);
+  };
+
+  const handleStartVote = () => {
     navigate('/voting');
   };
 
   return (
     <div className="ai-recommendations-page">
-      <header className="header">
-        <h1>AI-Powered Recommendations</h1>
-        <p>Based on your group's preferences, here are our top picks</p>
-      </header>
+      <div className="content-container">
+        <header className="header">
+          <h1>AI Destination Picks</h1>
+          <p>Tailored to group budgets, dates & vibes</p>
+          
+          <div className="filters">
+            <div className="filter-tag">💰 Budget ≤$1,500</div>
+            <div className="filter-tag">✈️ Flight ≤10h</div>
+            <div className="filter-tag">👥 Group: 4-6</div>
+            <div className="filter-tag">📅 May 2025</div>
+          </div>
+        </header>
 
-      <main className="main-content">
-        {loading ? (
-          <div className="loading">
-            <div className="spinner"></div>
-            <p>Analyzing preferences and generating recommendations...</p>
-          </div>
-        ) : (
-          <div className="recommendations-grid">
-            {recommendations.map((rec) => (
-              <div key={rec.id} className="recommendation-card">
-                <div className="card-image">
-                  <img src={rec.image} alt={rec.destination} />
-                  <div className="match-score">
-                    {rec.matchScore}% Match
-                  </div>
-                </div>
-                <div className="card-content">
-                  <h3>{rec.destination}</h3>
-                  <p className="description">{rec.description}</p>
-                  <div className="details">
-                    <span className="price">${rec.price}</span>
-                    <span className="duration">{rec.duration}</span>
-                  </div>
-                  <button
-                    className="vote-button"
-                    onClick={() => handleVote(rec.id)}
-                  >
-                    Vote for this destination
-                  </button>
-                </div>
+        <main className="destinations-grid">
+          {destinations.map((destination) => (
+            <div key={destination.id} className="destination-card">
+              <div className="card-image">
+                <img src={destination.image} alt={destination.destination} />
+                <div className="fit-score">{destination.fit}% fit</div>
               </div>
-            ))}
-          </div>
-        )}
-      </main>
+              <div className="card-content">
+                <div className="destination-header">
+                  <h3>{destination.destination}</h3>
+                  <span className="flag">{destination.flag}</span>
+                </div>
+                <div className="destination-details">
+                  <div className="detail">
+                    <span>💰 ${destination.pricePerPerson}/person</span>
+                  </div>
+                  <div className="detail">
+                    <span>🌡️ {destination.temperature}</span>
+                  </div>
+                </div>
+                <button
+                  className="view-details-button"
+                  onClick={() => handleViewDetails(destination.id)}
+                >
+                  View Details →
+                </button>
+              </div>
+            </div>
+          ))}
+        </main>
+
+        <div className="vote-section">
+          <button className="start-vote-button" onClick={handleStartVote}>
+            Start the Vote
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

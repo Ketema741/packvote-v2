@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import CreateTrip from './pages/CreateTrip';
 import TripLinks from './pages/TripLinks';
+import AIRecommendationsPage from './pages/AIRecommendationsPage';
 
 const App = () => {
   return (
@@ -13,6 +14,7 @@ const App = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/create-trip" element={<CreateTrip />} />
         <Route path="/trip-links" element={<TripLinks />} />
+        <Route path="/recommendations" element={<AIRecommendationsPage />} />
       </Routes>
     </>
   );

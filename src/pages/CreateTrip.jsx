@@ -7,22 +7,41 @@ import {
   Typography,
   Container,
   Paper,
-  Checkbox,
-  FormControlLabel,
   IconButton,
   Stack,
   Divider,
+  Alert,
+  Grid,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const CreateTrip = () => {
   const navigate = useNavigate();
   const [tripName, setTripName] = useState('');
-  const [participants, setParticipants] = useState([{ name: '', phone: '' }]);
-  const [willFillQuestionnaire, setWillFillQuestionnaire] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [organizer, setOrganizer] = useState({ name: '', phone: '' });
+  const [participants, setParticipants] = useState([]);
+  const [phoneErrors, setPhoneErrors] = useState({});
+
+  const validatePhoneNumber = (phone) => {
+    // Remove any non-digit characters
+    const cleanedPhone = phone.replace(/\D/g, '');
+    // Check if it's a valid US phone number (10 digits)
+    return cleanedPhone.length === 10;
+  };
+
+  const handleOrganizerChange = (field, value) => {
+    setOrganizer({ ...organizer, [field]: value });
+    if (field === 'phone') {
+      const newErrors = { ...phoneErrors };
+      if (!validatePhoneNumber(value)) {
+        newErrors.organizer = true;
+      } else {
+        delete newErrors.organizer;
+      }
+      setPhoneErrors(newErrors);
+    }
+  };
 
   const handleAddParticipant = () => {
     setParticipants([...participants, { name: '', phone: '' }]);
@@ -31,21 +50,54 @@ const CreateTrip = () => {
   const handleRemoveParticipant = (index) => {
     const newParticipants = participants.filter((_, i) => i !== index);
     setParticipants(newParticipants);
+    const newErrors = { ...phoneErrors };
+    delete newErrors[index];
+    setPhoneErrors(newErrors);
   };
 
   const handleParticipantChange = (index, field, value) => {
     const newParticipants = [...participants];
     newParticipants[index][field] = value;
     setParticipants(newParticipants);
+
+    if (field === 'phone') {
+      const newErrors = { ...phoneErrors };
+      if (!validatePhoneNumber(value)) {
+        newErrors[index] = true;
+      } else {
+        delete newErrors[index];
+      }
+      setPhoneErrors(newErrors);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (willFillQuestionnaire) {
-      setShowConfirmation(true);
-    } else {
-      handleGenerateLinks();
+    
+    // Validate organizer phone number
+    if (!validatePhoneNumber(organizer.phone)) {
+      const newErrors = { ...phoneErrors };
+      newErrors.organizer = true;
+      setPhoneErrors(newErrors);
+      return;
     }
+
+    // Validate all participant phone numbers
+    const hasErrors = participants.some((participant, index) => {
+      if (!validatePhoneNumber(participant.phone)) {
+        const newErrors = { ...phoneErrors };
+        newErrors[index] = true;
+        setPhoneErrors(newErrors);
+        return true;
+      }
+      return false;
+    });
+
+    if (hasErrors) {
+      return;
+    }
+
+    handleGenerateLinks();
   };
 
   const handleGenerateLinks = () => {
@@ -56,9 +108,14 @@ const CreateTrip = () => {
   return (
     <Container maxWidth="sm">
       <Paper elevation={0} sx={{ p: 4, mt: 8 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 2 }}>
           Set up your trip
         </Typography>
+        
+        <Alert severity="info" sx={{ mb: 4 }}>
+          As the trip organizer, you'll set up the trip and invite others to participate in the planning.
+        </Alert>
+
         <form onSubmit={handleSubmit}>
           <Stack spacing={3}>
             <TextField
@@ -70,80 +127,93 @@ const CreateTrip = () => {
               placeholder="Summer Escape 2025"
             />
 
-            {participants.map((participant, index) => (
-              <Box key={index}>
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  alignItems="center"
-                >
+            <Box>
+              <Typography variant="subtitle1" gutterBottom>
+                Your Information
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Phone numbers should be 10 digits (e.g., 1234567890)
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
                   <TextField
-                    label="Name"
-                    value={participant.name}
-                    onChange={(e) => handleParticipantChange(index, 'name', e.target.value)}
+                    label="Your Name"
+                    value={organizer.name}
+                    onChange={(e) => handleOrganizerChange('name', e.target.value)}
                     required
                     fullWidth
+                    size="small"
                   />
+                </Grid>
+                <Grid item xs={6}>
                   <TextField
-                    label="Phone"
-                    value={participant.phone}
-                    onChange={(e) => handleParticipantChange(index, 'phone', e.target.value)}
+                    label="Your Phone"
+                    value={organizer.phone}
+                    onChange={(e) => handleOrganizerChange('phone', e.target.value)}
                     required
                     fullWidth
+                    error={phoneErrors.organizer}
+                    placeholder="1234567890"
+                    size="small"
                   />
-                  {index > 0 && (
-                    <IconButton
-                      onClick={() => handleRemoveParticipant(index)}
-                      color="error"
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </Stack>
-              </Box>
-            ))}
+                </Grid>
+              </Grid>
+            </Box>
 
-            <Button
-              startIcon={<AddIcon />}
-              onClick={handleAddParticipant}
-              sx={{ alignSelf: 'flex-start' }}
-            >
-              Add another
-            </Button>
+            <Divider />
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={willFillQuestionnaire}
-                  onChange={(e) => setWillFillQuestionnaire(e.target.checked)}
-                />
-              }
-              label="I'll fill my questionnaire now"
-            />
+            <Box>
+              <Typography variant="subtitle1" gutterBottom>
+                Add Participants
+              </Typography>
+              <Grid container spacing={2}>
+                {participants.map((participant, index) => (
+                  <Grid item xs={12} key={index}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={5.75}>
+                        <TextField
+                          label="Name"
+                          value={participant.name}
+                          onChange={(e) => handleParticipantChange(index, 'name', e.target.value)}
+                          required
+                          fullWidth
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={5.75}>
+                        <TextField
+                          label="Phone"
+                          value={participant.phone}
+                          onChange={(e) => handleParticipantChange(index, 'phone', e.target.value)}
+                          required
+                          fullWidth
+                          error={phoneErrors[index]}
+                          placeholder="1234567890"
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={0.5}>
+                        <IconButton
+                          onClick={() => handleRemoveParticipant(index)}
+                          color="error"
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                ))}
+              </Grid>
 
-            {showConfirmation && willFillQuestionnaire && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <KeyboardArrowDownIcon />
-                  <Typography>
-                    Great! Your answers will be counted with everyone else.
-                  </Typography>
-                </Stack>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  You can come back to this page anytime.
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="success"
-                  fullWidth
-                  sx={{ mt: 2 }}
-                  onClick={() => navigate('/questionnaire')}
-                >
-                  Open My Questionnaire
-                </Button>
-              </Box>
-            )}
+              <Button
+                startIcon={<AddIcon />}
+                onClick={handleAddParticipant}
+                sx={{ mt: 2 }}
+              >
+                Add participant
+              </Button>
+            </Box>
 
             <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
               <Button
@@ -152,7 +222,7 @@ const CreateTrip = () => {
                 fullWidth
                 sx={{ bgcolor: '#4F46E5', '&:hover': { bgcolor: '#4338CA' } }}
               >
-                Generate Invite Links
+                Create Trip
               </Button>
               <Button
                 variant="text"

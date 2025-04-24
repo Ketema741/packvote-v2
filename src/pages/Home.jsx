@@ -3,7 +3,7 @@ import TravelPlanForm from '../components/TravelPlanForm';
 
 const Home = () => {
   return (
-    <div className="home-container">
+    <div className="home-container" data-testid="home-container">
       <header>
         <h1>Group Travel App</h1>
         <p>Plan your perfect group trip with AI assistance</p>

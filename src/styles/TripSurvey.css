@@ -1,0 +1,136 @@
+.trip-survey {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem;
+  background-color: #f8f9fa;
+}
+
+.survey-container {
+  width: 100%;
+  max-width: 800px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+/* Progress section */
+.progress-section {
+  margin-bottom: 2rem;
+}
+
+.progress-text {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.progress-bar {
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #4263eb;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Survey content */
+.survey-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.survey-content h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Typeform container */
+.typeform-container {
+  min-height: 400px;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  border: 1px dashed #e5e7eb;
+  margin: 1rem 0;
+}
+
+/* Action buttons */
+.survey-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.done-button {
+  background-color: #4263eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.done-button:hover {
+  background-color: #364fc7;
+}
+
+.arrow {
+  font-size: 18px;
+}
+
+.open-new-tab {
+  background: none;
+  border: none;
+  color: #4263eb;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px;
+  text-decoration: underline;
+}
+
+.open-new-tab:hover {
+  color: #364fc7;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .trip-survey {
+    padding: 1rem;
+  }
+
+  .survey-container {
+    padding: 1.5rem;
+  }
+
+  .survey-content h1 {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+} 

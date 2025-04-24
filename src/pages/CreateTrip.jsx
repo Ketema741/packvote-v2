@@ -12,9 +12,14 @@ import {
   Divider,
   Alert,
   Grid,
+  AppBar,
+  Toolbar,
+  Link,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import '../styles/LandingPage.css';
 
 const CreateTrip = () => {
   const navigate = useNavigate();
@@ -119,136 +124,199 @@ const CreateTrip = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={0} sx={{ p: 4, mt: 8 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 2 }}>
-          Set up your trip
-        </Typography>
-        
-        <Alert severity="info" sx={{ mb: 4 }}>
-          As the trip organizer, you'll set up the trip and invite others to participate in the planning.
-        </Alert>
+    <div className="landing-page">
+      {/* Navigation */}
+      <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ 
+              color: 'primary.main', 
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+            onClick={() => navigate('/')}
+          >
+            Group Travel AI
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+              Docs
+            </Link>
+            <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+              Donate
+            </Link>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('/create-trip')}
+              className="primary-button"
+            >
+              Start a Trip
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-        <form onSubmit={handleSubmit}>
-          <Stack spacing={3}>
-            <TextField
-              label="Trip Name"
-              value={tripName}
-              onChange={(e) => setTripName(e.target.value)}
-              required
-              fullWidth
-              placeholder="Summer Escape 2025"
-            />
+      <Container maxWidth="sm" sx={{ pt: 12, pb: 8 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 2 }}>
+            Set up your trip
+          </Typography>
+          
+          <Alert severity="info" sx={{ mb: 4 }}>
+            As the trip organizer, you'll set up the trip and invite others to participate in the planning.
+          </Alert>
 
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Your Information
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Phone numbers should be 10 digits (e.g., 1234567890)
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <TextField
-                    label="Your Name"
-                    value={organizer.name}
-                    onChange={(e) => handleOrganizerChange('name', e.target.value)}
-                    required
-                    fullWidth
-                    size="small"
-                  />
+          <form onSubmit={handleSubmit}>
+            <Stack spacing={3}>
+              <TextField
+                label="Trip Name"
+                value={tripName}
+                onChange={(e) => setTripName(e.target.value)}
+                required
+                fullWidth
+                placeholder="Summer Escape 2025"
+              />
+
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Your Information
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Phone numbers should be 10 digits (e.g., 1234567890)
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Your Name"
+                      value={organizer.name}
+                      onChange={(e) => handleOrganizerChange('name', e.target.value)}
+                      required
+                      fullWidth
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Your Phone"
+                      value={organizer.phone}
+                      onChange={(e) => handleOrganizerChange('phone', e.target.value)}
+                      required
+                      fullWidth
+                      error={phoneErrors.organizer}
+                      placeholder="1234567890"
+                      size="small"
+                    />
+                  </Grid>
                 </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    label="Your Phone"
-                    value={organizer.phone}
-                    onChange={(e) => handleOrganizerChange('phone', e.target.value)}
-                    required
-                    fullWidth
-                    error={phoneErrors.organizer}
-                    placeholder="1234567890"
-                    size="small"
-                  />
-                </Grid>
-              </Grid>
-            </Box>
+              </Box>
 
-            <Divider />
+              <Divider />
 
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Add Participants
-              </Typography>
-              <Grid container spacing={2}>
-                {participants.map((participant, index) => (
-                  <Grid item xs={12} key={index}>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={5.75}>
-                        <TextField
-                          label="Name"
-                          value={participant.name}
-                          onChange={(e) => handleParticipantChange(index, 'name', e.target.value)}
-                          required
-                          fullWidth
-                          size="small"
-                        />
-                      </Grid>
-                      <Grid item xs={5.75}>
-                        <TextField
-                          label="Phone"
-                          value={participant.phone}
-                          onChange={(e) => handleParticipantChange(index, 'phone', e.target.value)}
-                          required
-                          fullWidth
-                          error={phoneErrors[index]}
-                          placeholder="1234567890"
-                          size="small"
-                        />
-                      </Grid>
-                      <Grid item xs={0.5}>
-                        <IconButton
-                          onClick={() => handleRemoveParticipant(index)}
-                          color="error"
-                          size="small"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Add Participants
+                </Typography>
+                <Grid container spacing={2}>
+                  {participants.map((participant, index) => (
+                    <Grid item xs={12} key={index}>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={5.75}>
+                          <TextField
+                            label="Name"
+                            value={participant.name}
+                            onChange={(e) => handleParticipantChange(index, 'name', e.target.value)}
+                            required
+                            fullWidth
+                            size="small"
+                          />
+                        </Grid>
+                        <Grid item xs={5.75}>
+                          <TextField
+                            label="Phone"
+                            value={participant.phone}
+                            onChange={(e) => handleParticipantChange(index, 'phone', e.target.value)}
+                            required
+                            fullWidth
+                            error={phoneErrors[index]}
+                            placeholder="1234567890"
+                            size="small"
+                          />
+                        </Grid>
+                        <Grid item xs={0.5}>
+                          <IconButton
+                            onClick={() => handleRemoveParticipant(index)}
+                            color="error"
+                            size="small"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Grid>
                       </Grid>
                     </Grid>
-                  </Grid>
-                ))}
-              </Grid>
+                  ))}
+                </Grid>
 
-              <Button
-                startIcon={<AddIcon />}
-                onClick={handleAddParticipant}
-                sx={{ mt: 2 }}
-              >
-                Add participant
-              </Button>
-            </Box>
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={handleAddParticipant}
+                  sx={{ mt: 2 }}
+                >
+                  Add participant
+                </Button>
+              </Box>
 
-            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-              <Button
-                type="submit"
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  fullWidth
+                  className="primary-button"
+                >
+                  Create Trip
+                </Button>
+                <Button
+                  variant="text"
+                  fullWidth
+                  onClick={() => navigate('/')}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            </Stack>
+          </form>
+        </Paper>
+      </Container>
+
+      {/* Footer */}
+      <footer className="footer">
+        <Container maxWidth="lg">
+          <div className="footer-content">
+            <div className="footer-donate">
+              <div className="footer-donate-text">
+                <LightbulbIcon />
+                <Typography>Keep the API lights on</Typography>
+              </div>
+              <Button 
                 variant="contained"
-                fullWidth
-                sx={{ bgcolor: '#4F46E5', '&:hover': { bgcolor: '#4338CA' } }}
+                onClick={() => navigate('/donate')}
+                className="footer-donate-button"
               >
-                Create Trip
+                Donate
               </Button>
-              <Button
-                variant="text"
-                fullWidth
-                onClick={() => navigate('/')}
-              >
-                Cancel
-              </Button>
-            </Box>
-          </Stack>
-        </form>
-      </Paper>
-    </Container>
+            </div>
+            <Typography variant="body1" align="center" className="footer-tagline">
+              ✈️ Made for group travel lovers
+            </Typography>
+            <div className="footer-links">
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/contact">Contact</Link>
+            </div>
+          </div>
+        </Container>
+      </footer>
+    </div>
   );
 };
 

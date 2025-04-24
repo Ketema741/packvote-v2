@@ -62,34 +62,42 @@ const PrivacyPolicy = () => {
           </Typography>
           <Typography paragraph>
             We collect information that you provide directly to us when using the AI Travel App, including:
-            • Personal information (name, email address)
-            • Travel preferences and interests
-            • Group travel information and coordination details
-            • Survey responses and voting data
-            • Communication preferences
           </Typography>
+          <Box component="ul" sx={{ pl: 4 }}>
+            <Typography component="li">Personal information (name, email address)</Typography>
+            <Typography component="li">Travel preferences and interests</Typography>
+            <Typography component="li">Group travel information and coordination details</Typography>
+            <Typography component="li">Survey responses and voting data</Typography>
+            <Typography component="li">Communication preferences</Typography>
+          </Box>
 
           <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
             2. How We Use Your Information
           </Typography>
           <Typography paragraph>
             We use the collected information to:
-            • Facilitate group travel planning and coordination
-            • Provide personalized travel recommendations
-            • Enable voting and decision-making features
-            • Improve our services and user experience
-            • Send important updates about your trips
-            • Ensure the security of your account
           </Typography>
+          <Box component="ul" sx={{ pl: 4 }}>
+            <Typography component="li">Facilitate group travel planning and coordination</Typography>
+            <Typography component="li">Provide personalized travel recommendations</Typography>
+            <Typography component="li">Enable voting and decision-making features</Typography>
+            <Typography component="li">Improve our services and user experience</Typography>
+            <Typography component="li">Send important updates about your trips</Typography>
+            <Typography component="li">Ensure the security of your account</Typography>
+          </Box>
 
           <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
             3. Information Sharing
           </Typography>
           <Typography paragraph>
             We share your information only with:
-            • Other group members (only for shared trip details)
-            • Service providers who assist in operating our platform
-            • Legal authorities when required by law
+          </Typography>
+          <Box component="ul" sx={{ pl: 4 }}>
+            <Typography component="li">Other group members (only for shared trip details)</Typography>
+            <Typography component="li">Service providers who assist in operating our platform</Typography>
+            <Typography component="li">Legal authorities when required by law</Typography>
+          </Box>
+          <Typography paragraph>
             We never sell your personal information to third parties.
           </Typography>
 
@@ -105,12 +113,14 @@ const PrivacyPolicy = () => {
           </Typography>
           <Typography paragraph>
             You have the right to:
-            • Access your personal information
-            • Correct inaccurate data
-            • Request deletion of your data
-            • Opt-out of marketing communications
-            • Export your data
           </Typography>
+          <Box component="ul" sx={{ pl: 4 }}>
+            <Typography component="li">Access your personal information</Typography>
+            <Typography component="li">Correct inaccurate data</Typography>
+            <Typography component="li">Request deletion of your data</Typography>
+            <Typography component="li">Opt-out of marketing communications</Typography>
+            <Typography component="li">Export your data</Typography>
+          </Box>
 
           <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
             6. Cookies and Tracking
@@ -130,10 +140,10 @@ const PrivacyPolicy = () => {
             8. Contact Us
           </Typography>
           <Typography paragraph>
-            If you have questions about this privacy policy or your personal data, please contact us at privacy@aitravelapp.com.
+            If you have questions about this privacy policy or your personal data, please contact us at <Link href="mailto:privacy@aitravelapp.com" color="primary">privacy@aitravelapp.com</Link>.
           </Typography>
 
-          <Typography variant="body2" sx={{ mt: 4, color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ mt: 4, color: 'text.secondary', fontStyle: 'italic' }}>
             Last updated: {new Date().toLocaleDateString()}
           </Typography>
         </Paper>

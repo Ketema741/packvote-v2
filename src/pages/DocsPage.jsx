@@ -1,5 +1,19 @@
 import React from 'react';
-import { Container, Typography, Box, Paper, Divider, List, ListItem, ListItemText, ListItemIcon } from '@mui/material';
+import { 
+  Container, 
+  Typography, 
+  Box, 
+  Paper, 
+  Divider, 
+  List, 
+  ListItem, 
+  ListItemText, 
+  ListItemIcon,
+  AppBar,
+  Toolbar,
+  Button,
+  Link
+} from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
@@ -7,19 +21,57 @@ import SecurityIcon from '@mui/icons-material/Security';
 import PaymentIcon from '@mui/icons-material/Payment';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import { useNavigate } from 'react-router-dom';
+import '../styles/LandingPage.css';
 
 const DocsPage = () => {
+  const navigate = useNavigate();
+
   return (
-    <Container maxWidth="md">
-      <Box sx={{ py: 8 }}>
-        <Paper elevation={0} sx={{ p: 4 }}>
+    <div className="landing-page">
+      {/* Navigation */}
+      <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ 
+              color: 'primary.main', 
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+            onClick={() => navigate('/')}
+          >
+            Group Travel AI
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+              Docs
+            </Link>
+            <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+              Donate
+            </Link>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('/create-trip')}
+              className="primary-button"
+            >
+              Start a Trip
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="md" sx={{ pt: 12, pb: 8 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
           <Typography variant="h3" component="h1" gutterBottom>
             Documentation
           </Typography>
 
           {/* Getting Started */}
           <Box sx={{ mb: 6 }}>
-            <Typography variant="h5" gutterBottom sx={{ color: '#6366F1', mt: 4 }}>
+            <Typography variant="h5" gutterBottom sx={{ color: 'text.secondary', mt: 4 }}>
               Getting Started
             </Typography>
             <Typography paragraph>
@@ -62,7 +114,7 @@ const DocsPage = () => {
 
           {/* Survey Questions */}
           <Box sx={{ my: 6 }}>
-            <Typography variant="h5" gutterBottom sx={{ color: '#6366F1' }}>
+            <Typography variant="h5" gutterBottom sx={{ color: 'text.secondary' }}>
               Survey Questions Explained
             </Typography>
             <Typography paragraph>
@@ -101,7 +153,7 @@ const DocsPage = () => {
 
           {/* Privacy & Security */}
           <Box sx={{ my: 6 }}>
-            <Typography variant="h5" gutterBottom sx={{ color: '#6366F1' }}>
+            <Typography variant="h5" gutterBottom sx={{ color: 'text.secondary' }}>
               Privacy & Security
             </Typography>
             <List>
@@ -126,7 +178,7 @@ const DocsPage = () => {
 
           {/* Payment & Donations */}
           <Box sx={{ my: 6 }}>
-            <Typography variant="h5" gutterBottom sx={{ color: '#6366F1' }}>
+            <Typography variant="h5" gutterBottom sx={{ color: 'text.secondary' }}>
               Payment & Donations
             </Typography>
             <List>
@@ -151,7 +203,7 @@ const DocsPage = () => {
 
           {/* Tips for Success */}
           <Box sx={{ my: 6 }}>
-            <Typography variant="h5" gutterBottom sx={{ color: '#6366F1' }}>
+            <Typography variant="h5" gutterBottom sx={{ color: 'text.secondary' }}>
               Tips for Success
             </Typography>
             <List>
@@ -179,8 +231,36 @@ const DocsPage = () => {
             </List>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+
+      {/* Footer */}
+      <footer className="footer">
+        <Container maxWidth="lg">
+          <div className="footer-content">
+            <div className="footer-donate">
+              <div className="footer-donate-text">
+                <LightbulbIcon />
+                <Typography>Keep the API lights on</Typography>
+              </div>
+              <Button 
+                variant="contained"
+                onClick={() => navigate('/donate')}
+                className="footer-donate-button"
+              >
+                Donate
+              </Button>
+            </div>
+            <Typography variant="body1" align="center" className="footer-tagline">
+              ✈️ Made for group travel lovers
+            </Typography>
+            <div className="footer-links">
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/contact">Contact</Link>
+            </div>
+          </div>
+        </Container>
+      </footer>
+    </div>
   );
 };
 

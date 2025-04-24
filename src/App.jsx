@@ -11,6 +11,8 @@ import SocialSharePage from './pages/SocialSharePage';
 import TripSurvey from './pages/TripSurvey';
 import WinnerPage from './pages/WinnerPage';
 import DonationPage from './pages/DonationPage';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import ContactPage from './pages/ContactPage';
 
 const App = () => {
   return (
@@ -27,6 +29,8 @@ const App = () => {
         <Route path="/survey" element={<TripSurvey />} />
         <Route path="/winner" element={<WinnerPage />} />
         <Route path="/donate" element={<DonationPage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Routes>
     </>
   );

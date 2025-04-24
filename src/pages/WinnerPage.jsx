@@ -2,6 +2,25 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { 
+  Container, 
+  Typography, 
+  Box, 
+  Button, 
+  AppBar,
+  Toolbar,
+  Link,
+  Paper,
+  Card,
+  CardMedia,
+  Chip
+} from '@mui/material';
+import ShareIcon from '@mui/icons-material/Share';
+import GetAppIcon from '@mui/icons-material/GetApp';
+import LocalCafeIcon from '@mui/icons-material/LocalCafe';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import '../styles/LandingPage.css';
 import '../styles/WinnerPage.css';
 
 const WinnerPage = () => {
@@ -59,82 +78,240 @@ const WinnerPage = () => {
     }
   };
 
-  const handleBuyCoffe = () => {
+  const handleBuyCoffee = () => {
     navigate('/donate');
   };
 
   return (
-    <div className="winner-page">
-      {/* Confetti animation container */}
-      <div className="confetti-container">
+    <div className="landing-page winner-page">
+      {/* Confetti animation container - positioned fixed to appear behind content */}
+      <div className="confetti-container" style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }}>
         {/* Confetti dots will be added via CSS */}
       </div>
 
-      <div className="logo">
-        <span>TravelMate</span>
-      </div>
+      {/* Navigation */}
+      <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper', zIndex: 1100 }}>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ 
+              color: 'primary.main', 
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+            onClick={() => navigate('/')}
+          >
+            Group Travel AI
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+              Docs
+            </Link>
+            <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+              Donate
+            </Link>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('/create-trip')}
+              className="primary-button"
+            >
+              Start a Trip
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-      <div className="status-badge">
-        Trip Confirmed!
-      </div>
-
-      {/* Trip card */}
-      <div className="trip-card" ref={tripCardRef}>
-        <div className="trip-image">
-          <img 
-            src="https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800" 
-            alt="Santorini sunset view with blue domed churches"
-            crossOrigin="anonymous"
+      <Container maxWidth="md" sx={{ pt: 12, pb: 8, position: 'relative', zIndex: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+          <Chip
+            icon={<CelebrationIcon />}
+            label="Trip Confirmed!"
+            color="primary"
+            sx={{ 
+              fontSize: '1.1rem', 
+              py: 2.5, 
+              px: 2,
+              "& .MuiChip-icon": { fontSize: '1.5rem' }
+            }}
           />
-          <div className="trip-details-overlay">
-            <h1>{tripDetails.destination}</h1>
-            <div className="trip-info">
-              <span className="date">{tripDetails.dates}</span>
-              <span className="travelers">{tripDetails.travelers}</span>
-              <span className="price">{tripDetails.price}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+        </Box>
 
-      {/* What's Next section */}
-      <div className="next-steps">
-        <h2>What's Next?</h2>
-        <div className="action-buttons">
-          <button className="action-button share" onClick={handleShare}>
-            <div className="button-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M16 8L8 16M8 8L16 16M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
-            Share on Socials
-          </button>
+        {/* Trip card */}
+        <Card 
+          ref={tripCardRef} 
+          elevation={3}
+          sx={{ 
+            borderRadius: 3, 
+            overflow: 'hidden',
+            mb: 5,
+            maxWidth: '700px',
+            mx: 'auto',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          <Box sx={{ position: 'relative' }}>
+            <CardMedia
+              component="img"
+              height="400"
+              image="https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800"
+              alt="Santorini sunset view with blue domed churches"
+              crossOrigin="anonymous"
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                bgcolor: 'rgba(0, 0, 0, 0.75)',
+                color: 'white',
+                padding: 3,
+                backdropFilter: 'blur(3px)'
+              }}
+            >
+              <Typography 
+                variant="h3" 
+                component="h1" 
+                gutterBottom 
+                sx={{ 
+                  color: 'white',
+                  textShadow: '1px 1px 3px rgba(0,0,0,0.7)'
+                }}
+              >
+                {tripDetails.destination}
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 3,
+                '& .MuiTypography-root': {
+                  fontWeight: 500,
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  color: 'white'
+                }
+              }}>
+                <Typography variant="body1">
+                  📅 {tripDetails.dates}
+                </Typography>
+                <Typography variant="body1">
+                  👥 {tripDetails.travelers}
+                </Typography>
+                <Typography variant="body1">
+                  💰 {tripDetails.price}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Card>
+
+        {/* What's Next section */}
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 4, 
+            borderRadius: 3, 
+            maxWidth: '700px',
+            mx: 'auto',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          <Typography 
+            variant="h4" 
+            component="h2" 
+            gutterBottom 
+            align="center"
+            sx={{ mb: 4 }}
+          >
+            What's Next?
+          </Typography>
           
-          <button className="action-button download" onClick={handleDownload}>
-            <div className="button-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M4 17V19C4 19.5304 4.21071 20.0391 4.58579 20.4142C4.96086 20.7893 5.46957 21 6 21H18C18.5304 21 19.0391 20.7893 19.4142 20.4142C19.7893 20.0391 20 19.5304 20 19V17M7 11L12 16M12 16L17 11M12 16V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            Download Trip PDF
-          </button>
-          
-          <button className="action-button coffee" onClick={handleBuyCoffe}>
-            <div className="button-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M18 8H19C20.0609 8 21.0783 8.42143 21.8284 9.17157C22.5786 9.92172 23 10.9391 23 12C23 13.0609 22.5786 14.0783 21.8284 14.8284C21.0783 15.5786 20.0609 16 19 16H18M18 8H2V17C2 18.0609 2.42143 19.0783 3.17157 19.8284C3.92172 20.5786 4.93913 21 6 21H14C15.0609 21 16.0783 20.5786 16.8284 19.8284C17.5786 19.0783 18 18.0609 18 17V8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            Buy us a coffee
-          </button>
-        </div>
-      </div>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'center',
+            gap: 2,
+            mb: 2
+          }}>
+            <Button
+              variant="outlined"
+              startIcon={<ShareIcon />}
+              onClick={handleShare}
+              fullWidth
+              sx={{ py: 1.5 }}
+            >
+              Share on Socials
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={<GetAppIcon />}
+              onClick={handleDownload}
+              fullWidth
+              sx={{ py: 1.5 }}
+            >
+              Download Trip PDF
+            </Button>
+            
+            <Button
+              variant="contained"
+              startIcon={<LocalCafeIcon />}
+              onClick={handleBuyCoffee}
+              className="primary-button"
+              fullWidth
+              sx={{ py: 1.5 }}
+            >
+              Buy us a coffee
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
 
       {/* Footer */}
-      <div className="footer">
-        <p>Made with ❤️ by Group Travel AI</p>
-        <p className="subtitle">Your dream vacation awaits!</p>
-      </div>
+      <footer className="footer" style={{ 
+        position: 'relative', 
+        zIndex: 1,
+        width: '100%',
+        marginTop: 'auto',
+        left: 0,
+        right: 0,
+        bottom: 0
+      }}>
+        <Container maxWidth="lg">
+          <div className="footer-content">
+            <div className="footer-donate">
+              <div className="footer-donate-text">
+                <LightbulbIcon />
+                <Typography>Keep the API lights on</Typography>
+              </div>
+              <Button 
+                variant="contained"
+                onClick={() => navigate('/donate')}
+                className="footer-donate-button"
+              >
+                Donate
+              </Button>
+            </div>
+            <Typography variant="body1" align="center" className="footer-tagline">
+              ✈️ Made for group travel lovers
+            </Typography>
+            <div className="footer-links">
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/contact">Contact</Link>
+            </div>
+          </div>
+        </Container>
+      </footer>
     </div>
   );
 };

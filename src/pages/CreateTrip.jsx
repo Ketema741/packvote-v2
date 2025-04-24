@@ -101,8 +101,21 @@ const CreateTrip = () => {
   };
 
   const handleGenerateLinks = () => {
-    // TODO: Implement API call to create trip and generate links
-    navigate('/trip-links');
+    // Create the trip data to pass to the next page
+    const tripData = {
+      organizerLink: `https://tripplanner.com/q/org/${Math.random().toString(36).substr(2, 9)}`,
+      organizer: {
+        name: organizer.name,
+        phone: organizer.phone,
+      },
+      participants: participants.map(participant => ({
+        name: participant.name,
+        phone: participant.phone,
+        link: `tripplanner.com/q/t/${Math.random().toString(36).substr(2, 9)}`
+      }))
+    };
+
+    navigate('/trip-links', { state: { tripData } });
   };
 
   return (

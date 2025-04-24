@@ -7,7 +7,6 @@ import {
   AppBar,
   Toolbar,
   Link,
-  useTheme
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -23,7 +22,6 @@ import '../styles/LandingPage.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
 
   return (
     <div className="landing-page">

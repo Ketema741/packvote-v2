@@ -22,20 +22,27 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        cache-dependency-path: package.json
+        cache-dependency-path: group-travel-app-ui/package.json
         
     - name: Install dependencies
       run: |
+        cd group-travel-app-ui
         npm install
         npm install --save-dev eslint
         
     - name: Run linting
-      run: npx eslint src/
+      run: |
+        cd group-travel-app-ui
+        npx eslint src/
       
     - name: Run tests
-      run: npm test
+      run: |
+        cd group-travel-app-ui
+        npm test
       env:
         CI: true
         
     - name: Build
-      run: npm run build 
+      run: |
+        cd group-travel-app-ui
+        npm run build 

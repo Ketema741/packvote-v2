@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x]
+        node-version: [18.x, 20.x]
 
     steps:
     - uses: actions/checkout@v3
@@ -21,8 +21,6 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: group-travel-app-ui/package.json
         
     - name: Install dependencies
       run: |
@@ -38,7 +36,7 @@ jobs:
     - name: Run tests
       run: |
         cd group-travel-app-ui
-        npm test
+        npm run test:nowatch
       env:
         CI: true
         

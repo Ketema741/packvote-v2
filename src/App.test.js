@@ -1,9 +1,23 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import App from './App';
+import { BrowserRouter } from 'react-router-dom';
+import { act } from 'react';
+import Navbar from './components/Navbar';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/Group Travel App/i);
-  expect(linkElement).toBeInTheDocument();
+// Mock the useNavigate hook
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => jest.fn(),
+}));
+
+test('renders Navbar with correct title', () => {
+  act(() => {
+    render(
+      <BrowserRouter>
+        <Navbar />
+      </BrowserRouter>
+    );
+  });
+  const titleElement = screen.getByText(/Group Travel AI/i);
+  expect(titleElement).toBeInTheDocument();
 }); 

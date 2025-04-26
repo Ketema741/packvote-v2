@@ -15,7 +15,7 @@
         {
           "type": "text",
           "name": "liveLocation",
-          "title": "Where do you live? (Used for cost calculation)",
+          "title": "Where do you live? (used for cost calculation)",
           "isRequired": true
         }
       ]
@@ -23,12 +23,12 @@
     {
       "name": "page2",
       "title": "Budget",
-      "description": "Rough budget in USD. Per person, includes flights/travel.",
+      "description": "",
       "elements": [
         {
           "type": "dropdown",
           "name": "budget",
-          "title": "Rough Budget",
+          "title": "Rough budget in USD. Per person, includes flights/travel.",
           "isRequired": true,
           "choices": [
             "< $500",
@@ -59,29 +59,29 @@
           "description": "Dates you absolutely CANNOT make. One range per line, please"
         },
         {
-          "type": "panel",
-          "name": "tripLengthPanel",
-          "title": "Trip Length",
-          "elements": [
-            {
-              "type": "text",
-              "inputType": "number",
-              "name": "minTripDays",
-              "title": "Minimum trip length (days)",
-              "isRequired": true,
-              "min": 1,
-              "max": 90
-            },
-            {
-              "type": "text",
-              "inputType": "number",
-              "name": "maxTripDays",
-              "title": "Maximum trip length (days)",
-              "isRequired": true,
-              "min": 1,
-              "max": 90
-            }
-          ]
+          "type": "text",
+          "inputType": "number",
+          "name": "minTripDays",
+          "title": "Minimum trip length (days)",
+          "isRequired": true,
+          "min": 1,
+          "max": 90
+        },
+        {
+          "type": "text",
+          "inputType": "number",
+          "name": "maxTripDays",
+          "title": "Maximum trip length (days)",
+          "isRequired": true,
+          "min": 1,
+          "max": 90,
+          "validators": [
+                {
+                  "type": "expression",
+                  "expression": "{maxTripDays} >= {minTripDays}",
+                  "text": "Maximum trip length must be at least minimum trip length"
+                }
+              ]
         }
       ]
     },

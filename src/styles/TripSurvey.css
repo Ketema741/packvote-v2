@@ -61,6 +61,184 @@
   margin: 0;
 }
 
+/* Survey wrapper */
+.survey-wrapper {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom SurveyJS styling */
+.sv_custom_root {
+  font-family: 'Inter', sans-serif !important;
+  color: var(--color-text, #111827) !important;
+}
+
+.sv_custom_container {
+  max-width: 100% !important;
+}
+
+.sv_custom_body {
+  padding: 0 !important;
+  border: none !important;
+}
+
+.sv_custom_page {
+  padding: 0 !important;
+}
+
+.sv_custom_page_title {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  color: var(--color-text, #111827) !important;
+  font-size: 1.5rem !important;
+}
+
+.sv_custom_row {
+  margin-bottom: 1.5rem !important;
+}
+
+.sv_custom_question {
+  font-family: 'Inter', sans-serif !important;
+  margin-bottom: 1.5rem !important;
+  padding: 0 !important;
+}
+
+.sv_custom_question_title {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  color: var(--color-text, #111827) !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.sv_custom_question_description {
+  font-size: 0.9rem !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.sv_custom_panel_title {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1.2rem !important;
+  font-weight: 500 !important;
+  color: var(--color-text, #111827) !important;
+  margin-bottom: 1rem !important;
+}
+
+.sv_custom_panel_description {
+  font-size: 0.9rem !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+
+.sv_custom_btn {
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  cursor: pointer !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Survey buttons */
+.sv_next_btn.sv_custom_btn, 
+.sv_complete_btn.sv_custom_btn {
+  background-color: var(--color-primary, #4263eb) !important;
+  color: white !important;
+  margin-left: 12px !important;
+}
+
+.sv_next_btn.sv_custom_btn:hover, 
+.sv_complete_btn.sv_custom_btn:hover {
+  background-color: var(--color-primary-dark, #364fc7) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px rgba(66, 99, 235, 0.2) !important;
+}
+
+.sv_prev_btn.sv_custom_btn {
+  background-color: white !important;
+  color: var(--color-text, #111827) !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.sv_prev_btn.sv_custom_btn:hover {
+  background-color: #f9fafb !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Input fields */
+.sv_custom_input {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 8px !important;
+  border: 1px solid #e5e7eb !important;
+  padding: 0.75rem 1rem !important;
+  width: 100% !important;
+  transition: border-color 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.sv_custom_input:focus {
+  border-color: var(--color-primary, #4263eb) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.15) !important;
+}
+
+.sv_custom_dropdown_control {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 8px !important;
+  border: 1px solid #e5e7eb !important;
+  padding: 0.75rem 1rem !important;
+  width: 100% !important;
+  transition: border-color 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  font-size: 16px !important;
+}
+
+.sv_custom_dropdown_control:focus {
+  border-color: var(--color-primary, #4263eb) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.15) !important;
+}
+
+/* Also increase font size for dropdown options */
+select.sv_custom_dropdown_control option {
+  font-size: 16px !important;
+  padding: 8px !important;
+}
+
+/* Checkbox & Radio items */
+.sv_custom_checkbox_item,
+.sv_custom_radiogroup_item {
+  display: flex !important;
+  align-items: center !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: 8px !important;
+  margin-bottom: 0.5rem !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid #e5e7eb !important;
+  background-color: white !important;
+}
+
+.sv_custom_checkbox_item:hover,
+.sv_custom_radiogroup_item:hover {
+  background-color: #f9fafb !important;
+  border-color: #d1d5db !important;
+}
+
+.sv_custom_checkbox_item_checked,
+.sv_custom_radiogroup_item_checked {
+  border-color: var(--color-primary, #4263eb) !important;
+  background-color: rgba(66, 99, 235, 0.05) !important;
+}
+
+.sv_custom_checkbox_label,
+.sv_custom_radiogroup_label {
+  font-family: 'Inter', sans-serif !important;
+  margin-left: 0.5rem !important;
+  font-weight: 500 !important;
+}
+
 /* Typeform container */
 .typeform-container {
   min-height: 400px;
@@ -73,7 +251,8 @@
 /* Action buttons */
 .survey-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
   gap: 1rem;
   margin-top: 1rem;
 }
@@ -116,6 +295,21 @@
   color: #364fc7;
 }
 
+/* Text areas */
+textarea.sv_custom_input {
+  min-height: 100px !important;
+  resize: vertical !important;
+}
+
+/* Survey navigation buttons */
+.sv_nav {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .trip-survey {
@@ -132,5 +326,15 @@
 
   .subtitle {
     font-size: 14px;
+  }
+  
+  .sv_custom_btn {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.9rem !important;
+  }
+  
+  .sv_nav {
+    flex-direction: row;
+    justify-content: flex-start;
   }
 } 

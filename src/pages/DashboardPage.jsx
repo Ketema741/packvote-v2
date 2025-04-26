@@ -43,7 +43,7 @@ const DashboardPage = () => {
       end: '22, 2025',
       window: '7 days window'
     },
-    activities: ['Beach', 'Hiking', 'Food Tours']
+    vibes: ['Beach & chill', 'Foodie', 'Culture/sightseeing']
   };
 
   const handleResendSMS = (participantId) => {
@@ -157,11 +157,11 @@ const DashboardPage = () => {
               <Paper elevation={2} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Typography variant="h6" component="h2" sx={{ ml: 1 }}>
-                    <span role="img" aria-label="star">⭐</span> Top Activities
+                    <span role="img" aria-label="sparkles">✨</span> Top Vibe Picks
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mt: 2 }}>
-                  {tripData.activities.map((activity, index) => (
+                  {tripData.vibes.map((vibe, index) => (
                     <Box key={index} sx={{ 
                       bgcolor: 'background.paper', 
                       borderRadius: 2, 
@@ -170,7 +170,7 @@ const DashboardPage = () => {
                       border: '1px solid',
                       borderColor: 'primary.light'
                     }}>
-                      {activity}
+                      {vibe}
                     </Box>
                   ))}
                 </Box>

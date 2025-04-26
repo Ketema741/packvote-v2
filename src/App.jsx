@@ -14,6 +14,7 @@ import DonationPage from './pages/DonationPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ContactPage from './pages/ContactPage';
 import DocsPage from './pages/DocsPage';
+import NextStepPage from './pages/NextStepPage';
 
 const App = () => {
   return (
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/docs" element={<DocsPage />} />
+        <Route path="/next-step" element={<NextStepPage />} />
       </Routes>
     </>
   );

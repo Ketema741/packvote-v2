@@ -11,19 +11,50 @@ import {
   Paper,
   LinearProgress
 } from '@mui/material';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import { Survey, StylesManager, Model } from 'survey-react';
+import 'survey-react/survey.css';
 import '../styles/LandingPage.css';
 import '../styles/TripSurvey.css';
 
+// Apply custom styling
+StylesManager.applyTheme("defaultV2");
+
 const TripSurvey = () => {
   const navigate = useNavigate();
+  const [survey, setSurvey] = React.useState(null);
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const [totalPages, setTotalPages] = React.useState(0);
 
-  const handleDone = () => {
-    // TODO: Handle survey completion
+  React.useEffect(() => {
+    // Import survey JSON
+    import('../data/survey.json').then((surveyJson) => {
+      const surveyModel = new Model(surveyJson.default);
+      
+      // Initialize the total number of pages
+      setTotalPages(surveyModel.pages.length);
+      
+      // Add event handlers for page changes
+      surveyModel.onCurrentPageChanged.add((sender, options) => {
+        // SurveyJS uses 0-based indexing for pages
+        setCurrentPage(sender.currentPageNo + 1);
+      });
+      
+      // Set initial page
+      setCurrentPage(1);
+      
+      setSurvey(surveyModel);
+    });
+  }, []);
+
+  const handleComplete = (sender) => {
+    // Handle survey completion
+    console.log('Survey results:', sender.data);
     navigate('/next-step');
   };
+
+  // Calculate progress percentage
+  const progressPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
 
   return (
     <div className="landing-page">
@@ -66,13 +97,13 @@ const TripSurvey = () => {
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Step 1 of 2
+                Step {currentPage} of {totalPages}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                50%
+                {Math.round(progressPercentage)}%
               </Typography>
             </Box>
-            <LinearProgress variant="determinate" value={50} sx={{ height: 8, borderRadius: 4 }} />
+            <LinearProgress variant="determinate" value={progressPercentage} sx={{ height: 8, borderRadius: 4 }} />
           </Box>
 
           {/* Survey content */}
@@ -85,49 +116,74 @@ const TripSurvey = () => {
             </Typography>
           </Box>
 
-          {/* Placeholder for future Typeform embed */}
-          <Box 
-            className="typeform-container" 
-            sx={{ 
-              bgcolor: '#f5f5f5', 
-              height: '300px', 
-              borderRadius: 2,
+          {/* SurveyJS Component */}
+          <Box sx={{ 
+            mt: 0,
+            mb: 0,
+            '& .sv_main': {
+              fontFamily: 'inherit',
+              backgroundColor: 'transparent',
+              marginTop: '0 !important',
+              paddingTop: '0 !important',
+            },
+            '& .sv_container': {
+              maxWidth: '100%',
+              marginTop: '0 !important',
+              paddingTop: '0 !important',
+            },
+            '& .sv_page': {
+              marginTop: '0 !important',
+              paddingTop: '0 !important',
+            },
+            '& .sv_row': {
+              marginTop: '0 !important',
+              paddingTop: '0 !important',
+            },
+            '& .sv_p_root': {
+              marginTop: '0 !important',
+              paddingTop: '0 !important',
+            },
+            '& .sv_body': {
+              marginTop: '0 !important',
+              paddingTop: '0 !important',
+            },
+            '& .sv_q': {
+              padding: '0.5rem 0',
+            },
+            '& .sv_q_title': {
+              fontSize: '1.1rem',
+              fontWeight: 500,
+            },
+            '& .sv_q_radiogroup': {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            },
+            '& .sv_q_radiogroup label': {
+              margin: '0.5rem 0',
+            },
+            '& .sv_q_rating': {
               display: 'flex',
               justifyContent: 'center',
-              alignItems: 'center',
-              mb: 4
-            }}
-          >
-            <Typography variant="body1" color="text.secondary">
-              Typeform will be embedded here
-            </Typography>
-          </Box>
-
-          <Box 
-            className="survey-actions"
-            sx={{ 
-              display: 'flex', 
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 2,
-              justifyContent: 'center',
-              mt: 4
-            }}
-          >
-            <Button 
-              variant="contained" 
-              onClick={handleDone}
-              className="primary-button"
-              endIcon={<ArrowForwardIcon />}
-              sx={{ minWidth: '150px' }}
-            >
-              Done
-            </Button>
-            <Button 
-              variant="outlined" 
-              startIcon={<OpenInNewIcon />}
-            >
-              Open form in new tab
-            </Button>
+              gap: '0.5rem',
+            },
+            '& .sv_q_rating_item': {
+              padding: '0.5rem',
+            },
+            '& .sv_nav_btn': {
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+            },
+          }}>
+            {survey && (
+              <Survey
+                model={survey}
+                onComplete={handleComplete}
+              />
+            )}
           </Box>
         </Paper>
       </Container>

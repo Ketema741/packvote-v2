@@ -1,0 +1,191 @@
+{
+  "title": "",
+  "description": "",
+  "pages": [
+    {
+      "name": "page1",
+      "title": "Who Are You?",
+      "elements": [
+        {
+          "type": "text",
+          "name": "name",
+          "title": "Your name",
+          "isRequired": true
+        },
+        {
+          "type": "text",
+          "name": "liveLocation",
+          "title": "Where do you live? (Used for cost calculation)",
+          "isRequired": true
+        }
+      ]
+    },
+    {
+      "name": "page2",
+      "title": "Budget",
+      "description": "Rough budget in USD. Per person, includes flights/travel.",
+      "elements": [
+        {
+          "type": "dropdown",
+          "name": "budget",
+          "title": "Rough Budget",
+          "isRequired": true,
+          "choices": [
+            "< $500",
+            "$500 - $1,000",
+            "$1,000 - $1,500",
+            "$1,500 - $2,000",
+            "$2,000 - $2,500",
+            "$2,500+"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "page3",
+      "title": "Dates",
+      "elements": [
+        {
+          "type": "comment",
+          "name": "preferredDates",
+          "title": "Preferred Dates",
+          "description": "Rough ranges are fine. One range per line, please.",
+          "isRequired": true
+        },
+        {
+          "type": "comment",
+          "name": "blackoutDates",
+          "title": "Blackout Dates",
+          "description": "Dates you absolutely CANNOT make. One range per line, please"
+        },
+        {
+          "type": "panel",
+          "name": "tripLengthPanel",
+          "title": "Trip Length",
+          "elements": [
+            {
+              "type": "text",
+              "inputType": "number",
+              "name": "minTripDays",
+              "title": "Minimum trip length (days)",
+              "isRequired": true,
+              "min": 1,
+              "max": 90
+            },
+            {
+              "type": "text",
+              "inputType": "number",
+              "name": "maxTripDays",
+              "title": "Maximum trip length (days)",
+              "isRequired": true,
+              "min": 1,
+              "max": 90
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "page4",
+      "title": "Vibe",
+      "elements": [
+        {
+          "type": "checkbox",
+          "name": "vibe",
+          "title": "What vibe are you after? Pick up to 3.",
+          "choices": [
+            "Beach & chill",
+            "Adventure/outdoors",
+            "Culture/sightseeing",
+            "Party/nightlife",
+            "Nature/remote",
+            "Family-friendly",
+            "Wellness/retreat",
+            "Expedition (minimal tourist infrastructure)",
+            "Foodie"
+          ],
+          "choicesOrder": "random",
+          "showOtherItem": true,
+          "maxSelectedChoices": 3,
+          "minSelectedChoices": 1
+        },
+        {
+          "type": "radiogroup",
+          "name": "moreQuestions",
+          "title": "Do you want to fill out a few more questions to help us give you the best possible recommendations?",
+          "choices": [
+            "Yes",
+            {
+              "value": "No, save my results and finish",
+              "text": "No, save my results and finish survey"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "page5",
+      "title": "Past Travel Likes & Dislikes (Optional)\n",
+      "elements": [
+        {
+          "type": "comment",
+          "name": "pastLiked",
+          "title": "Places you loved"
+        },
+        {
+          "type": "comment",
+          "name": "revisit",
+          "title": "Are you open to revisiting somewhere you've been?",
+          "description": "If so, list which ones"
+        },
+        {
+          "type": "comment",
+          "name": "pastDisliked",
+          "title": "Places you didn't enjoy"
+        }
+      ]
+    },
+    {
+      "name": "page6",
+      "title": "Wishlist (Optional)",
+      "elements": [
+        {
+          "type": "comment",
+          "name": "wishList",
+          "title": "Top 3 places on your travel wish list"
+        },
+        {
+          "type": "comment",
+          "name": "activities",
+          "title": "What activities would you like to do on this trip?"
+        }
+      ]
+    },
+    {
+      "name": "page7",
+      "title": "Final Priorities (Optional) ",
+      "elements": [
+        {
+          "type": "ranking",
+          "name": "priorities",
+          "title": "Which matters most for you on this trip?",
+          "description": "Drag and drop to rank",
+          "choices": [
+            "Budget",
+            "Dates",
+            "Vibe",
+            "New destination vs. revisit",
+            "Activities"
+          ]
+        }
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "type": "complete",
+      "expression": "{moreQuestions} = 'No, save my results and finish'"
+    }
+  ],
+  "headerView": "advanced"
+}

@@ -24,23 +24,16 @@ jobs:
         
     - name: Install dependencies
       run: |
-        cd group-travel-app-ui
         npm install
         npm install --save-dev eslint
         
     - name: Run linting
-      run: |
-        cd group-travel-app-ui
-        npx eslint src/
+      run: npx eslint src/
       
     - name: Run tests
-      run: |
-        cd group-travel-app-ui
-        npm run test:nowatch
+      run: npm run test:nowatch
       env:
         CI: true
         
     - name: Build
-      run: |
-        cd group-travel-app-ui
-        npm run build 
+      run: npm run build 

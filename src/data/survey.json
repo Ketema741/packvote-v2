@@ -91,8 +91,9 @@
       "elements": [
         {
           "type": "checkbox",
-          "name": "vibe",
-          "title": "What vibe are you after? Pick up to 3.",
+          "name": "",
+          "title": "",
+          "description": "What vibe are you after? Pick up to 3.",
           "choices": [
             "Beach & chill",
             "Adventure/outdoors",
@@ -174,6 +175,7 @@
             "Budget",
             "Dates",
             "Vibe",
+            "Location",
             "New destination vs. revisit",
             "Activities"
           ]

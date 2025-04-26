@@ -235,8 +235,15 @@ select.sv_custom_dropdown_control option {
 .sv_custom_checkbox_label,
 .sv_custom_radiogroup_label {
   font-family: 'Inter', sans-serif !important;
-  margin-left: 0.5rem !important;
+  margin-left: 1rem !important;
   font-weight: 500 !important;
+}
+
+/* Add spacing for the checkbox/radio inputs themselves */
+.sv_q_checkbox input[type="checkbox"],
+.sv_q_radiogroup input[type="radio"] {
+  margin-right: 0.5rem !important;
+  transform: scale(1.2) !important;
 }
 
 /* Typeform container */

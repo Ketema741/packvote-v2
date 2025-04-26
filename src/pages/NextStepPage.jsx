@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Container, 
   Typography, 
@@ -16,6 +16,8 @@ import '../styles/LandingPage.css';
 
 const NextStepPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const tripId = location.state?.tripId;
 
   return (
     <div className="landing-page">
@@ -131,7 +133,7 @@ const NextStepPage = () => {
               variant="contained" 
               size="large" 
               endIcon={<ArrowForwardIcon />}
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(tripId ? `/dashboard/${tripId}` : '/dashboard')}
               sx={{ 
                 mt: 4, 
                 py: 1.5, 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -15,47 +15,132 @@ import {
   AppBar,
   Toolbar,
   Link,
+  Snackbar,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MessageIcon from '@mui/icons-material/Message';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { sendSMS, sendAllSMS } from '../utils/api';
 import '../styles/LandingPage.css';
 
 const TripLinks = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const tripData = location.state?.tripData || {
+    tripId: null,
     organizerLink: 'No link available',
     participants: []
   };
 
+  // State for UI feedback
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [sendingState, setSendingState] = useState({});
+
   const handleCopyLink = async (link) => {
     try {
       await navigator.clipboard.writeText(link);
-      // TODO: Show success toast
+      setToast({
+        open: true,
+        message: 'Link copied to clipboard',
+        severity: 'success'
+      });
     } catch (err) {
-      // TODO: Show error toast
+      setToast({
+        open: true,
+        message: 'Failed to copy link',
+        severity: 'error'
+      });
     }
   };
 
-  const handleSendSMS = (participant) => {
-    // TODO: Implement SMS sending through backend
-    console.log('Sending SMS to:', participant.name, 'at', participant.phone);
+  const handleSendSMS = async (participant) => {
+    if (!participant.id) {
+      setToast({
+        open: true,
+        message: 'Cannot send SMS: missing participant ID',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setSendingState(prev => ({ ...prev, [participant.id]: true }));
+    
+    try {
+      const result = await sendSMS(participant.id);
+      
+      if (result.status === 'sent' || result.status === 'simulated') {
+        setToast({
+          open: true,
+          message: `Survey link sent to ${participant.name}`,
+          severity: 'success'
+        });
+      } else {
+        throw new Error(result.error || 'Failed to send SMS');
+      }
+    } catch (error) {
+      setToast({
+        open: true,
+        message: `Failed to send SMS: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setSendingState(prev => ({ ...prev, [participant.id]: false }));
+    }
   };
 
-  const handleSendAllSMS = () => {
-    // TODO: Implement sending all SMS through backend
-    const allParticipants = [...tripData.participants];
-    if (tripData.organizer) {
-      allParticipants.unshift(tripData.organizer);
+  const handleSendAllSMS = async () => {
+    if (!tripData.tripId) {
+      setToast({
+        open: true,
+        message: 'Cannot send SMS: missing trip ID',
+        severity: 'error'
+      });
+      return;
     }
-    console.log('Sending SMS to all:', allParticipants);
+
+    setLoading(true);
+    
+    try {
+      const result = await sendAllSMS(tripData.tripId);
+      
+      if (result.status === 'completed') {
+        setToast({
+          open: true,
+          message: 'Survey links sent to all participants',
+          severity: 'success'
+        });
+      } else {
+        throw new Error('Failed to send SMS to all participants');
+      }
+    } catch (error) {
+      setToast({
+        open: true,
+        message: `Failed to send SMS: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
     navigate('/');
+  };
+
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setToast(prev => ({ ...prev, open: false }));
   };
 
   // If no trip data was passed, show an error state
@@ -218,11 +303,11 @@ const TripLinks = () => {
                 variant="body2"
                 sx={{ flex: 1, fontFamily: 'monospace' }}
               >
-                {tripData.organizerLink}
+                {tripData.organizer?.link || tripData.organizerLink}
               </Typography>
               <IconButton
                 size="small"
-                onClick={() => handleCopyLink(tripData.organizerLink)}
+                onClick={() => handleCopyLink(tripData.organizer?.link || tripData.organizerLink)}
               >
                 <ContentCopyIcon />
               </IconButton>
@@ -241,7 +326,7 @@ const TripLinks = () => {
                 </TableHead>
                 <TableBody>
                   {tripData.participants.map((participant) => (
-                    <TableRow key={participant.name}>
+                    <TableRow key={participant.id || participant.name}>
                       <TableCell>{participant.name}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -267,8 +352,13 @@ const TripLinks = () => {
                           size="small"
                           onClick={() => handleSendSMS(participant)}
                           sx={{ color: 'primary.main' }}
+                          disabled={sendingState[participant.id]}
                         >
-                          <MessageIcon fontSize="small" />
+                          {sendingState[participant.id] ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <MessageIcon fontSize="small" />
+                          )}
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -280,15 +370,16 @@ const TripLinks = () => {
 
           <Button
             variant="contained"
-            startIcon={<MessageIcon />}
+            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <MessageIcon />}
             fullWidth
             onClick={handleSendAllSMS}
             className="primary-button"
+            disabled={loading}
             sx={{
               mt: 3,
             }}
           >
-            Text all invites
+            {loading ? 'Sending...' : 'Text all invites'}
           </Button>
 
           <Typography
@@ -301,6 +392,22 @@ const TripLinks = () => {
           </Typography>
         </Paper>
       </Container>
+
+      {/* Toast notification */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={6000}
+        onClose={handleCloseToast}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseToast}
+          severity={toast.severity}
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
 
       {/* Footer */}
       <footer className="footer">

@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Container, 
   Typography, 
@@ -9,10 +9,13 @@ import {
   Toolbar,
   Link,
   Paper,
-  LinearProgress
+  LinearProgress,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import { Survey, StylesManager, Model } from 'survey-react';
+import { saveSurveyResponse } from '../utils/api';
 import 'survey-react/survey.css';
 import '../styles/LandingPage.css';
 import '../styles/TripSurvey.css';
@@ -43,11 +46,19 @@ StylesManager.ThemeColors["default"] = {
 
 const TripSurvey = () => {
   const navigate = useNavigate();
-  const [survey, setSurvey] = React.useState(null);
-  const [currentPage, setCurrentPage] = React.useState(0);
-  const [totalPages, setTotalPages] = React.useState(0);
+  const { tripId, participantId } = useParams();
+  const [survey, setSurvey] = useState(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [toast, setToast] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Import survey JSON
     import('../data/survey.json').then((surveyJson) => {
       const surveyModel = new Model(surveyJson.default);
@@ -160,14 +171,136 @@ const TripSurvey = () => {
     });
   }, []);
 
-  const handleComplete = (sender) => {
-    // Handle survey completion
-    console.log('Survey results:', sender.data);
-    navigate('/next-step');
+  const handleComplete = async (sender) => {
+    if (!tripId || !participantId) {
+      setError('Invalid survey link. Missing trip or participant identification.');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // Send survey results to the API
+      const result = await saveSurveyResponse(participantId, sender.data);
+      
+      if (result.status === 'success') {
+        setToast({
+          open: true,
+          message: 'Your responses have been saved. Thank you!',
+          severity: 'success'
+        });
+        
+        // After a short delay, navigate to the next step page
+        setTimeout(() => {
+          navigate('/next-step', { state: { tripId } });
+        }, 3000);
+      } else {
+        throw new Error('Failed to save survey responses');
+      }
+    } catch (error) {
+      setError(`Failed to save your responses: ${error.message}`);
+      setToast({
+        open: true,
+        message: `Failed to save responses: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setToast(prev => ({ ...prev, open: false }));
   };
 
   // Calculate progress percentage
   const progressPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
+
+  // If there's no tripId or participantId in the URL, show an error
+  if (!tripId || !participantId) {
+    return (
+      <div className="landing-page">
+        <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
+          <Toolbar sx={{ justifyContent: 'space-between' }}>
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                color: 'primary.main', 
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              onClick={() => navigate('/')}
+            >
+              Group Travel AI
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+                Docs
+              </Link>
+              <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+                Donate
+              </Link>
+              <Button 
+                variant="contained" 
+                onClick={() => navigate('/create-trip')}
+                className="primary-button"
+              >
+                Start a Trip
+              </Button>
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        <Container maxWidth="md" sx={{ pt: 12, pb: 8 }}>
+          <Paper elevation={3} sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+            <Typography variant="h6" color="error" gutterBottom>
+              Invalid survey link. Please check your link and try again.
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('/')}
+              className="primary-button"
+              sx={{ mt: 2 }}
+            >
+              Go to Homepage
+            </Button>
+          </Paper>
+        </Container>
+
+        {/* Footer */}
+        <footer className="footer">
+          <Container maxWidth="lg">
+            <div className="footer-content">
+              <div className="footer-donate">
+                <div className="footer-donate-text">
+                  <LightbulbIcon />
+                  <Typography>Keep the API lights on</Typography>
+                </div>
+                <Button 
+                  variant="contained"
+                  onClick={() => navigate('/donate')}
+                  className="footer-donate-button"
+                >
+                  Donate
+                </Button>
+              </div>
+              <Typography variant="body1" align="center" className="footer-tagline">
+                ✈️ Made for group travel lovers
+              </Typography>
+              <div className="footer-links">
+                <Link href="/privacy">Privacy</Link>
+                <Link href="/contact">Contact</Link>
+              </div>
+            </div>
+          </Container>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="landing-page">
@@ -206,6 +339,12 @@ const TripSurvey = () => {
 
       <Container maxWidth="md" sx={{ pt: 12, pb: 8 }}>
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3, maxWidth: '800px', mx: 'auto' }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 4 }}>
+              {error}
+            </Alert>
+          )}
+
           {/* Progress indicator */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -249,9 +388,30 @@ const TripSurvey = () => {
                 css={{ root: "survey-custom" }}
               />
             )}
+            {loading && (
+              <Box sx={{ width: '100%', mt: 4 }}>
+                <LinearProgress />
+              </Box>
+            )}
           </Box>
         </Paper>
       </Container>
+
+      {/* Toast notification */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={6000}
+        onClose={handleCloseToast}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseToast}
+          severity={toast.severity}
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
 
       {/* Footer */}
       <footer className="footer">

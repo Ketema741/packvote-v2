@@ -15,10 +15,13 @@ import {
   AppBar,
   Toolbar,
   Link,
+  CircularProgress,
+  Snackbar
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import { createTrip } from '../utils/api';
 import '../styles/LandingPage.css';
 
 const CreateTrip = () => {
@@ -27,12 +30,25 @@ const CreateTrip = () => {
   const [organizer, setOrganizer] = useState({ name: '', phone: '' });
   const [participants, setParticipants] = useState([]);
   const [phoneErrors, setPhoneErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [toast, setToast] = useState({
+    open: false,
+    message: '',
+    severity: 'error'
+  });
 
   const validatePhoneNumber = (phone) => {
     // Remove any non-digit characters
     const cleanedPhone = phone.replace(/\D/g, '');
     // Check if it's a valid US phone number (10 digits)
     return cleanedPhone.length === 10;
+  };
+
+  const formatPhoneNumber = (phone) => {
+    // Format for API: +1 followed by the 10 digits
+    const cleanedPhone = phone.replace(/\D/g, '');
+    return `+1${cleanedPhone}`;
   };
 
   const handleOrganizerChange = (field, value) => {
@@ -76,14 +92,58 @@ const CreateTrip = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setToast(prev => ({ ...prev, open: false }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Form validation
+    if (!tripName.trim()) {
+      setToast({
+        open: true,
+        message: 'Trip name is required',
+        severity: 'error'
+      });
+      return;
+    }
+
+    if (!organizer.name.trim() || !organizer.phone.trim()) {
+      setToast({
+        open: true,
+        message: 'Organizer name and phone are required',
+        severity: 'error'
+      });
+      return;
+    }
+
     // Validate organizer phone number
     if (!validatePhoneNumber(organizer.phone)) {
       const newErrors = { ...phoneErrors };
       newErrors.organizer = true;
       setPhoneErrors(newErrors);
+      setToast({
+        open: true,
+        message: 'Please enter a valid 10-digit phone number for the organizer',
+        severity: 'error'
+      });
+      return;
+    }
+
+    // Validate participant fields are not empty
+    const emptyParticipant = participants.find(
+      p => (!p.name.trim() || !p.phone.trim())
+    );
+    if (emptyParticipant) {
+      setToast({
+        open: true,
+        message: 'All participant fields are required',
+        severity: 'error'
+      });
       return;
     }
 
@@ -99,28 +159,59 @@ const CreateTrip = () => {
     });
 
     if (hasErrors) {
+      setToast({
+        open: true,
+        message: 'Please enter valid 10-digit phone numbers for all participants',
+        severity: 'error'
+      });
       return;
     }
 
-    handleGenerateLinks();
-  };
+    // Create the trip through the API
+    setLoading(true);
+    setError(null);
 
-  const handleGenerateLinks = () => {
-    // Create the trip data to pass to the next page
-    const tripData = {
-      organizerLink: `https://tripplanner.com/q/org/${Math.random().toString(36).substr(2, 9)}`,
-      organizer: {
+    try {
+      // Format phone numbers for API (+1 format)
+      const formattedOrganizer = {
         name: organizer.name,
-        phone: organizer.phone,
-      },
-      participants: participants.map(participant => ({
-        name: participant.name,
-        phone: participant.phone,
-        link: `tripplanner.com/q/t/${Math.random().toString(36).substr(2, 9)}`
-      }))
-    };
+        phone: formatPhoneNumber(organizer.phone)
+      };
 
-    navigate('/trip-links', { state: { tripData } });
+      const formattedParticipants = participants.map(p => ({
+        name: p.name,
+        phone: formatPhoneNumber(p.phone)
+      }));
+
+      // Call the API to create the trip
+      const result = await createTrip({
+        organizer_name: formattedOrganizer.name,
+        organizer_phone: formattedOrganizer.phone,
+        trip_name: tripName,
+        participants: formattedParticipants
+      });
+
+      // Navigate to the trip links page with the result data
+      navigate('/trip-links', { 
+        state: { 
+          tripData: {
+            tripId: result.trip_id,
+            organizer: result.organizer,
+            participants: result.participants
+          } 
+        } 
+      });
+    } catch (err) {
+      console.error('Failed to create trip:', err);
+      setError('Failed to create trip: ' + err.message);
+      setToast({
+        open: true,
+        message: 'Failed to create trip: ' + err.message,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -167,6 +258,12 @@ const CreateTrip = () => {
           <Alert severity="info" sx={{ mb: 4 }}>
             As the trip organizer, you'll set up the trip and invite others to participate in the planning.
           </Alert>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 4 }}>
+              {error}
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit}>
             <Stack spacing={3}>
@@ -273,13 +370,15 @@ const CreateTrip = () => {
                   variant="contained"
                   fullWidth
                   className="primary-button"
+                  disabled={loading}
                 >
-                  Create Trip
+                  {loading ? <CircularProgress size={24} /> : 'Create Trip'}
                 </Button>
                 <Button
                   variant="text"
                   fullWidth
                   onClick={() => navigate('/')}
+                  disabled={loading}
                 >
                   Cancel
                 </Button>
@@ -288,6 +387,17 @@ const CreateTrip = () => {
           </form>
         </Paper>
       </Container>
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={6000}
+        onClose={handleCloseToast}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseToast} severity={toast.severity} sx={{ width: '100%' }}>
+          {toast.message}
+        </Alert>
+      </Snackbar>
 
       {/* Footer */}
       <footer className="footer">

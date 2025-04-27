@@ -325,7 +325,10 @@ const TripLinks = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {tripData.participants.map((participant) => (
+                  {tripData.participants
+                    // Filter out the organizer from participants list to prevent duplicate display
+                    .filter(participant => participant.id !== tripData.organizer?.id)
+                    .map((participant) => (
                     <TableRow key={participant.id || participant.name}>
                       <TableCell>{participant.name}</TableCell>
                       <TableCell>

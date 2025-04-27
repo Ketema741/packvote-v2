@@ -15,10 +15,18 @@ export const createTrip = async (tripData) => {
     const backendData = {
       trip_name: tripData.trip_name,
       organizer_id: tripData.organizer_phone, // Using phone as ID for now
-      participants: tripData.participants.map(p => ({
-        name: p.name,
-        phone: p.phone
-      }))
+      participants: [
+        // Include organizer as the first participant
+        {
+          name: tripData.organizer_name,
+          phone: tripData.organizer_phone
+        },
+        // Then include the rest of the participants
+        ...tripData.participants.map(p => ({
+          name: p.name,
+          phone: p.phone
+        }))
+      ]
     };
 
     const response = await fetch(`${API_BASE_URL}/trips/`, {
@@ -31,7 +39,13 @@ export const createTrip = async (tripData) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+      
+      // Handle duplicate trip error
+      if (errorData.detail && errorData.detail.code === 'DUPLICATE_TRIP') {
+        throw new Error("A trip with this name and participants already exists. Please create a new trip with a different name or participants.");
+      }
+      
+      throw new Error(errorData.detail?.message || errorData.detail || `HTTP error! Status: ${response.status}`);
     }
 
     return await response.json();

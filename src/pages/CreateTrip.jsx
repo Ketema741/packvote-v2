@@ -203,12 +203,28 @@ const CreateTrip = () => {
       });
     } catch (err) {
       console.error('Failed to create trip:', err);
-      setError('Failed to create trip: ' + err.message);
-      setToast({
-        open: true,
-        message: 'Failed to create trip: ' + err.message,
-        severity: 'error'
-      });
+      
+      // Display a user-friendly error message
+      let errorMessage = err.message || 'Something went wrong. Please try again.';
+      
+      // Check if this is a duplicate trip error
+      if (errorMessage.includes('A trip with this name and participants already exists')) {
+        // This is a duplicate trip error
+        setError(errorMessage);
+        setToast({
+          open: true,
+          message: errorMessage,
+          severity: 'warning' // Use warning instead of error for duplicate trip
+        });
+      } else {
+        // For other errors, show general error message
+        setError('Failed to create trip: ' + errorMessage);
+        setToast({
+          open: true,
+          message: 'Failed to create trip: ' + errorMessage,
+          severity: 'error'
+        });
+      }
     } finally {
       setLoading(false);
     }

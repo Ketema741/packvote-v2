@@ -11,16 +11,27 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:800
  */
 export const createTrip = async (tripData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/trips`, {
+    // Transform the data to match the backend's expected format
+    const backendData = {
+      trip_name: tripData.trip_name,
+      organizer_id: tripData.organizer_phone, // Using phone as ID for now
+      participants: tripData.participants.map(p => ({
+        name: p.name,
+        phone: p.phone
+      }))
+    };
+
+    const response = await fetch(`${API_BASE_URL}/trips/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(tripData),
+      body: JSON.stringify(backendData),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
     }
 
     return await response.json();

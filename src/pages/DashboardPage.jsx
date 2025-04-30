@@ -35,6 +35,8 @@ const DashboardPage = () => {
       total: 1
     },
     participants: [],
+    respondedParticipants: [],
+    organizer: null,
     budget: {
       amount: 0,
       currency: 'USD'
@@ -72,7 +74,10 @@ const DashboardPage = () => {
         const processedData = {
           id: data.id,
           title: data.name,
-          progress: data.progress,
+          progress: data.progress || {
+            completed: data.participants.filter(p => p.responded).length,
+            total: data.participants.length
+          },
           participants: data.participants.filter(p => !p.responded),
           respondedParticipants: data.participants.filter(p => p.responded),
           organizer: data.organizer,
@@ -151,7 +156,7 @@ const DashboardPage = () => {
   };
 
   // Calculate progress percentage
-  const progress = tripData.progress ? 
+  const progress = tripData.progress && tripData.progress.total > 0 ? 
     (tripData.progress.completed / tripData.progress.total) * 100 : 0;
   
   // Determine if enough participants have responded to enable AI recommendations

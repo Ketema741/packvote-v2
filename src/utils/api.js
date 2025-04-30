@@ -115,19 +115,38 @@ export const sendAllSMS = async (tripId) => {
  */
 export const saveSurveyResponse = async (participantId, responseData) => {
   try {
+    // Transform the data to match the backend's expected format
+    const backendData = {
+      trip_id: responseData.tripId,
+      user_id: participantId,
+      name: responseData.name,
+      live_location: responseData.liveLocation,
+      budget: responseData.budget,
+      preferred_dates: responseData.preferredDates,
+      min_trip_days: parseInt(responseData.minTripDays),
+      max_trip_days: parseInt(responseData.maxTripDays),
+      vibe_choices: responseData.vibe || [],
+      blackout_dates: responseData.blackoutDates,
+      more_questions: responseData.moreQuestions,
+      past_liked: responseData.pastLiked,
+      revisit: responseData.revisit,
+      past_disliked: responseData.pastDisliked,
+      wish_list: responseData.wishList,
+      activities: responseData.activities,
+      priorities: responseData.priorities
+    };
+
     const response = await fetch(`${API_BASE_URL}/survey-response`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        participant_id: participantId,
-        response_data: responseData,
-      }),
+      body: JSON.stringify(backendData),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
     }
 
     return await response.json();

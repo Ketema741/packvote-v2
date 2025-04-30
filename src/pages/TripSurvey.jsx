@@ -180,8 +180,14 @@ const TripSurvey = () => {
     setLoading(true);
     
     try {
+      // Add tripId to the survey data
+      const surveyData = {
+        ...sender.data,
+        tripId: tripId
+      };
+
       // Send survey results to the API
-      const result = await saveSurveyResponse(participantId, sender.data);
+      const result = await saveSurveyResponse(participantId, surveyData);
       
       if (result.status === 'success') {
         setToast({

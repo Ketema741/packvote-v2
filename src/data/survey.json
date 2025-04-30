@@ -91,7 +91,7 @@
       "elements": [
         {
           "type": "checkbox",
-          "name": "",
+          "name": "vibe",
           "title": "",
           "description": "What vibe are you after? Pick up to 3.",
           "choices": [

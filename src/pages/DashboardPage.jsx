@@ -319,7 +319,11 @@ const DashboardPage = () => {
                 ${tripData.budget.amount.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Median budget from {tripData.totalResponses} responses
+                {tripData.totalResponses === 0 
+                  ? "No budget data available yet"
+                  : tripData.totalResponses === 1 
+                    ? "Based on 1 response" 
+                    : `Average from ${tripData.totalResponses} responses`}
               </Typography>
             </Paper>
           </Grid>

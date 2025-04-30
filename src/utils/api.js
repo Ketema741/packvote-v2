@@ -197,7 +197,35 @@ export const calculateSurveyStats = (responses) => {
 
   // Calculate median budget
   const budgets = responses
-    .map(r => parseInt(r.budget.replace(/[^0-9]/g, '')))
+    .map(r => {
+      // Handle budget ranges like "$1,000 - $1,500"
+      const budgetStr = r.budget || "";
+      
+      // Special case: less than $500
+      if (budgetStr.includes("< $500")) {
+        return 500; // Use the upper bound
+      }
+      
+      // Special case: $2,500+
+      if (budgetStr.includes("$2,500+")) {
+        return 2500; // Use the lower bound
+      }
+      
+      // Handle regular ranges like "$500 - $1,000"
+      const matches = budgetStr.match(/\$?([\d,]+)(?:\s*-\s*\$?([\d,]+))?/);
+      
+      if (!matches) return NaN;
+      
+      // If it's a range, calculate the average
+      if (matches[2]) {
+        const min = parseInt(matches[1].replace(/,/g, ''));
+        const max = parseInt(matches[2].replace(/,/g, ''));
+        return Math.round((min + max) / 2);
+      }
+      
+      // If it's a single value
+      return parseInt(matches[1].replace(/,/g, ''));
+    })
     .filter(b => !isNaN(b))
     .sort((a, b) => a - b);
   

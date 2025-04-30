@@ -157,13 +157,13 @@ export const saveSurveyResponse = async (participantId, responseData) => {
 };
 
 /**
- * Get trip details
+ * Get trip details including survey responses
  * @param {string} tripId - Trip ID
- * @returns {Promise<Object>} Trip details
+ * @returns {Promise<Object>} Trip details with survey responses
  */
 export const getTripDetails = async (tripId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/trips/${tripId}`);
+    const response = await fetch(`${API_BASE_URL}/trips/${tripId}?include_responses=true`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
@@ -174,4 +174,78 @@ export const getTripDetails = async (tripId) => {
     console.error('Error getting trip details:', error);
     throw error;
   }
+};
+
+/**
+ * Calculate statistics from survey responses
+ * @param {Array} responses - Array of survey responses
+ * @returns {Object} Calculated statistics
+ */
+export const calculateSurveyStats = (responses) => {
+  if (!responses || responses.length === 0) {
+    return {
+      medianBudget: 0,
+      dateRange: {
+        start: null,
+        end: null,
+        window: null
+      },
+      commonVibes: [],
+      totalResponses: 0
+    };
+  }
+
+  // Calculate median budget
+  const budgets = responses
+    .map(r => parseInt(r.budget.replace(/[^0-9]/g, '')))
+    .filter(b => !isNaN(b))
+    .sort((a, b) => a - b);
+  
+  const medianBudget = budgets.length > 0 
+    ? budgets[Math.floor(budgets.length / 2)]
+    : 0;
+
+  // Calculate date ranges
+  const dateRanges = responses.map(r => {
+    const [start, end] = r.preferred_dates.split(' - ');
+    return {
+      start: new Date(start),
+      end: new Date(end)
+    };
+  });
+
+  const validDateRanges = dateRanges.filter(d => !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
+  
+  const dateRange = validDateRanges.length > 0
+    ? {
+        start: new Date(Math.min(...validDateRanges.map(d => d.start.getTime()))),
+        end: new Date(Math.max(...validDateRanges.map(d => d.end.getTime()))),
+        window: Math.max(...validDateRanges.map(d => 
+          Math.ceil((d.end - d.start) / (1000 * 60 * 60 * 24))
+        ))
+      }
+    : {
+        start: null,
+        end: null,
+        window: null
+      };
+
+  // Calculate most common vibes
+  const allVibes = responses.flatMap(r => r.vibe_choices);
+  const vibeCounts = allVibes.reduce((acc, vibe) => {
+    acc[vibe] = (acc[vibe] || 0) + 1;
+    return acc;
+  }, {});
+
+  const commonVibes = Object.entries(vibeCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([vibe]) => vibe);
+
+  return {
+    medianBudget,
+    dateRange,
+    commonVibes,
+    totalResponses: responses.length
+  };
 }; 

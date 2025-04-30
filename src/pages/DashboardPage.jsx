@@ -14,13 +14,13 @@ import {
   LinearProgress,
   CircularProgress,
   Snackbar,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
-import ShareIcon from '@mui/icons-material/Share';
 import MessageIcon from '@mui/icons-material/Message';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import { getTripDetails, sendSMS } from '../utils/api';
+import { getTripDetails, sendSMS, calculateSurveyStats } from '../utils/api';
 import '../styles/DashboardPage.css';
 import '../styles/LandingPage.css';
 
@@ -46,7 +46,8 @@ const DashboardPage = () => {
       end: '',
       window: ''
     },
-    vibes: []
+    vibes: [],
+    totalResponses: 0
   });
   
   const [loading, setLoading] = useState(true);
@@ -70,28 +71,42 @@ const DashboardPage = () => {
       try {
         const data = await getTripDetails(tripId);
         
+        // Check if we have survey responses
+        if (!data.survey_responses || data.survey_responses.length === 0) {
+          console.log('No survey responses found for trip:', tripId);
+        } else {
+          console.log(`Found ${data.survey_responses.length} survey responses for trip:`, tripId);
+        }
+        
+        // Calculate statistics from survey responses
+        const stats = calculateSurveyStats(data.survey_responses || []);
+        
         // Process the data for display in the dashboard
         const processedData = {
           id: data.id,
-          title: data.name,
-          progress: data.progress || {
-            completed: data.participants.filter(p => p.responded).length,
+          title: data.trip_name,
+          progress: {
+            completed: data.participants.filter(p => p.responded || p.has_responded).length,
             total: data.participants.length
           },
-          participants: data.participants.filter(p => !p.responded),
-          respondedParticipants: data.participants.filter(p => p.responded),
-          organizer: data.organizer,
-          // Use actual survey data if available
-          budget: data.budget || {
-            amount: 1200,
+          participants: data.participants.filter(p => !(p.responded || p.has_responded)),
+          respondedParticipants: data.participants.filter(p => p.responded || p.has_responded),
+          organizer: data.participants.find(p => p.is_organizer),
+          budget: {
+            amount: stats.medianBudget,
             currency: 'USD'
           },
-          dateRange: data.dateRange || {
-            start: 'July 15',
-            end: '22, 2025',
-            window: '7 days window'
+          dateRange: stats.dateRange.start ? {
+            start: stats.dateRange.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+            end: stats.dateRange.end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            window: `${stats.dateRange.window} days window`
+          } : {
+            start: 'Not available',
+            end: 'Not available',
+            window: 'Not available'
           },
-          vibes: data.vibes || ['Beach & chill', 'Foodie', 'Culture/sightseeing']
+          vibes: stats.commonVibes,
+          totalResponses: stats.totalResponses
         };
         
         setTripData(processedData);
@@ -274,143 +289,125 @@ const DashboardPage = () => {
           </Alert>
         )}
         
-        <Box className="dashboard-content">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h4" component="h1">{tripData.title}</Typography>
-            <Button 
-              startIcon={<ShareIcon />} 
-              variant="outlined"
-              onClick={handleShareTrip}
-            >
-              Share
-            </Button>
-          </Box>
+        <Grid container spacing={4}>
+          {/* Trip Title and Progress */}
+          <Grid item xs={12}>
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+              <Typography variant="h4" gutterBottom>
+                {tripData.title}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Typography variant="body1" color="text.secondary">
+                  {tripData.progress.completed} of {tripData.progress.total} participants responded
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={progress} 
+                  sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
+                />
+              </Box>
+            </Paper>
+          </Grid>
 
-          <Box sx={{ mb: 4 }}>
-            <LinearProgress 
-              variant="determinate" 
-              value={progress} 
-              sx={{ 
-                height: 10, 
-                borderRadius: 5,
-                mb: 1
-              }} 
-            />
-            <Typography variant="body2" color="text.secondary">
-              {tripData.progress.completed}/{tripData.progress.total} completed
-            </Typography>
-          </Box>
+          {/* Statistics Section */}
+          <Grid item xs={12} md={4}>
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+              <Typography variant="h6" gutterBottom>
+                Budget
+              </Typography>
+              <Typography variant="h4" color="primary">
+                ${tripData.budget.amount.toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Median budget from {tripData.totalResponses} responses
+              </Typography>
+            </Paper>
+          </Grid>
 
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={4}>
-              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" component="h2" sx={{ ml: 1 }}>
-                    <span role="img" aria-label="money">💰</span> Median Budget
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Typography variant="h3" component="div" color="primary.main">
-                    ${tripData.budget.amount}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    per person
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
+          <Grid item xs={12} md={4}>
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+              <Typography variant="h6" gutterBottom>
+                Preferred Dates
+              </Typography>
+              <Typography variant="h4" color="primary">
+                {tripData.dateRange.start} - {tripData.dateRange.end}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {tripData.dateRange.window}
+              </Typography>
+            </Paper>
+          </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" component="h2" sx={{ ml: 1 }}>
-                    <span role="img" aria-label="calendar">📅</span> Date Overlap
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Typography variant="h5" component="div">
-                    {tripData.dateRange.start}-{tripData.dateRange.end}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {tripData.dateRange.window}
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
+          <Grid item xs={12} md={4}>
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+              <Typography variant="h6" gutterBottom>
+                Common Vibes
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {tripData.vibes.map((vibe, index) => (
+                  <Chip 
+                    key={index} 
+                    label={vibe} 
+                    color="primary" 
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+            </Paper>
+          </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" component="h2" sx={{ ml: 1 }}>
-                    <span role="img" aria-label="sparkles">✨</span> Top Vibe Picks
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mt: 2 }}>
-                  {tripData.vibes.map((vibe, index) => (
-                    <Box key={index} sx={{ 
-                      bgcolor: 'background.paper', 
-                      borderRadius: 2, 
-                      px: 2, 
-                      py: 0.5, 
-                      border: '1px solid',
-                      borderColor: 'primary.light'
+          {tripData.participants.length > 0 ? (
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4 }}>
+                <Typography variant="h6" component="h2" gutterBottom>
+                  Waiting on responses from...
+                </Typography>
+                
+                <Box sx={{ mt: 2 }}>
+                  {tripData.participants.map(participant => (
+                    <Box key={participant.id} sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      py: 1.5,
+                      borderBottom: '1px solid',
+                      borderColor: 'divider'
                     }}>
-                      {vibe}
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar src={participant.image || `https://i.pravatar.cc/150?u=${participant.id}`} alt={participant.name} />
+                        <Typography sx={{ ml: 2 }}>{participant.name}</Typography>
+                      </Box>
+                      <Button 
+                        startIcon={sendingState[participant.id] ? 
+                          <CircularProgress size={16} color="inherit" /> : 
+                          <MessageIcon />
+                        } 
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleResendSMS(participant.id)}
+                        disabled={sendingState[participant.id]}
+                      >
+                        {sendingState[participant.id] ? 'Sending...' : 'Resend SMS'}
+                      </Button>
                     </Box>
                   ))}
                 </Box>
               </Paper>
             </Grid>
-          </Grid>
-
-          {tripData.participants.length > 0 ? (
-            <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4 }}>
-              <Typography variant="h6" component="h2" gutterBottom>
-                Waiting on responses from...
-              </Typography>
-              
-              <Box sx={{ mt: 2 }}>
-                {tripData.participants.map(participant => (
-                  <Box key={participant.id} sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    py: 1.5,
-                    borderBottom: '1px solid',
-                    borderColor: 'divider'
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Avatar src={participant.image || `https://i.pravatar.cc/150?u=${participant.id}`} alt={participant.name} />
-                      <Typography sx={{ ml: 2 }}>{participant.name}</Typography>
-                    </Box>
-                    <Button 
-                      startIcon={sendingState[participant.id] ? 
-                        <CircularProgress size={16} color="inherit" /> : 
-                        <MessageIcon />
-                      } 
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleResendSMS(participant.id)}
-                      disabled={sendingState[participant.id]}
-                    >
-                      {sendingState[participant.id] ? 'Sending...' : 'Resend SMS'}
-                    </Button>
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
           ) : (
-            <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4, textAlign: 'center' }}>
-              <Typography variant="h6" component="h2" gutterBottom>
-                All participants have responded!
-              </Typography>
-              <Typography color="text.secondary">
-                Everyone has completed their survey. You're ready to proceed with trip planning.
-              </Typography>
-            </Paper>
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4, textAlign: 'center' }}>
+                <Typography variant="h6" component="h2" gutterBottom>
+                  All participants have responded!
+                </Typography>
+                <Typography color="text.secondary">
+                  Everyone has completed their survey. You're ready to proceed with trip planning.
+                </Typography>
+              </Paper>
+            </Grid>
           )}
 
-          <Box sx={{ textAlign: 'center' }}>
+          <Grid item xs={12} sx={{ textAlign: 'center' }}>
             <Button 
               variant="contained"
               startIcon={<AutoAwesomeIcon />}
@@ -427,8 +424,8 @@ const DashboardPage = () => {
                 'Ready to generate recommendations!' : 
                 'Enabled when 50% or more have responded'}
             </Typography>
-          </Box>
-        </Box>
+          </Grid>
+        </Grid>
       </Container>
 
       {/* Toast notification */}

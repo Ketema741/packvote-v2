@@ -324,26 +324,35 @@ const DashboardPage = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={8}>
             <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
               <Typography variant="h6" gutterBottom>
                 Trip Dates
               </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Available dates after accounting for everyone's preferences and blackout dates
+              </Typography>
+              
               {tripData.overlappingRanges && tripData.overlappingRanges.length > 0 ? (
-                <>
-                  <Typography variant="h4" color="primary">
-                    {tripData.overlappingRanges[0].start}
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body1" color="text.primary" sx={{ fontWeight: 'medium', mb: 1 }}>
+                    Overlapping available date ranges:
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    See all available dates in the Dates section below
-                  </Typography>
-                </>
+                  {tripData.overlappingRanges.map((range, index) => (
+                    <Box key={index} sx={{ mb: 1, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                      <Typography variant="body1">
+                        {range.start} to {range.end} ({range.days} days)
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
               ) : (
-                <Typography variant="body1" color="text.secondary">
-                  {tripData.dateRange.start ? 
-                    "No overlapping dates found. See details below." : 
-                    "No date preferences yet"}
-                </Typography>
+                <Box sx={{ color: 'text.secondary', mt: 1 }}>
+                  <WarningIcon color="warning" sx={{ verticalAlign: 'middle', mr: 1 }} />
+                  <Typography variant="body2" display="inline">
+                    No overlapping dates found that work for everyone. Try adjusting preferences or blackout dates.
+                  </Typography>
+                </Box>
               )}
             </Paper>
           </Grid>
@@ -365,37 +374,6 @@ const DashboardPage = () => {
               </Box>
             </Paper>
           </Grid>
-
-          {/* Date Range Card */}
-          <Card sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" gutterBottom>Dates</Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Available dates after accounting for everyone's preferences and blackout dates
-              </Typography>
-            </Box>
-            {tripData.overlappingRanges && tripData.overlappingRanges.length > 0 ? (
-              <Box>
-                <Typography variant="body1" color="text.primary" sx={{ fontWeight: 'medium', mb: 1 }}>
-                  Overlapping available date ranges:
-                </Typography>
-                {tripData.overlappingRanges.map((range, index) => (
-                  <Box key={index} sx={{ mb: 1, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
-                    <Typography variant="body1">
-                      {range.start} to {range.end} ({range.days} days)
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            ) : (
-              <Box sx={{ color: 'text.secondary' }}>
-                <WarningIcon color="warning" sx={{ verticalAlign: 'middle', mr: 1 }} />
-                <Typography variant="body2" display="inline">
-                  No overlapping dates found that work for everyone. Try adjusting preferences or blackout dates.
-                </Typography>
-              </Box>
-            )}
-          </Card>
 
           {tripData.participants.length > 0 ? (
             <Grid item xs={12}>

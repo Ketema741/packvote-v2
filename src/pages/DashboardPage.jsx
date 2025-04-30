@@ -15,11 +15,13 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  Chip
+  Chip,
+  Card
 } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import MessageIcon from '@mui/icons-material/Message';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import WarningIcon from '@mui/icons-material/Warning';
 import { getTripDetails, sendSMS, calculateSurveyStats } from '../utils/api';
 import '../styles/DashboardPage.css';
 import '../styles/LandingPage.css';
@@ -47,7 +49,8 @@ const DashboardPage = () => {
       window: ''
     },
     vibes: [],
-    totalResponses: 0
+    totalResponses: 0,
+    overlappingRanges: []
   });
   
   const [loading, setLoading] = useState(true);
@@ -105,6 +108,11 @@ const DashboardPage = () => {
             end: 'Not available',
             window: 'Not available'
           },
+          overlappingRanges: stats.overlappingRanges ? stats.overlappingRanges.map(range => ({
+            start: range.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+            end: range.end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            days: Math.ceil((range.end - range.start) / (1000 * 60 * 60 * 24))
+          })) : [],
           vibes: stats.commonVibes,
           totalResponses: stats.totalResponses
         };
@@ -319,20 +327,22 @@ const DashboardPage = () => {
           <Grid item xs={12} md={4}>
             <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
               <Typography variant="h6" gutterBottom>
-                Preferred Dates
+                Trip Dates
               </Typography>
-              {tripData.dateRange.start ? (
+              {tripData.overlappingRanges && tripData.overlappingRanges.length > 0 ? (
                 <>
                   <Typography variant="h4" color="primary">
-                    {tripData.dateRange.start} - {tripData.dateRange.end}
+                    {tripData.overlappingRanges[0].start}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {tripData.dateRange.window}
+                    See all available dates in the Dates section below
                   </Typography>
                 </>
               ) : (
                 <Typography variant="body1" color="text.secondary">
-                  No date preferences yet
+                  {tripData.dateRange.start ? 
+                    "No overlapping dates found. See details below." : 
+                    "No date preferences yet"}
                 </Typography>
               )}
             </Paper>
@@ -355,6 +365,37 @@ const DashboardPage = () => {
               </Box>
             </Paper>
           </Grid>
+
+          {/* Date Range Card */}
+          <Card sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" gutterBottom>Dates</Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Available dates after accounting for everyone's preferences and blackout dates
+              </Typography>
+            </Box>
+            {tripData.overlappingRanges && tripData.overlappingRanges.length > 0 ? (
+              <Box>
+                <Typography variant="body1" color="text.primary" sx={{ fontWeight: 'medium', mb: 1 }}>
+                  Overlapping available date ranges:
+                </Typography>
+                {tripData.overlappingRanges.map((range, index) => (
+                  <Box key={index} sx={{ mb: 1, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                    <Typography variant="body1">
+                      {range.start} to {range.end} ({range.days} days)
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{ color: 'text.secondary' }}>
+                <WarningIcon color="warning" sx={{ verticalAlign: 'middle', mr: 1 }} />
+                <Typography variant="body2" display="inline">
+                  No overlapping dates found that work for everyone. Try adjusting preferences or blackout dates.
+                </Typography>
+              </Box>
+            )}
+          </Card>
 
           {tripData.participants.length > 0 ? (
             <Grid item xs={12}>

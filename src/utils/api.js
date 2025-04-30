@@ -246,6 +246,8 @@ export const calculateSurveyStats = (responses) => {
     };
   }
 
+  console.log('Calculating survey stats from', responses.length, 'responses');
+  
   // Calculate median budget
   const budgets = responses
     .map(r => {
@@ -284,8 +286,8 @@ export const calculateSurveyStats = (responses) => {
     ? budgets[Math.floor(budgets.length / 2)]
     : 0;
 
-  // Calculate date ranges
-  const dateRanges = responses.flatMap(r => {
+  // Parse all preferred date ranges
+  const preferredDateRanges = responses.flatMap(r => {
     // Handle multiple preferred date ranges separated by semicolons
     const dateRangesStr = r.preferred_dates || "";
     return dateRangesStr.split(';').map(range => {
@@ -295,17 +297,120 @@ export const calculateSurveyStats = (responses) => {
         end: new Date(end)
       };
     });
-  });
+  }).filter(d => !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime()));
 
-  const validDateRanges = dateRanges.filter(d => 
-    !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime())
-  );
-  
-  const dateRange = validDateRanges.length > 0
+  console.log('All preferred date ranges:', preferredDateRanges.map(d => 
+    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
+  ));
+
+  // Parse all blackout date ranges
+  const blackoutDateRanges = responses.flatMap(r => {
+    // Handle multiple blackout date ranges separated by semicolons
+    const dateRangesStr = r.blackout_dates || "";
+    if (!dateRangesStr) return [];
+    
+    return dateRangesStr.split(';').map(range => {
+      const [start, end] = range.trim().split(' - ');
+      return {
+        start: new Date(start),
+        end: new Date(end)
+      };
+    });
+  }).filter(d => !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime()));
+
+  console.log('All blackout date ranges:', blackoutDateRanges.map(d => 
+    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
+  ));
+
+  // Group preferred date ranges by user
+  const preferredDatesByUser = responses.map(r => {
+    const dateRangesStr = r.preferred_dates || "";
+    if (!dateRangesStr) return [];
+    
+    return dateRangesStr.split(';')
+      .map(range => {
+        const [start, end] = range.trim().split(' - ');
+        return {
+          start: new Date(start),
+          end: new Date(end)
+        };
+      })
+      .filter(d => !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime()));
+  }).filter(ranges => ranges.length > 0);
+
+  console.log('Preferred dates by user:', preferredDatesByUser.map(
+    (ranges, i) => `User ${i+1}: ${ranges.map(d => 
+      `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
+    ).join(', ')}`
+  ));
+
+  // Function to check if two date ranges overlap
+  const checkOverlap = (range1, range2) => {
+    return range1.start <= range2.end && range2.start <= range1.end;
+  };
+
+  // Function to get the overlap between two date ranges
+  const getOverlap = (range1, range2) => {
+    return {
+      start: new Date(Math.max(range1.start.getTime(), range2.start.getTime())),
+      end: new Date(Math.min(range1.end.getTime(), range2.end.getTime()))
+    };
+  };
+
+  // Function to check if a date range overlaps with any blackout period
+  const overlapsWithBlackout = (range) => {
+    return blackoutDateRanges.some(blackout => checkOverlap(range, blackout));
+  };
+
+  // Find overlapping date ranges across all users
+  let overlappingRanges = [];
+
+  if (preferredDatesByUser.length > 0) {
+    // Start with the first user's preferred dates
+    overlappingRanges = [...preferredDatesByUser[0]];
+    console.log('Starting with first user ranges:', overlappingRanges.map(d => 
+      `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
+    ));
+    
+    // For each subsequent user, find overlaps with current overlapping ranges
+    for (let i = 1; i < preferredDatesByUser.length; i++) {
+      const userRanges = preferredDatesByUser[i];
+      const newOverlaps = [];
+      
+      // Check each current overlap against each of this user's ranges
+      for (const currentOverlap of overlappingRanges) {
+        for (const userRange of userRanges) {
+          if (checkOverlap(currentOverlap, userRange)) {
+            newOverlaps.push(getOverlap(currentOverlap, userRange));
+          }
+        }
+      }
+      
+      overlappingRanges = newOverlaps;
+      console.log(`After processing user ${i+1}, overlapping ranges:`, overlappingRanges.map(d => 
+        `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
+      ));
+      
+      // If we have no more overlaps, break early
+      if (overlappingRanges.length === 0) break;
+    }
+  }
+
+  // Remove any overlapping ranges that conflict with blackout dates
+  const validOverlaps = overlappingRanges.filter(range => !overlapsWithBlackout(range));
+  console.log('Overlapping ranges after removing blackout dates:', validOverlaps.map(d => 
+    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
+  ));
+
+  // Sort valid overlaps by start date
+  validOverlaps.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  // Calculate the date range from the valid overlapping periods
+  const dateRange = validOverlaps.length > 0
     ? {
-        start: new Date(Math.min(...validDateRanges.map(d => d.start.getTime()))),
-        end: new Date(Math.max(...validDateRanges.map(d => d.end.getTime()))),
-        window: Math.max(...validDateRanges.map(d => 
+        start: validOverlaps[0].start,
+        end: validOverlaps[validOverlaps.length - 1].end,
+        window: Math.max(...validOverlaps.map(d => 
           Math.ceil((d.end - d.start) / (1000 * 60 * 60 * 24))
         ))
       }
@@ -314,6 +419,11 @@ export const calculateSurveyStats = (responses) => {
         end: null,
         window: null
       };
+
+  console.log('Final date range:', dateRange.start ? 
+    `${dateRange.start.toLocaleDateString()} - ${dateRange.end.toLocaleDateString()} (${dateRange.window} days)` : 
+    'No valid dates found'
+  );
 
   // Calculate most common vibes
   const allVibes = responses.flatMap(r => r.vibe_choices);
@@ -331,6 +441,8 @@ export const calculateSurveyStats = (responses) => {
     medianBudget,
     dateRange,
     commonVibes,
-    totalResponses: responses.length
+    totalResponses: responses.length,
+    // Add overlapping ranges for more detailed display if needed
+    overlappingRanges: validOverlaps
   };
 }; 

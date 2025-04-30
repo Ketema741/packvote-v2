@@ -61,15 +61,7 @@
               "inputType": "date",
               "name": "preferredStartDate1",
               "title": "Start Date",
-              "isRequired": true,
-              "min": "2023-07-01",
-              "validators": [
-                {
-                  "type": "expression",
-                  "expression": "dateCompare({preferredStartDate1}, 'today') >= 0",
-                  "text": "Start date cannot be in the past"
-                }
-              ]
+              "isRequired": true
             },
             {
               "type": "text",
@@ -77,12 +69,11 @@
               "name": "preferredEndDate1",
               "title": "End Date",
               "isRequired": true,
-              "min": "2023-07-01",
               "validators": [
                 {
                   "type": "expression",
-                  "expression": "dateCompare({preferredEndDate1}, {preferredStartDate1}) >= 0",
-                  "text": "End date cannot be before start date"
+                  "expression": "{preferredEndDate1} >= {preferredStartDate1}",
+                  "text": "End date must be on or after start date"
                 }
               ]
             }
@@ -120,27 +111,18 @@
               "type": "text",
               "inputType": "date",
               "name": "preferredStartDate2",
-              "title": "Start Date",
-              "min": "2023-07-01",
-              "validators": [
-                {
-                  "type": "expression",
-                  "expression": "dateCompare({preferredStartDate2}, 'today') >= 0",
-                  "text": "Start date cannot be in the past"
-                }
-              ]
+              "title": "Start Date"
             },
             {
               "type": "text",
               "inputType": "date",
               "name": "preferredEndDate2",
               "title": "End Date",
-              "min": "2023-07-01",
               "validators": [
                 {
                   "type": "expression",
-                  "expression": "dateCompare({preferredEndDate2}, {preferredStartDate2}) >= 0",
-                  "text": "End date cannot be before start date"
+                  "expression": "{preferredEndDate2} >= {preferredStartDate2}",
+                  "text": "End date must be on or after start date"
                 }
               ]
             }
@@ -181,27 +163,18 @@
               "type": "text",
               "inputType": "date",
               "name": "preferredStartDate3",
-              "title": "Start Date",
-              "min": "2023-07-01",
-              "validators": [
-                {
-                  "type": "expression",
-                  "expression": "dateCompare({preferredStartDate3}, 'today') >= 0",
-                  "text": "Start date cannot be in the past"
-                }
-              ]
+              "title": "Start Date"
             },
             {
               "type": "text",
               "inputType": "date",
               "name": "preferredEndDate3",
               "title": "End Date",
-              "min": "2023-07-01",
               "validators": [
                 {
                   "type": "expression",
-                  "expression": "dateCompare({preferredEndDate3}, {preferredStartDate3}) >= 0",
-                  "text": "End date cannot be before start date"
+                  "expression": "{preferredEndDate3} >= {preferredStartDate3}",
+                  "text": "End date must be on or after start date"
                 }
               ]
             }
@@ -245,27 +218,18 @@
               "type": "text",
               "inputType": "date",
               "name": "blackoutStartDate1",
-              "title": "Start Date",
-              "min": "2023-07-01",
-              "validators": [
-                {
-                  "type": "expression",
-                  "expression": "dateCompare({blackoutStartDate1}, 'today') >= 0",
-                  "text": "Start date cannot be in the past"
-                }
-              ]
+              "title": "Start Date"
             },
             {
               "type": "text",
               "inputType": "date",
               "name": "blackoutEndDate1",
               "title": "End Date",
-              "min": "2023-07-01",
               "validators": [
                 {
                   "type": "expression",
-                  "expression": "dateCompare({blackoutEndDate1}, {blackoutStartDate1}) >= 0",
-                  "text": "End date cannot be before start date"
+                  "expression": "{blackoutEndDate1} >= {blackoutStartDate1}",
+                  "text": "End date must be on or after start date"
                 }
               ]
             }
@@ -306,27 +270,18 @@
               "type": "text",
               "inputType": "date",
               "name": "blackoutStartDate2",
-              "title": "Start Date",
-              "min": "2023-07-01",
-              "validators": [
-                {
-                  "type": "expression",
-                  "expression": "dateCompare({blackoutStartDate2}, 'today') >= 0",
-                  "text": "Start date cannot be in the past"
-                }
-              ]
+              "title": "Start Date"
             },
             {
               "type": "text",
               "inputType": "date",
               "name": "blackoutEndDate2",
               "title": "End Date",
-              "min": "2023-07-01",
               "validators": [
                 {
                   "type": "expression",
-                  "expression": "dateCompare({blackoutEndDate2}, {blackoutStartDate2}) >= 0",
-                  "text": "End date cannot be before start date"
+                  "expression": "{blackoutEndDate2} >= {blackoutStartDate2}",
+                  "text": "End date must be on or after start date"
                 }
               ]
             }
@@ -367,27 +322,18 @@
               "type": "text",
               "inputType": "date",
               "name": "blackoutStartDate3",
-              "title": "Start Date",
-              "min": "2023-07-01",
-              "validators": [
-                {
-                  "type": "expression",
-                  "expression": "dateCompare({blackoutStartDate3}, 'today') >= 0",
-                  "text": "Start date cannot be in the past"
-                }
-              ]
+              "title": "Start Date"
             },
             {
               "type": "text",
               "inputType": "date",
               "name": "blackoutEndDate3",
               "title": "End Date",
-              "min": "2023-07-01",
               "validators": [
                 {
                   "type": "expression",
-                  "expression": "dateCompare({blackoutEndDate3}, {blackoutStartDate3}) >= 0",
-                  "text": "End date cannot be before start date"
+                  "expression": "{blackoutEndDate3} >= {blackoutStartDate3}",
+                  "text": "End date must be on or after start date"
                 }
               ]
             }
@@ -525,5 +471,7 @@
       "expression": "{moreQuestions} = 'No, save my results and finish'"
     }
   ],
-  "headerView": "advanced"
+  "headerView": "advanced",
+  "checkErrorsMode": "onValueChanged",
+  "textUpdateMode": "onBlur"
 }

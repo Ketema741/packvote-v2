@@ -16,7 +16,6 @@ import {
   Snackbar,
   Alert,
   Chip,
-  Card
 } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import MessageIcon from '@mui/icons-material/Message';

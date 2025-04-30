@@ -157,18 +157,6 @@ const DashboardPage = () => {
     setToast(prev => ({ ...prev, open: false }));
   };
 
-  const handleShareTrip = () => {
-    // Redirect to TripLinks page with the current trip data
-    navigate('/trip-links', { 
-      state: { 
-        tripData: {
-          tripId: tripData.id,
-          organizer: tripData.organizer,
-          participants: [...tripData.participants, ...tripData.respondedParticipants]
-        } 
-      } 
-    });
-  };
 
   // Calculate progress percentage
   const progress = tripData.progress && tripData.progress.total > 0 ? 
@@ -333,12 +321,20 @@ const DashboardPage = () => {
               <Typography variant="h6" gutterBottom>
                 Preferred Dates
               </Typography>
-              <Typography variant="h4" color="primary">
-                {tripData.dateRange.start} - {tripData.dateRange.end}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {tripData.dateRange.window}
-              </Typography>
+              {tripData.dateRange.start ? (
+                <>
+                  <Typography variant="h4" color="primary">
+                    {tripData.dateRange.start} - {tripData.dateRange.end}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {tripData.dateRange.window}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body1" color="text.secondary">
+                  No date preferences yet
+                </Typography>
+              )}
             </Paper>
           </Grid>
 

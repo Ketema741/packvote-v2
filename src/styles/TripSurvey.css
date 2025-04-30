@@ -118,10 +118,15 @@
 
 .sv_custom_panel_title {
   font-family: 'Inter', sans-serif !important;
-  font-size: 1.2rem !important;
+  font-size: 1rem !important;
   font-weight: 500 !important;
   color: var(--color-text, #111827) !important;
   margin-bottom: 1rem !important;
+  text-align: left !important;
+  display: flex !important;
+  align-items: center !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
 .sv_custom_panel_description {
@@ -344,4 +349,149 @@ textarea.sv_custom_input {
     flex-direction: row;
     justify-content: flex-start;
   }
+}
+
+.sv_custom_error {
+  color: #ef4444 !important;
+  font-size: 0.9rem !important;
+  margin-top: 0.5rem !important;
+}
+
+/* Make validation text red by default */
+.sv_q_erbox {
+  color: #ef4444 !important;
+  font-size: 0.9rem !important;
+  margin-top: 0.5rem !important;
+}
+
+/* Adjust checkbox layout for boolean items */
+.sv_qcbx label, .sv_qcbc label {
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Hide variable names in boolean/checkbox controls */
+.sv-boolean__label {
+  margin-left: 8px !important;
+}
+
+/* Properly align date inputs */
+.sv_q[data-name^="preferred"], .sv_q[data-name^="blackout"] {
+  margin-bottom: 0.5rem !important;
+}
+
+/* Boolean/checkbox styling */
+.sv-boolean__switch {
+  margin-right: 8px !important;
+}
+
+/* Remove the checkbox variable name */
+.sv-boolean__label-clickable {
+  font-size: 0.9rem !important;
+  margin-left: 0 !important;
+}
+
+/* Fix checkbox element styling */
+div[data-name="addSecondPreferredRange"],
+div[data-name="addThirdPreferredRange"],
+div[data-name="hasBlackoutDates"],
+div[data-name="addSecondBlackoutRange"],
+div[data-name="addThirdBlackoutRange"] {
+  margin-bottom: 15px !important;
+}
+
+/* For non-boolean checkboxes */
+.sv_q_checkbox {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.sv_q_checkbox_control_label {
+  font-weight: normal !important;
+  font-size: 0.9rem !important;
+}
+
+/* Fix panel styling */
+.sv_p_title {
+  text-align: left !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Fix panel container */
+.sv_p_container {
+  padding-left: 0 !important;
+}
+
+/* Hide variable names and improve radiogroup styling */
+div[data-name="addSecondPreferredRange"] legend,
+div[data-name="addThirdPreferredRange"] legend,
+div[data-name="hasBlackoutDates"] legend,
+div[data-name="addSecondBlackoutRange"] legend,
+div[data-name="addThirdBlackoutRange"] legend {
+  display: none !important;
+}
+
+/* Add space between radio options */
+.sv_q_radiogroup_inline {
+  display: flex !important;
+  gap: 16px !important;
+}
+
+/* Style radio labels */
+.sv_q_radiogroup_label {
+  font-weight: normal !important;
+  font-size: 0.9rem !important;
+}
+
+/* Panel border style */
+.sv_custom_panel_container {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  margin-bottom: 24px !important;
+}
+
+/* Additional styling to hide variable names */
+.sv_q_radiogroup_control_label,
+.sv_qcbc legend,
+.sv_qcbx legend {
+  display: none !important;
+}
+
+/* More specific selectors to target the problematic elements */
+div[data-name="addSecondPreferredRange"],
+div[data-name="addThirdPreferredRange"],
+div[data-name="hasBlackoutDates"],
+div[data-name="addSecondBlackoutRange"],
+div[data-name="addThirdBlackoutRange"] {
+  position: relative !important;
+}
+
+div[data-name="addSecondPreferredRange"] > div:first-child,
+div[data-name="addThirdPreferredRange"] > div:first-child,
+div[data-name="hasBlackoutDates"] > div:first-child,
+div[data-name="addSecondBlackoutRange"] > div:first-child,
+div[data-name="addThirdBlackoutRange"] > div:first-child {
+  display: none !important;
+}
+
+/* Make the radio buttons appear better and hide the variable name */
+.sv_q_radiogroup {
+  border: none !important;
+  background: transparent !important;
+}
+
+.custom-panel-title {
+  font-size: 1rem !important;
+  text-align: left !important;
+  display: flex !important;
+  align-items: center !important;
+  width: auto !important;
+}
+
+.custom-panel-container {
+  padding-left: 0 !important;
+  border-radius: 8px !important;
 } 

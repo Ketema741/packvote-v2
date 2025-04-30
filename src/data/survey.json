@@ -46,17 +46,353 @@
       "title": "Dates",
       "elements": [
         {
-          "type": "comment",
-          "name": "preferredDates",
-          "title": "Preferred Dates",
-          "description": "Rough ranges are fine. One range per line, please.",
-          "isRequired": true
+          "type": "html",
+          "name": "preferredDatesHeader",
+          "html": "<h4 style='text-align: left; font-size: 1.2rem; margin-bottom: 10px;'>Preferred Travel Dates</h4><p>Please select date ranges you would prefer to travel</p>"
         },
         {
-          "type": "comment",
-          "name": "blackoutDates",
-          "title": "Blackout Dates",
-          "description": "Dates you absolutely CANNOT make. One range per line, please"
+          "type": "panel",
+          "name": "preferredDatesPanel1",
+          "title": "Date Range 1",
+          "titleLocation": "left",
+          "elements": [
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "preferredStartDate1",
+              "title": "Start Date",
+              "isRequired": true,
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({preferredStartDate1}, 'today') >= 0",
+                  "text": "Start date cannot be in the past"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "preferredEndDate1",
+              "title": "End Date",
+              "isRequired": true,
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({preferredEndDate1}, {preferredStartDate1}) >= 0",
+                  "text": "End date cannot be before start date"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "html",
+          "name": "addSecondPreferredRangeQuestion",
+          "html": "<p>Add another preferred date range?</p>"
+        },
+        {
+          "type": "radiogroup",
+          "name": "addSecondPreferredRange",
+          "hideTitle": true,
+          "choices": [
+            {
+              "value": true,
+              "text": "Yes"
+            },
+            {
+              "value": false,
+              "text": "No"
+            }
+          ],
+          "colCount": 2,
+          "defaultValue": false
+        },
+        {
+          "type": "panel",
+          "name": "preferredDatesPanel2",
+          "title": "Date Range 2",
+          "titleLocation": "left",
+          "elements": [
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "preferredStartDate2",
+              "title": "Start Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({preferredStartDate2}, 'today') >= 0",
+                  "text": "Start date cannot be in the past"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "preferredEndDate2",
+              "title": "End Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({preferredEndDate2}, {preferredStartDate2}) >= 0",
+                  "text": "End date cannot be before start date"
+                }
+              ]
+            }
+          ],
+          "visibleIf": "{addSecondPreferredRange} = true"
+        },
+        {
+          "type": "html",
+          "name": "addThirdPreferredRangeQuestion",
+          "html": "<p>Add another preferred date range?</p>",
+          "visibleIf": "{addSecondPreferredRange} = true"
+        },
+        {
+          "type": "radiogroup",
+          "name": "addThirdPreferredRange",
+          "hideTitle": true,
+          "choices": [
+            {
+              "value": true,
+              "text": "Yes"
+            },
+            {
+              "value": false,
+              "text": "No"
+            }
+          ],
+          "colCount": 2,
+          "defaultValue": false,
+          "visibleIf": "{addSecondPreferredRange} = true"
+        },
+        {
+          "type": "panel",
+          "name": "preferredDatesPanel3",
+          "title": "Date Range 3",
+          "titleLocation": "left",
+          "elements": [
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "preferredStartDate3",
+              "title": "Start Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({preferredStartDate3}, 'today') >= 0",
+                  "text": "Start date cannot be in the past"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "preferredEndDate3",
+              "title": "End Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({preferredEndDate3}, {preferredStartDate3}) >= 0",
+                  "text": "End date cannot be before start date"
+                }
+              ]
+            }
+          ],
+          "visibleIf": "{addThirdPreferredRange} = true"
+        },
+        {
+          "type": "html",
+          "name": "blackoutDatesHeader",
+          "html": "<h4 style='text-align: left; font-size: 1.2rem; margin-bottom: 10px;'>Blackout Dates</h4><p>Please select dates you CANNOT travel</p>"
+        },
+        {
+          "type": "html",
+          "name": "hasBlackoutDatesQuestion",
+          "html": "<p>Do you have dates you absolutely cannot travel?</p>"
+        },
+        {
+          "type": "radiogroup",
+          "name": "hasBlackoutDates",
+          "hideTitle": true,
+          "choices": [
+            {
+              "value": true,
+              "text": "Yes"
+            },
+            {
+              "value": false,
+              "text": "No"
+            }
+          ],
+          "colCount": 2,
+          "defaultValue": false
+        },
+        {
+          "type": "panel",
+          "name": "blackoutDatesPanel1",
+          "title": "Blackout Range 1",
+          "titleLocation": "left",
+          "elements": [
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "blackoutStartDate1",
+              "title": "Start Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({blackoutStartDate1}, 'today') >= 0",
+                  "text": "Start date cannot be in the past"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "blackoutEndDate1",
+              "title": "End Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({blackoutEndDate1}, {blackoutStartDate1}) >= 0",
+                  "text": "End date cannot be before start date"
+                }
+              ]
+            }
+          ],
+          "visibleIf": "{hasBlackoutDates} = true"
+        },
+        {
+          "type": "html",
+          "name": "addSecondBlackoutRangeQuestion",
+          "html": "<p>Add another blackout date range?</p>",
+          "visibleIf": "{hasBlackoutDates} = true"
+        },
+        {
+          "type": "radiogroup",
+          "name": "addSecondBlackoutRange",
+          "hideTitle": true,
+          "choices": [
+            {
+              "value": true,
+              "text": "Yes"
+            },
+            {
+              "value": false,
+              "text": "No"
+            }
+          ],
+          "colCount": 2,
+          "defaultValue": false,
+          "visibleIf": "{hasBlackoutDates} = true"
+        },
+        {
+          "type": "panel",
+          "name": "blackoutDatesPanel2",
+          "title": "Blackout Range 2",
+          "titleLocation": "left",
+          "elements": [
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "blackoutStartDate2",
+              "title": "Start Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({blackoutStartDate2}, 'today') >= 0",
+                  "text": "Start date cannot be in the past"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "blackoutEndDate2",
+              "title": "End Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({blackoutEndDate2}, {blackoutStartDate2}) >= 0",
+                  "text": "End date cannot be before start date"
+                }
+              ]
+            }
+          ],
+          "visibleIf": "{addSecondBlackoutRange} = true"
+        },
+        {
+          "type": "html",
+          "name": "addThirdBlackoutRangeQuestion",
+          "html": "<p>Add another blackout date range?</p>",
+          "visibleIf": "{addSecondBlackoutRange} = true"
+        },
+        {
+          "type": "radiogroup",
+          "name": "addThirdBlackoutRange",
+          "hideTitle": true,
+          "choices": [
+            {
+              "value": true,
+              "text": "Yes"
+            },
+            {
+              "value": false,
+              "text": "No"
+            }
+          ],
+          "colCount": 2,
+          "defaultValue": false,
+          "visibleIf": "{addSecondBlackoutRange} = true"
+        },
+        {
+          "type": "panel",
+          "name": "blackoutDatesPanel3",
+          "title": "Blackout Range 3",
+          "titleLocation": "left",
+          "elements": [
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "blackoutStartDate3",
+              "title": "Start Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({blackoutStartDate3}, 'today') >= 0",
+                  "text": "Start date cannot be in the past"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "inputType": "date",
+              "name": "blackoutEndDate3",
+              "title": "End Date",
+              "min": "2023-07-01",
+              "validators": [
+                {
+                  "type": "expression",
+                  "expression": "dateCompare({blackoutEndDate3}, {blackoutStartDate3}) >= 0",
+                  "text": "End date cannot be before start date"
+                }
+              ]
+            }
+          ],
+          "visibleIf": "{addThirdBlackoutRange} = true"
         },
         {
           "type": "text",
@@ -76,12 +412,12 @@
           "min": 1,
           "max": 90,
           "validators": [
-                {
-                  "type": "expression",
-                  "expression": "{maxTripDays} >= {minTripDays}",
-                  "text": "Maximum trip length must be at least minimum trip length"
-                }
-              ]
+            {
+              "type": "expression",
+              "expression": "{maxTripDays} >= {minTripDays}",
+              "text": "Maximum trip length must be at least minimum trip length"
+            }
+          ]
         }
       ]
     },

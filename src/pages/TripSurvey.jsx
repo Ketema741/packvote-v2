@@ -96,6 +96,13 @@ const TripSurvey = () => {
       // Configure dropdown appearance
       surveyModel.showClearButton = false; // Hide the X button altogether
       
+      // Customize error styling
+      surveyModel.onValidateQuestion.add((sender, options) => {
+        if (options.error) {
+          options.errorText = `<span style="color: #ef4444;">${options.error}</span>`;
+        }
+      });
+      
       // Set spacing for all questions in the survey
       surveyModel.setDesignMode(true);
       surveyModel.getAllQuestions().forEach(question => {
@@ -108,7 +115,23 @@ const TripSurvey = () => {
           question.renderAs = "select";
           question.searchEnabled = false;
         }
+        
+        // Hide variable name display for specific questions
+        if (["addSecondPreferredRange", "addThirdPreferredRange", "hasBlackoutDates", 
+             "addSecondBlackoutRange", "addThirdBlackoutRange"].includes(question.name)) {
+          question.hideNumber = true;
+          question.showTitle = false;
+        }
       });
+      
+      // Customize panel appearance
+      surveyModel.getAllPanels().forEach(panel => {
+        panel.titleLocation = "left";
+        panel.title = panel.title.replace("Preferred Date Range", "Date Range").replace("Blackout Date Range", "Blackout Range");
+        panel.showQuestionNumbers = false;
+        panel.showTitle = true;
+      });
+      
       surveyModel.setDesignMode(false);
 
       // Custom CSS classes
@@ -161,12 +184,12 @@ const TripSurvey = () => {
         },
         text: "sv_q_text sv_custom_input",
         panel: {
-          title: "sv_p_title sv_custom_panel_title",
+          title: "sv_p_title sv_custom_panel_title custom-panel-title",
           description: "sv_p_description sv_custom_panel_description",
-          container: "sv_p_container sv_custom_panel_container"
+          container: "sv_p_container sv_custom_panel_container custom-panel-container"
         }
       };
-      
+
       setSurvey(surveyModel);
     });
   }, []);

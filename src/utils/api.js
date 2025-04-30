@@ -115,6 +115,57 @@ export const sendAllSMS = async (tripId) => {
  */
 export const saveSurveyResponse = async (participantId, responseData) => {
   try {
+    // Process preferred dates into a formatted string
+    let preferredDatesString = '';
+    
+    // First preferred date range (required)
+    if (responseData.preferredStartDate1 && responseData.preferredEndDate1) {
+      preferredDatesString = `${responseData.preferredStartDate1} - ${responseData.preferredEndDate1}`;
+    }
+    
+    // Second preferred date range (optional)
+    if (responseData.addSecondPreferredRange && 
+        responseData.addSecondPreferredRange.includes('Yes') &&
+        responseData.preferredStartDate2 && 
+        responseData.preferredEndDate2) {
+      preferredDatesString += `; ${responseData.preferredStartDate2} - ${responseData.preferredEndDate2}`;
+    }
+    
+    // Third preferred date range (optional)
+    if (responseData.addThirdPreferredRange && 
+        responseData.addThirdPreferredRange.includes('Yes') &&
+        responseData.preferredStartDate3 && 
+        responseData.preferredEndDate3) {
+      preferredDatesString += `; ${responseData.preferredStartDate3} - ${responseData.preferredEndDate3}`;
+    }
+
+    // Process blackout dates into a formatted string
+    let blackoutDatesString = '';
+    
+    // First blackout date range (optional)
+    if (responseData.hasBlackoutDates && 
+        responseData.hasBlackoutDates.includes('Yes') &&
+        responseData.blackoutStartDate1 && 
+        responseData.blackoutEndDate1) {
+      blackoutDatesString = `${responseData.blackoutStartDate1} - ${responseData.blackoutEndDate1}`;
+      
+      // Second blackout date range (optional)
+      if (responseData.addSecondBlackoutRange && 
+          responseData.addSecondBlackoutRange.includes('Yes') &&
+          responseData.blackoutStartDate2 && 
+          responseData.blackoutEndDate2) {
+        blackoutDatesString += `; ${responseData.blackoutStartDate2} - ${responseData.blackoutEndDate2}`;
+      }
+      
+      // Third blackout date range (optional)
+      if (responseData.addThirdBlackoutRange && 
+          responseData.addThirdBlackoutRange.includes('Yes') &&
+          responseData.blackoutStartDate3 && 
+          responseData.blackoutEndDate3) {
+        blackoutDatesString += `; ${responseData.blackoutStartDate3} - ${responseData.blackoutEndDate3}`;
+      }
+    }
+
     // Transform the data to match the backend's expected format
     const backendData = {
       trip_id: responseData.tripId,
@@ -122,11 +173,11 @@ export const saveSurveyResponse = async (participantId, responseData) => {
       name: responseData.name,
       live_location: responseData.liveLocation,
       budget: responseData.budget,
-      preferred_dates: responseData.preferredDates,
+      preferred_dates: preferredDatesString,
       min_trip_days: parseInt(responseData.minTripDays),
       max_trip_days: parseInt(responseData.maxTripDays),
       vibe_choices: responseData.vibe || [],
-      blackout_dates: responseData.blackoutDates,
+      blackout_dates: blackoutDatesString,
       more_questions: responseData.moreQuestions,
       past_liked: responseData.pastLiked,
       revisit: responseData.revisit,
@@ -234,15 +285,21 @@ export const calculateSurveyStats = (responses) => {
     : 0;
 
   // Calculate date ranges
-  const dateRanges = responses.map(r => {
-    const [start, end] = r.preferred_dates.split(' - ');
-    return {
-      start: new Date(start),
-      end: new Date(end)
-    };
+  const dateRanges = responses.flatMap(r => {
+    // Handle multiple preferred date ranges separated by semicolons
+    const dateRangesStr = r.preferred_dates || "";
+    return dateRangesStr.split(';').map(range => {
+      const [start, end] = range.trim().split(' - ');
+      return {
+        start: new Date(start),
+        end: new Date(end)
+      };
+    });
   });
 
-  const validDateRanges = dateRanges.filter(d => !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
+  const validDateRanges = dateRanges.filter(d => 
+    !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime())
+  );
   
   const dateRange = validDateRanges.length > 0
     ? {

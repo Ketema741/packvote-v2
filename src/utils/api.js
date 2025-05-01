@@ -445,4 +445,69 @@ export const calculateSurveyStats = (responses) => {
     // Add overlapping ranges for more detailed display if needed
     overlappingRanges: validOverlaps
   };
+};
+
+/**
+ * Generate travel recommendations for a trip
+ * @param {string} tripId - Trip ID
+ * @param {Object} options - Additional options (numRecommendations, temperature)
+ * @returns {Promise<Object>} Generated recommendations
+ */
+export const generateTravelRecommendations = async (tripId, options = {}) => {
+  try {
+    const { numRecommendations = 3, temperature = 0.7 } = options;
+    
+    const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        trip_id: tripId,
+        num_recommendations: numRecommendations,
+        temperature: temperature
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error generating travel recommendations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get stored travel recommendations for a trip
+ * @param {string} tripId - Trip ID
+ * @returns {Promise<Object>} Stored recommendations
+ */
+export const getTravelRecommendations = async (tripId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/recommendations/${tripId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      // If 404, it means no recommendations yet - this is not an error
+      if (response.status === 404) {
+        return { recommendations: [] };
+      }
+      
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting travel recommendations:', error);
+    throw error;
+  }
 }; 

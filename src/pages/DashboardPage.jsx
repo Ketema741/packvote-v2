@@ -154,7 +154,7 @@ const DashboardPage = () => {
   };
 
   const handleGetAIDestinations = () => {
-    navigate('/recommendations');
+    navigate(`/recommendations/${tripId}`);
   };
 
   const handleCloseToast = (event, reason) => {

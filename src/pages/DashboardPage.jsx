@@ -78,10 +78,12 @@ const DashboardPage = () => {
           console.log('No survey responses found for trip:', tripId);
         } else {
           console.log(`Found ${data.survey_responses.length} survey responses for trip:`, tripId);
+          console.log('Raw survey responses:', data.survey_responses);
         }
         
         // Calculate statistics from survey responses
         const stats = calculateSurveyStats(data.survey_responses || []);
+        console.log('Calculated stats:', stats);
         
         // Process the data for display in the dashboard
         const processedData = {
@@ -92,7 +94,45 @@ const DashboardPage = () => {
             total: data.participants.length
           },
           participants: data.participants.filter(p => !(p.responded || p.has_responded)),
-          respondedParticipants: data.participants.filter(p => p.responded || p.has_responded),
+          respondedParticipants: data.participants
+            .filter(p => p.responded || p.has_responded)
+            .map(p => {
+              // Find this participant's survey response
+              const response = data.survey_responses?.find(r => r.user_id === p.id);
+              console.log(`Processing participant ${p.name}, found response:`, response);
+              
+              // Add preferred dates to participant data if available
+              if (response) {
+                let preferredDates = [];
+                
+                if (Array.isArray(response.preferred_dates)) {
+                  preferredDates = response.preferred_dates;
+                } else if (typeof response.preferred_dates === 'string') {
+                  preferredDates = response.preferred_dates.split(';');
+                }
+                
+                // Process vibe choices
+                let vibeChoices = [];
+                if (Array.isArray(response.vibe_choices)) {
+                  vibeChoices = response.vibe_choices;
+                } else if (typeof response.vibe_choices === 'string' && response.vibe_choices) {
+                  vibeChoices = response.vibe_choices.split(';');
+                }
+                
+                console.log(`Participant ${p.name} has vibes:`, vibeChoices);
+                
+                return {
+                  ...p,
+                  preferredDates,
+                  blackoutDates: Array.isArray(response.blackout_dates) 
+                    ? response.blackout_dates 
+                    : (response.blackout_dates?.split(';') || []),
+                  vibeChoices
+                };
+              }
+              
+              return p;
+            }),
           organizer: data.participants.find(p => p.is_organizer),
           budget: {
             amount: stats.medianBudget,
@@ -110,11 +150,15 @@ const DashboardPage = () => {
           overlappingRanges: stats.overlappingRanges ? stats.overlappingRanges.map(range => ({
             start: range.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
             end: range.end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            days: Math.ceil((range.end - range.start) / (1000 * 60 * 60 * 24))
+            days: Math.max(1, Math.ceil((range.end - range.start) / (1000 * 60 * 60 * 24)) + 1)
           })) : [],
-          vibes: stats.commonVibes,
+          vibes: stats.commonVibes || [],
           totalResponses: stats.totalResponses
         };
+        
+        // Debug overlapping ranges
+        console.log('Stats overlapping ranges:', stats.overlappingRanges);
+        console.log('Processed overlapping ranges:', processedData.overlappingRanges);
         
         setTripData(processedData);
       } catch (error) {
@@ -328,49 +372,95 @@ const DashboardPage = () => {
               <Typography variant="h6" gutterBottom>
                 Trip Dates
               </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Available dates after accounting for everyone's preferences and blackout dates
-              </Typography>
               
-              {tripData.overlappingRanges && tripData.overlappingRanges.length > 0 ? (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body1" color="text.primary" sx={{ fontWeight: 'medium', mb: 1 }}>
-                    Overlapping available date ranges:
+              <Box>
+                {tripData.respondedParticipants.length > 0 ? (
+                  <>
+                    {/* Prioritize showing overlapping dates if they exist */}
+                    {Array.isArray(tripData.overlappingRanges) && tripData.overlappingRanges.length > 0 ? (
+                      <Box>
+                        <Typography variant="body1" color="primary" sx={{ fontWeight: 'medium' }}>
+                          Overlapping date ranges:
+                        </Typography>
+                        {tripData.overlappingRanges.map((range, index) => (
+                          <Box key={index} sx={{ mb: 1, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                            <Typography variant="body1">
+                              {range.start} to {range.end} ({range.days} days)
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Box sx={{ mb: 3, color: 'text.secondary' }}>
+                        <WarningIcon color="warning" sx={{ verticalAlign: 'middle', mr: 1 }} />
+                        <Typography variant="body2" display="inline">
+                          No overlapping dates found. Please adjust preferred dates to find a time that works for everyone.
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                ) : (
+                  <Typography color="text.secondary">
+                    Waiting for participants to respond with their date preferences.
                   </Typography>
-                  {tripData.overlappingRanges.map((range, index) => (
-                    <Box key={index} sx={{ mb: 1, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
-                      <Typography variant="body1">
-                        {range.start} to {range.end} ({range.days} days)
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              ) : (
-                <Box sx={{ color: 'text.secondary', mt: 1 }}>
-                  <WarningIcon color="warning" sx={{ verticalAlign: 'middle', mr: 1 }} />
-                  <Typography variant="body2" display="inline">
-                    No overlapping dates found that work for everyone. Try adjusting preferences or blackout dates.
-                  </Typography>
-                </Box>
-              )}
+                )}
+              </Box>
             </Paper>
           </Grid>
 
           <Grid item xs={12} md={4}>
             <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
               <Typography variant="h6" gutterBottom>
-                Common Vibes
+                Trip Vibes
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {tripData.vibes.map((vibe, index) => (
-                  <Chip 
-                    key={index} 
-                    label={vibe} 
-                    color="primary" 
-                    variant="outlined"
-                  />
-                ))}
-              </Box>
+              {tripData.vibes && tripData.vibes.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {tripData.vibes.map((vibe, index) => (
+                    <Chip 
+                      key={index} 
+                      label={vibe} 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    No common vibes found yet. Showing all vibes from participants:
+                  </Typography>
+                  
+                  {/* Show all vibes from individual participants */}
+                  {tripData.respondedParticipants.some(p => p.vibeChoices && p.vibeChoices.length > 0) ? (
+                    <Box sx={{ mt: 1 }}>
+                      {tripData.respondedParticipants.map((participant, index) => (
+                        participant.vibeChoices && participant.vibeChoices.length > 0 ? (
+                          <Box key={index} sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                              {participant.name}:
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 2 }}>
+                              {participant.vibeChoices.map((vibe, i) => (
+                                <Chip 
+                                  key={i} 
+                                  label={vibe} 
+                                  size="small"
+                                  color="default" 
+                                  variant="outlined"
+                                />
+                              ))}
+                            </Box>
+                          </Box>
+                        ) : null
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No vibes selected by any participant.
+                    </Typography>
+                  )}
+                </Box>
+              )}
             </Paper>
           </Grid>
 

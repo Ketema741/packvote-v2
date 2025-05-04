@@ -251,7 +251,7 @@ const TripSurvey = () => {
         blackoutDates: blackoutDates.length > 0 ? blackoutDates : [],
         minTripDays: sender.data.minTripDays,
         maxTripDays: sender.data.maxTripDays,
-        vibeChoices: sender.data.vibeChoices || [],
+        vibeChoices: sender.data.vibe || [],
         moreQuestions: sender.data.moreQuestions || null,
         pastLiked: sender.data.pastLiked || null,
         revisit: sender.data.revisit || null,

@@ -215,6 +215,8 @@ export const calculateSurveyStats = (responses) => {
   }
 
   console.log('Calculating survey stats from', responses.length, 'responses');
+  // Log raw data for debugging
+  console.log('Raw survey responses:', JSON.stringify(responses, null, 2));
   
   // Calculate median budget
   const budgets = responses
@@ -254,80 +256,237 @@ export const calculateSurveyStats = (responses) => {
     ? budgets[Math.floor(budgets.length / 2)]
     : 0;
 
-  // Parse all preferred date ranges
-  const preferredDateRanges = responses.flatMap(r => {
-    // Handle multiple preferred date ranges separated by semicolons
-    const dateRangesStr = r.preferred_dates || "";
-    return dateRangesStr.split(';').map(range => {
-      const [start, end] = range.trim().split(' - ');
-      return {
-        start: new Date(start),
-        end: new Date(end)
-      };
-    });
-  }).filter(d => !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime()));
+  // Helper function to safely parse dates in various formats
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    
+    // Try direct parsing first, but set time to noon to avoid timezone issues
+    const dateWithoutTime = dateStr.split('T')[0]; // Remove any time component if present
+    const date = new Date(`${dateWithoutTime}T12:00:00`); // Use noon to avoid timezone shifts
+    
+    if (!isNaN(date.getTime())) return date;
+    
+    // Try other formats if direct parsing failed
+    // Check for MM/DD/YYYY format
+    const usFormat = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+    const usMatch = dateStr.match(usFormat);
+    if (usMatch) {
+      return new Date(parseInt(usMatch[3]), parseInt(usMatch[1]) - 1, parseInt(usMatch[2]), 12, 0, 0);
+    }
+    
+    console.log(`Failed to parse date: ${dateStr}`);
+    return null;
+  };
 
-  console.log('All preferred date ranges:', preferredDateRanges.map(d => 
+  // Parse all preferred date ranges
+  const preferredDateRanges = responses.flatMap((r, index) => {
+    console.log(`Processing preferred dates for user ${index + 1}:`, r.preferred_dates);
+    
+    // Handle preferred dates as either array or semicolon-separated string
+    let dateRanges = [];
+    if (Array.isArray(r.preferred_dates)) {
+      dateRanges = r.preferred_dates;
+    } else {
+      const dateRangesStr = String(r.preferred_dates || "");
+      dateRanges = dateRangesStr ? dateRangesStr.split(';') : [];
+    }
+    
+    return dateRanges.map(range => {
+      // Handle various formats of date ranges
+      let start, end;
+      
+      if (typeof range === 'string') {
+        console.log(`Parsing string date range: ${range}`);
+        // Try both "to" and "-" separators
+        if (range.includes(" to ")) {
+          const parts = range.split(" to ");
+          start = parseDate(parts[0].trim());
+          end = parseDate(parts[1].trim());
+        } else if (range.includes(" - ")) {
+          const parts = range.split(" - ");
+          start = parseDate(parts[0].trim());
+          end = parseDate(parts[1].trim());
+        } else {
+          console.log(`Unrecognized date range format: ${range}`);
+          return { start: null, end: null };
+        }
+      } else if (range && typeof range === 'object') {
+        console.log(`Parsing object date range:`, range);
+        // Object with start/end properties
+        start = parseDate(range.start);
+        end = parseDate(range.end);
+      } else {
+        console.log(`Invalid date range: ${JSON.stringify(range)}`);
+        return { start: null, end: null };
+      }
+      
+      if (start && end) {
+        console.log(`Successfully parsed date range: ${start.toISOString()} to ${end.toISOString()}`);
+      } else {
+        console.log(`Failed to parse one or both dates in range`);
+      }
+      
+      return { start, end };
+    }).filter(d => d.start && d.end && !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
+  });
+
+  console.log('All parsed preferred date ranges:', preferredDateRanges.map(d => 
     `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
   ));
 
   // Parse all blackout date ranges
-  const blackoutDateRanges = responses.flatMap(r => {
-    // Handle multiple blackout date ranges separated by semicolons
-    const dateRangesStr = r.blackout_dates || "";
-    if (!dateRangesStr) return [];
+  const blackoutDateRanges = responses.flatMap((r, index) => {
+    console.log(`Processing blackout dates for user ${index + 1}:`, r.blackout_dates);
     
-    return dateRangesStr.split(';').map(range => {
-      const [start, end] = range.trim().split(' - ');
-      return {
-        start: new Date(start),
-        end: new Date(end)
-      };
-    });
-  }).filter(d => !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime()));
+    // Handle blackout dates as either array or semicolon-separated string
+    let dateRanges = [];
+    if (Array.isArray(r.blackout_dates)) {
+      dateRanges = r.blackout_dates;
+    } else {
+      const dateRangesStr = String(r.blackout_dates || "");
+      dateRanges = dateRangesStr ? dateRangesStr.split(';') : [];
+    }
+    
+    if (dateRanges.length === 0) {
+      console.log(`No blackout dates for user ${index + 1}`);
+    }
+    
+    return dateRanges.map(range => {
+      // Handle various formats of date ranges
+      let start, end;
+      
+      if (typeof range === 'string') {
+        console.log(`Parsing string blackout range: ${range}`);
+        // Try both "to" and "-" separators
+        if (range.includes(" to ")) {
+          const parts = range.split(" to ");
+          start = parseDate(parts[0].trim());
+          end = parseDate(parts[1].trim());
+        } else if (range.includes(" - ")) {
+          const parts = range.split(" - ");
+          start = parseDate(parts[0].trim());
+          end = parseDate(parts[1].trim());
+        } else {
+          console.log(`Unrecognized blackout range format: ${range}`);
+          return { start: null, end: null };
+        }
+      } else if (range && typeof range === 'object') {
+        console.log(`Parsing object blackout range:`, range);
+        // Object with start/end properties
+        start = parseDate(range.start);
+        end = parseDate(range.end);
+      } else {
+        console.log(`Invalid blackout range: ${JSON.stringify(range)}`);
+        return { start: null, end: null };
+      }
+      
+      if (start && end) {
+        console.log(`Successfully parsed blackout range: ${start.toISOString()} to ${end.toISOString()}`);
+      } else {
+        console.log(`Failed to parse one or both dates in blackout range`);
+      }
+      
+      return { start, end };
+    }).filter(d => d.start && d.end && !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
+  });
 
-  console.log('All blackout date ranges:', blackoutDateRanges.map(d => 
+  console.log('All parsed blackout date ranges:', blackoutDateRanges.map(d => 
     `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
   ));
 
-  // Group preferred date ranges by user
-  const preferredDatesByUser = responses.map(r => {
-    const dateRangesStr = r.preferred_dates || "";
-    if (!dateRangesStr) return [];
+  // Group preferred date ranges by user for overlap calculation
+  const preferredDatesByUser = responses.map((r, index) => {
+    console.log(`Grouping preferred dates for user ${index + 1}`);
     
-    return dateRangesStr.split(';')
-      .map(range => {
-        const [start, end] = range.trim().split(' - ');
-        return {
-          start: new Date(start),
-          end: new Date(end)
-        };
-      })
-      .filter(d => !isNaN(d.start?.getTime()) && !isNaN(d.end?.getTime()));
+    // Handle preferred dates as either array or semicolon-separated string
+    let dateRanges = [];
+    if (Array.isArray(r.preferred_dates)) {
+      dateRanges = r.preferred_dates;
+    } else {
+      const dateRangesStr = String(r.preferred_dates || "");
+      dateRanges = dateRangesStr ? dateRangesStr.split(';') : [];
+    }
+    
+    const parsedRanges = dateRanges.map(range => {
+      // Handle various formats of date ranges
+      let start, end;
+      
+      if (typeof range === 'string') {
+        // Try both "to" and "-" separators
+        if (range.includes(" to ")) {
+          const parts = range.split(" to ");
+          start = parseDate(parts[0].trim());
+          end = parseDate(parts[1].trim());
+        } else if (range.includes(" - ")) {
+          const parts = range.split(" - ");
+          start = parseDate(parts[0].trim());
+          end = parseDate(parts[1].trim());
+        } else {
+          return { start: null, end: null };
+        }
+      } else if (range && typeof range === 'object') {
+        // Object with start/end properties
+        start = parseDate(range.start);
+        end = parseDate(range.end);
+      } else {
+        return { start: null, end: null };
+      }
+      
+      return { start, end };
+    }).filter(d => d.start && d.end && !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
+    
+    console.log(`User ${index + 1} has ${parsedRanges.length} valid preferred date ranges`);
+    return parsedRanges;
   }).filter(ranges => ranges.length > 0);
 
-  console.log('Preferred dates by user:', preferredDatesByUser.map(
-    (ranges, i) => `User ${i+1}: ${ranges.map(d => 
+  console.log(`Have ${preferredDatesByUser.length} users with valid preferred dates`);
+  preferredDatesByUser.forEach((ranges, i) => {
+    console.log(`User ${i+1} preferred dates: ${ranges.map(d => 
       `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-    ).join(', ')}`
-  ));
+    ).join(', ')}`);
+  });
 
   // Function to check if two date ranges overlap
   const checkOverlap = (range1, range2) => {
-    return range1.start <= range2.end && range2.start <= range1.end;
+    // Make sure we have valid dates
+    if (!range1.start || !range1.end || !range2.start || !range2.end) {
+      console.log("Invalid date range passed to checkOverlap");
+      return false;
+    }
+    
+    // Two ranges overlap if one starts before the other ends
+    const result = range1.start <= range2.end && range2.start <= range1.end;
+    console.log(`Checking overlap: ${range1.start.toLocaleDateString()} - ${range1.end.toLocaleDateString()} with ${range2.start.toLocaleDateString()} - ${range2.end.toLocaleDateString()}: ${result}`);
+    return result;
   };
 
   // Function to get the overlap between two date ranges
   const getOverlap = (range1, range2) => {
-    return {
-      start: new Date(Math.max(range1.start.getTime(), range2.start.getTime())),
-      end: new Date(Math.min(range1.end.getTime(), range2.end.getTime()))
-    };
+    const start = new Date(Math.max(range1.start.getTime(), range2.start.getTime()));
+    const end = new Date(Math.min(range1.end.getTime(), range2.end.getTime()));
+    return { start, end };
   };
 
   // Function to check if a date range overlaps with any blackout period
   const overlapsWithBlackout = (range) => {
-    return blackoutDateRanges.some(blackout => checkOverlap(range, blackout));
+    // If we have no blackout dates, nothing can overlap
+    if (blackoutDateRanges.length === 0) {
+      console.log("No blackout dates to check against");
+      return false;
+    }
+    
+    // Check each blackout date range
+    for (const blackout of blackoutDateRanges) {
+      // A range overlaps with a blackout if they share any days
+      const hasOverlap = range.start <= blackout.end && blackout.start <= range.end;
+      
+      if (hasOverlap) {
+        console.log(`Range ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()} conflicts with blackout ${blackout.start.toLocaleDateString()} - ${blackout.end.toLocaleDateString()}`);
+        return true;
+      }
+    }
+    console.log(`Range ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()} does not conflict with any blackout dates`);
+    return false;
   };
 
   // Find overlapping date ranges across all users
@@ -345,30 +504,65 @@ export const calculateSurveyStats = (responses) => {
       const userRanges = preferredDatesByUser[i];
       const newOverlaps = [];
       
+      console.log(`Finding overlaps with user ${i+1}'s preferred dates`);
+      
       // Check each current overlap against each of this user's ranges
       for (const currentOverlap of overlappingRanges) {
         for (const userRange of userRanges) {
           if (checkOverlap(currentOverlap, userRange)) {
-            newOverlaps.push(getOverlap(currentOverlap, userRange));
+            const overlap = getOverlap(currentOverlap, userRange);
+            console.log(`Found overlap: ${overlap.start.toLocaleDateString()} - ${overlap.end.toLocaleDateString()}`);
+            newOverlaps.push(overlap);
           }
         }
       }
       
       overlappingRanges = newOverlaps;
-      console.log(`After processing user ${i+1}, overlapping ranges:`, overlappingRanges.map(d => 
-        `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-      ));
+      console.log(`After processing user ${i+1}, found ${overlappingRanges.length} overlapping range(s):`, 
+        overlappingRanges.length ? 
+          overlappingRanges.map(d => `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`).join(', ') : 
+          'None'
+      );
       
       // If we have no more overlaps, break early
       if (overlappingRanges.length === 0) break;
     }
   }
 
+  console.log(`Found ${overlappingRanges.length} total overlapping ranges between users`);
+
+  // Create a copy of the blackout dates for debugging
+  console.log(`Checking against ${blackoutDateRanges.length} blackout periods:`, 
+    blackoutDateRanges.length ? 
+      blackoutDateRanges.map(d => `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`).join(', ') : 
+      'None'
+  );
+
   // Remove any overlapping ranges that conflict with blackout dates
-  const validOverlaps = overlappingRanges.filter(range => !overlapsWithBlackout(range));
-  console.log('Overlapping ranges after removing blackout dates:', validOverlaps.map(d => 
-    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-  ));
+  let validOverlaps = overlappingRanges.filter(range => {
+    const isValid = !overlapsWithBlackout(range);
+    console.log(`Range ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()} is ${isValid ? 'valid' : 'invalid'}`);
+    return isValid;
+  });
+
+  console.log(`Found ${validOverlaps.length} valid overlapping ranges after removing blackout conflicts`);
+
+  // If for some reason we found no valid overlaps but have overlapping ranges, 
+  // we might have an issue with the blackout date filtering
+  if (validOverlaps.length === 0 && overlappingRanges.length > 0) {
+    console.log("WARNING: Found overlapping ranges but none are valid after blackout filtering.");
+    console.log("This might indicate an issue with blackout date handling.");
+    
+    // As a fallback, let's use the overlapping ranges even if they conflict with blackout dates
+    // This ensures we show something to the user rather than nothing
+    console.log("Using overlapping ranges as fallback since no valid overlaps found after blackout filtering");
+    validOverlaps = overlappingRanges;
+    
+    // Double-check overlapping dates
+    for (const range of overlappingRanges) {
+      console.log(`Fallback range: ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()}`);
+    }
+  }
 
   // Sort valid overlaps by start date
   validOverlaps.sort((a, b) => a.start.getTime() - b.start.getTime());
@@ -379,7 +573,7 @@ export const calculateSurveyStats = (responses) => {
         start: validOverlaps[0].start,
         end: validOverlaps[validOverlaps.length - 1].end,
         window: Math.max(...validOverlaps.map(d => 
-          Math.ceil((d.end - d.start) / (1000 * 60 * 60 * 24))
+          Math.ceil((d.end - d.start) / (1000 * 60 * 60 * 24)) + 1 // +1 to include both start and end days
         ))
       }
     : {
@@ -394,16 +588,36 @@ export const calculateSurveyStats = (responses) => {
   );
 
   // Calculate most common vibes
-  const allVibes = responses.flatMap(r => r.vibe_choices);
+  const allVibes = responses.flatMap(r => {
+    console.log(`Vibe choices for a response:`, r.vibe_choices);
+    return r.vibe_choices || [];
+  });
+  
+  console.log('All collected vibes:', allVibes);
+  
   const vibeCounts = allVibes.reduce((acc, vibe) => {
-    acc[vibe] = (acc[vibe] || 0) + 1;
+    if (vibe) {
+      acc[vibe] = (acc[vibe] || 0) + 1;
+    }
     return acc;
   }, {});
-
+  
+  console.log('Vibe counts:', vibeCounts);
+  
   const commonVibes = Object.entries(vibeCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([vibe]) => vibe);
+  
+  console.log('Final common vibes:', commonVibes);
+
+  // Add more detailed logging for debugging
+  console.log('FINAL CALCULATION SUMMARY:');
+  console.log('- Total overlapping ranges found:', overlappingRanges.length);
+  console.log('- Valid overlaps after blackout filtering:', validOverlaps.length);
+  console.log('- Detailed overlaps:', validOverlaps.map(d => 
+    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
+  ).join(', '));
 
   return {
     medianBudget,

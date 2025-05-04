@@ -203,10 +203,62 @@ const TripSurvey = () => {
     setLoading(true);
     
     try {
-      // Add tripId to the survey data
+      // Format the date ranges
+      const preferredDates = [];
+      const blackoutDates = [];
+
+      // Add first preferred date range
+      if (sender.data.preferredStartDate1 && sender.data.preferredEndDate1) {
+        preferredDates.push(`${sender.data.preferredStartDate1} to ${sender.data.preferredEndDate1}`);
+      }
+
+      // Add second preferred date range if selected
+      if (sender.data.addSecondPreferredRange && sender.data.preferredStartDate2 && sender.data.preferredEndDate2) {
+        preferredDates.push(`${sender.data.preferredStartDate2} to ${sender.data.preferredEndDate2}`);
+      }
+
+      // Add third preferred date range if selected
+      if (sender.data.addThirdPreferredRange && sender.data.preferredStartDate3 && sender.data.preferredEndDate3) {
+        preferredDates.push(`${sender.data.preferredStartDate3} to ${sender.data.preferredEndDate3}`);
+      }
+
+      // Add blackout dates if selected
+      if (sender.data.hasBlackoutDates) {
+        if (sender.data.blackoutStartDate1 && sender.data.blackoutEndDate1) {
+          blackoutDates.push(`${sender.data.blackoutStartDate1} to ${sender.data.blackoutEndDate1}`);
+        }
+
+        if (sender.data.addSecondBlackoutRange && sender.data.blackoutStartDate2 && sender.data.blackoutEndDate2) {
+          blackoutDates.push(`${sender.data.blackoutStartDate2} to ${sender.data.blackoutEndDate2}`);
+        }
+
+        if (sender.data.addThirdBlackoutRange && sender.data.blackoutStartDate3 && sender.data.blackoutEndDate3) {
+          blackoutDates.push(`${sender.data.blackoutStartDate3} to ${sender.data.blackoutEndDate3}`);
+        }
+      }
+
+      console.log('Preferred dates:', preferredDates);
+      console.log('Blackout dates:', blackoutDates);
+
+      // Prepare the survey data
       const surveyData = {
-        ...sender.data,
-        tripId: tripId
+        tripId: tripId,
+        userId: participantId,
+        name: sender.data.name,
+        liveLocation: sender.data.liveLocation,
+        budget: sender.data.budget,
+        preferredDates: preferredDates,
+        blackoutDates: blackoutDates.length > 0 ? blackoutDates : [],
+        minTripDays: sender.data.minTripDays,
+        maxTripDays: sender.data.maxTripDays,
+        vibeChoices: sender.data.vibeChoices || [],
+        moreQuestions: sender.data.moreQuestions || null,
+        pastLiked: sender.data.pastLiked || null,
+        revisit: sender.data.revisit || null,
+        pastDisliked: sender.data.pastDisliked || null,
+        wishList: sender.data.wishList || null,
+        activities: sender.data.activities || null,
+        priorities: sender.data.priorities || null
       };
 
       // Send survey results to the API

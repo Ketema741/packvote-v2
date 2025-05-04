@@ -115,84 +115,52 @@ export const sendAllSMS = async (tripId) => {
  */
 export const saveSurveyResponse = async (participantId, responseData) => {
   try {
-    // Process preferred dates into a formatted string
-    let preferredDatesString = '';
-    
-    // First preferred date range (required)
-    if (responseData.preferredStartDate1 && responseData.preferredEndDate1) {
-      preferredDatesString = `${responseData.preferredStartDate1} - ${responseData.preferredEndDate1}`;
-    }
-    
-    // Second preferred date range (optional)
-    if (responseData.addSecondPreferredRange && 
-        responseData.addSecondPreferredRange.includes('Yes') &&
-        responseData.preferredStartDate2 && 
-        responseData.preferredEndDate2) {
-      preferredDatesString += `; ${responseData.preferredStartDate2} - ${responseData.preferredEndDate2}`;
-    }
-    
-    // Third preferred date range (optional)
-    if (responseData.addThirdPreferredRange && 
-        responseData.addThirdPreferredRange.includes('Yes') &&
-        responseData.preferredStartDate3 && 
-        responseData.preferredEndDate3) {
-      preferredDatesString += `; ${responseData.preferredStartDate3} - ${responseData.preferredEndDate3}`;
-    }
-
-    // Process blackout dates into a formatted string
-    let blackoutDatesString = '';
-    
-    // First blackout date range (optional)
-    if (responseData.hasBlackoutDates && 
-        responseData.hasBlackoutDates.includes('Yes') &&
-        responseData.blackoutStartDate1 && 
-        responseData.blackoutEndDate1) {
-      blackoutDatesString = `${responseData.blackoutStartDate1} - ${responseData.blackoutEndDate1}`;
-      
-      // Second blackout date range (optional)
-      if (responseData.addSecondBlackoutRange && 
-          responseData.addSecondBlackoutRange.includes('Yes') &&
-          responseData.blackoutStartDate2 && 
-          responseData.blackoutEndDate2) {
-        blackoutDatesString += `; ${responseData.blackoutStartDate2} - ${responseData.blackoutEndDate2}`;
-      }
-      
-      // Third blackout date range (optional)
-      if (responseData.addThirdBlackoutRange && 
-          responseData.addThirdBlackoutRange.includes('Yes') &&
-          responseData.blackoutStartDate3 && 
-          responseData.blackoutEndDate3) {
-        blackoutDatesString += `; ${responseData.blackoutStartDate3} - ${responseData.blackoutEndDate3}`;
-      }
-    }
+    // Ensure all array fields are properly formatted
+    const ensureArray = (value) => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value;
+      return [value];
+    };
 
     // Transform the data to match the backend's expected format
     const backendData = {
       trip_id: responseData.tripId,
-      user_id: participantId,
+      user_id: responseData.userId || participantId,
       name: responseData.name,
       live_location: responseData.liveLocation,
       budget: responseData.budget,
-      preferred_dates: preferredDatesString,
+      preferred_dates: ensureArray(responseData.preferredDates),
+      blackout_dates: ensureArray(responseData.blackoutDates),
       min_trip_days: parseInt(responseData.minTripDays),
       max_trip_days: parseInt(responseData.maxTripDays),
-      vibe_choices: responseData.vibe || [],
-      blackout_dates: blackoutDatesString,
+      vibe_choices: ensureArray(responseData.vibeChoices),
       more_questions: responseData.moreQuestions,
       past_liked: responseData.pastLiked,
       revisit: responseData.revisit,
       past_disliked: responseData.pastDisliked,
       wish_list: responseData.wishList,
       activities: responseData.activities,
-      priorities: responseData.priorities
+      priorities: ensureArray(responseData.priorities)
     };
+
+    console.log('Sending survey response:', backendData);
+
+    // Use proper JSON stringification with replacer to handle non-serializable values
+    const stringified = JSON.stringify(backendData, (key, value) => {
+      // Handle special cases for array serialization if needed
+      if (Array.isArray(value)) {
+        return value;
+      }
+      return value;
+    });
+    console.log('JSON stringified data:', stringified);
 
     const response = await fetch(`${API_BASE_URL}/survey-response`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(backendData),
+      body: stringified,
     });
 
     if (!response.ok) {

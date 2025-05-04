@@ -140,12 +140,6 @@ const DocsPage = () => {
                   secondary="Types of activities you enjoy (adventure, culture, relaxation, etc.)"
                 />
               </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Must-Have Amenities" 
-                  secondary="Essential features or facilities you need at the destination"
-                />
-              </ListItem>
             </List>
           </Box>
 
@@ -207,13 +201,6 @@ const DocsPage = () => {
               Tips for Success
             </Typography>
             <List>
-              <ListItem>
-                <ListItemIcon><AccessTimeIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="Set a Response Deadline" 
-                  secondary="Give your group a specific timeframe to complete their surveys"
-                />
-              </ListItem>
               <ListItem>
                 <ListItemIcon><QuestionAnswerIcon color="primary" /></ListItemIcon>
                 <ListItemText 

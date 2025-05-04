@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { 
   Container, 
@@ -11,7 +11,9 @@ import {
   Link,
   Paper,
   IconButton,
-  Chip
+  Chip,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -20,28 +22,48 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import { getTravelRecommendations, submitVotes } from '../utils/api';
 import '../styles/LandingPage.css';
 import '../styles/VotingPage.css';
 
 const VotingPage = () => {
   const navigate = useNavigate();
-  const [destinations, setDestinations] = useState([
-    {
-      id: '1',
-      name: 'Paris, France',
-      image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34',
-    },
-    {
-      id: '2',
-      name: 'Tokyo, Japan',
-      image: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26',
-    },
-    {
-      id: '3',
-      name: 'New York, USA',
-      image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9',
-    },
-  ]);
+  const location = useLocation();
+  const { tripId: urlTripId } = useParams();
+  
+  // Get tripId either from URL params or from location state
+  const tripId = urlTripId || (location.state && location.state.tripId);
+  
+  // Initialize with recommendations from location state if available
+  const [destinations, setDestinations] = useState(location.state?.recommendations || []);
+  const [loading, setLoading] = useState(!location.state?.recommendations);
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    // If recommendations weren't passed via location state, fetch them
+    if (!location.state?.recommendations && tripId) {
+      const fetchRecommendations = async () => {
+        try {
+          setLoading(true);
+          const result = await getTravelRecommendations(tripId);
+          if (result.recommendations && result.recommendations.length > 0) {
+            setDestinations(result.recommendations);
+          } else {
+            setError('No recommendations found for this trip');
+          }
+        } catch (err) {
+          setError(`Failed to load recommendations: ${err.message}`);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchRecommendations();
+    }
+  }, [tripId, location.state]);
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
@@ -53,11 +75,126 @@ const VotingPage = () => {
     setDestinations(items);
   };
 
-  const handleSubmitVote = () => {
-    // TODO: Implement API call to submit rankings
-    console.log('Rankings submitted:', destinations);
-    navigate('/winner');
+  const handleMoveUp = (index) => {
+    if (index === 0) return;
+    
+    const items = Array.from(destinations);
+    const [item] = items.splice(index, 1);
+    items.splice(index - 1, 0, item);
+    
+    setDestinations(items);
   };
+  
+  const handleMoveDown = (index) => {
+    if (index === destinations.length - 1) return;
+    
+    const items = Array.from(destinations);
+    const [item] = items.splice(index, 1);
+    items.splice(index + 1, 0, item);
+    
+    setDestinations(items);
+  };
+
+  const handleSubmitVote = async () => {
+    if (!tripId) {
+      setError('Trip ID is missing');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      // Create vote data with ranking positions
+      const voteData = {
+        trip_id: tripId,
+        rankings: destinations.map((destination, index) => ({
+          recommendation_id: destination.id,
+          rank_position: index + 1
+        }))
+      };
+      
+      // Submit to backend
+      await submitVotes(voteData);
+      
+      // Navigate to winner page or show success message
+      navigate('/winner', { state: { tripId } });
+    } catch (err) {
+      setError(`Failed to submit votes: ${err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Utility function to format budget tier
+  const formatBudgetTier = (tier) => {
+    switch (tier) {
+      case 'budget':
+        return { text: 'Budget-Friendly', icon: <AttachMoneyIcon /> };
+      case 'moderate':
+        return { text: 'Moderate', icon: <><AttachMoneyIcon /><AttachMoneyIcon /></> };
+      case 'luxury':
+        return { text: 'Luxury', icon: <><AttachMoneyIcon /><AttachMoneyIcon /><AttachMoneyIcon /></> };
+      default:
+        return { text: tier, icon: <AttachMoneyIcon /> };
+    }
+  };
+
+  // Get image URL for a destination
+  const getImageUrl = (destination) => {
+    if (destination.image_url) return destination.image_url;
+    
+    // Generate fallback image URL using Unsplash
+    const dest = destination.destination.toLowerCase().replace(/,/g, '').replace(/ /g, '-');
+    const country = destination.country.toLowerCase().replace(/ /g, '-');
+    return `https://source.unsplash.com/featured/1200x800/?${dest},${country},travel`;
+  };
+
+  if (loading) {
+    return (
+      <div className="landing-page">
+        <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
+          <Toolbar sx={{ justifyContent: 'space-between' }}>
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                color: 'primary.main', 
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              onClick={() => navigate('/')}
+            >
+              Group Travel AI
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+                Docs
+              </Link>
+              <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+                Donate
+              </Link>
+              <Button 
+                variant="contained" 
+                onClick={() => navigate('/create-trip')}
+                className="primary-button"
+              >
+                Start a Trip
+              </Button>
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        <Container sx={{ pt: 12, pb: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress size={60} />
+            <Typography variant="h6" sx={{ mt: 2 }}>
+              Loading destinations...
+            </Typography>
+          </Box>
+        </Container>
+      </div>
+    );
+  }
 
   return (
     <div className="landing-page">
@@ -105,6 +242,12 @@ const VotingPage = () => {
           </Button>
         </Box>
         
+        {error && (
+          <Alert severity="error" sx={{ mb: 4 }}>
+            {error}
+          </Alert>
+        )}
+        
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3, mb: 4 }}>
           <Typography variant="h3" component="h1" gutterBottom align="center">
             Rank Destinations
@@ -138,8 +281,8 @@ const VotingPage = () => {
                 >
                   {destinations.map((destination, index) => (
                     <Draggable
-                      key={destination.id}
-                      draggableId={destination.id}
+                      key={destination.id || `destination-${index}`}
+                      draggableId={destination.id || `destination-${index}`}
                       index={index}
                     >
                       {(provided, snapshot) => (
@@ -178,8 +321,8 @@ const VotingPage = () => {
                             }}
                           >
                             <img 
-                              src={destination.image} 
-                              alt={destination.name} 
+                              src={getImageUrl(destination)} 
+                              alt={destination.destination} 
                               style={{ 
                                 width: '100%', 
                                 height: '100%', 
@@ -187,21 +330,50 @@ const VotingPage = () => {
                               }} 
                             />
                           </Box>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              flexGrow: 1,
-                              fontWeight: 500
-                            }}
-                          >
-                            {destination.name}
-                          </Typography>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 500
+                              }}
+                            >
+                              {destination.destination}
+                              <Typography 
+                                component="span" 
+                                color="text.secondary" 
+                                sx={{ ml: 1, fontSize: '0.9rem' }}
+                              >
+                                {destination.country}
+                              </Typography>
+                            </Typography>
+                            
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                              {/* Budget tier */}
+                              <Chip 
+                                size="small" 
+                                variant="outlined" 
+                                label={formatBudgetTier(destination.budget_tier).text}
+                                icon={formatBudgetTier(destination.budget_tier).icon}
+                              />
+                              
+                              {/* One matching vibe */}
+                              {destination.matching_vibes && destination.matching_vibes.length > 0 && (
+                                <Chip 
+                                  size="small" 
+                                  variant="outlined" 
+                                  icon={<BeachAccessIcon />}
+                                  label={destination.matching_vibes[0]}
+                                />
+                              )}
+                            </Box>
+                          </Box>
                           <Box>
                             <IconButton 
                               size="small" 
                               aria-label="Move up"
                               disabled={index === 0}
                               sx={{ color: index === 0 ? 'text.disabled' : 'text.secondary' }}
+                              onClick={() => handleMoveUp(index)}
                             >
                               <ArrowUpwardIcon />
                             </IconButton>
@@ -210,6 +382,7 @@ const VotingPage = () => {
                               aria-label="Move down"
                               disabled={index === destinations.length - 1}
                               sx={{ color: index === destinations.length - 1 ? 'text.disabled' : 'text.secondary' }}
+                              onClick={() => handleMoveDown(index)}
                             >
                               <ArrowDownwardIcon />
                             </IconButton>
@@ -232,8 +405,9 @@ const VotingPage = () => {
               className="primary-button"
               size="large"
               sx={{ mb: 1 }}
+              disabled={submitting || destinations.length === 0}
             >
-              Submit my vote
+              {submitting ? 'Submitting...' : 'Submit my vote'}
             </Button>
             <Typography variant="body2" color="text.secondary">
               You can edit until the deadline

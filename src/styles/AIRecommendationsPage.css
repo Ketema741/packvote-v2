@@ -124,14 +124,14 @@
   background-color: var(--color-white);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, height 0.3s ease-in-out;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: auto;
-  max-height: none;
+  height: 460px; /* Fixed height by default */
   width: 100%;
   box-sizing: border-box;
+  position: relative;
 }
 
 .destination-card:hover {
@@ -139,12 +139,18 @@
   box-shadow: var(--shadow-lg);
 }
 
+.destination-card.expanded {
+  height: auto; /* Auto height when expanded */
+  min-height: 460px;
+}
+
 .card-image {
   width: 100%;
-  aspect-ratio: 16/9;
+  height: 200px; /* Fixed height */
   position: relative;
   overflow: hidden;
   background-color: #f0f0f0;
+  flex-shrink: 0; /* Prevent image from shrinking */
 }
 
 .card-image.loading::after {
@@ -186,8 +192,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  background-color: var(--color-white);
+  overflow: visible; /* Remove overflow auto */
 }
 
 .fit-score {
@@ -329,4 +334,9 @@
   .card-image {
     aspect-ratio: 16/9;
   }
+}
+
+/* Style for expanded cards */
+.destination-card.expanded .card-content {
+  max-height: none;
 } 

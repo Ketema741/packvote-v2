@@ -21,7 +21,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import MessageIcon from '@mui/icons-material/Message';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import WarningIcon from '@mui/icons-material/Warning';
-import { getTripDetails, sendSMS, calculateSurveyStats } from '../utils/api';
+import { getTripDetails, sendSMS, calculateSurveyStats, generateTravelRecommendations } from '../utils/api';
 import '../styles/DashboardPage.css';
 import '../styles/LandingPage.css';
 
@@ -60,6 +60,7 @@ const DashboardPage = () => {
     message: '',
     severity: 'success'
   });
+  const [generatingRecommendations, setGeneratingRecommendations] = useState(false);
 
   useEffect(() => {
     // Fetch trip data when component mounts
@@ -197,8 +198,29 @@ const DashboardPage = () => {
     }
   };
 
-  const handleGetAIDestinations = () => {
-    navigate(`/recommendations/${tripId}`);
+  const handleGetAIDestinations = async () => {
+    try {
+      setGeneratingRecommendations(true);
+      setToast({
+        open: true,
+        message: 'Generating destination recommendations (this could take a few minutes)...',
+        severity: 'info'
+      });
+      
+      // Generate recommendations
+      await generateTravelRecommendations(tripId);
+      
+      // Navigate to AI recommendations page instead of directly to voting
+      navigate(`/recommendations/${tripId}`);
+    } catch (error) {
+      setToast({
+        open: true,
+        message: `Failed to generate recommendations: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setGeneratingRecommendations(false);
+    }
   };
 
   const handleCloseToast = (event, reason) => {
@@ -207,7 +229,6 @@ const DashboardPage = () => {
     }
     setToast(prev => ({ ...prev, open: false }));
   };
-
 
   // Calculate progress percentage
   const progress = tripData.progress && tripData.progress.total > 0 ? 
@@ -531,9 +552,9 @@ const DashboardPage = () => {
               className="primary-button"
               size="large"
               sx={{ mb: 1 }}
-              disabled={!canGenerateRecommendations}
+              disabled={!canGenerateRecommendations || generatingRecommendations}
             >
-              Get AI Destination Picks
+              {generatingRecommendations ? 'Generating...' : 'Get AI Destination Picks'}
             </Button>
             <Typography variant="body2" color="text.secondary">
               {canGenerateRecommendations ? 

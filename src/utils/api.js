@@ -1,7 +1,6 @@
 /**
  * API service for interacting with the backend
  */
-
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
 
 /**
@@ -638,7 +637,8 @@ export const calculateSurveyStats = (responses) => {
 export const generateTravelRecommendations = async (tripId, options = {}) => {
   try {
     const { numRecommendations = 3, temperature = 0.7 } = options;
-    
+    console.log('Generating travel recommendations for trip:', tripId);
+     
     const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
       method: 'POST',
       headers: {
@@ -656,7 +656,24 @@ export const generateTravelRecommendations = async (tripId, options = {}) => {
       throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    
+    // Process the recommendations to handle field mapping and filter invalid ones
+    if (data && data.recommendations) {
+      data.recommendations = data.recommendations
+        .filter(rec => rec && (rec.city || rec.destination)) // Filter out invalid recommendations
+        .map(rec => {
+          // Map city to destination and vice versa for consistency
+          if (rec.city && !rec.destination) {
+            rec.destination = rec.city;
+          } else if (rec.destination && !rec.city) {
+            rec.city = rec.destination;
+          }
+          return rec;
+        });
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error generating travel recommendations:', error);
     throw error;
@@ -687,9 +704,53 @@ export const getTravelRecommendations = async (tripId) => {
       throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    
+    // Process the recommendations to handle field mapping and filter invalid ones
+    if (data && data.recommendations) {
+      data.recommendations = data.recommendations
+        .filter(rec => rec && (rec.city || rec.destination)) // Filter out invalid recommendations
+        .map(rec => {
+          // Map city to destination and vice versa for consistency
+          if (rec.city && !rec.destination) {
+            rec.destination = rec.city;
+          } else if (rec.destination && !rec.city) {
+            rec.city = rec.destination;
+          }
+          return rec;
+        });
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error getting travel recommendations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Submit user votes/rankings for travel recommendations
+ * @param {Object} voteData - Object containing trip_id and rankings array
+ * @returns {Promise<Object>} Submission result
+ */
+export const submitVotes = async (voteData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/recommendations/vote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(voteData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error submitting votes:', error);
     throw error;
   }
 }; 

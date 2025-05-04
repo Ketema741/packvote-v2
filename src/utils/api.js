@@ -709,34 +709,23 @@ export const getTravelRecommendations = async (tripId) => {
     const data = await response.json();
     console.log('Raw recommendation data from API:', data);
     
-    // Helper function to generate a proper UUID v4
-    const generateUUID = () => {
-      // Implementation based on RFC4122 version 4
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = (Math.random() * 16) | 0;
-        const v = c === 'x' ? r : ((r & 0x3) | 0x8);
-        return v.toString(16);
-      });
-    };
-    
     // Process the recommendations to handle field mapping and filter invalid ones
     if (data && data.recommendations) {
+      const missingIds = data.recommendations.filter(rec => !rec.id);
+      if (missingIds.length > 0) {
+        console.error('Error: Recommendations missing IDs:', missingIds);
+        throw new Error(`${missingIds.length} recommendations are missing IDs. Unable to proceed with voting.`);
+      }
+      
+      const tempIds = data.recommendations.filter(rec => rec.id && rec.id.startsWith('temp-'));
+      if (tempIds.length > 0) {
+        console.error('Error: Recommendations with temporary IDs:', tempIds);
+        throw new Error(`${tempIds.length} recommendations have temporary IDs. Unable to proceed with voting.`);
+      }
+      
       data.recommendations = data.recommendations
         .filter(rec => rec && (rec.city || rec.destination)) // Filter out invalid recommendations
-        .map(rec => {
-          // Log missing ID
-          if (!rec.id) {
-            console.warn('Recommendation missing ID:', rec);
-            // Generate a proper UUID for frontend and backend use
-            rec.id = generateUUID();
-            console.log(`Generated UUID ${rec.id} for recommendation: ${rec.city || rec.destination}`);
-          } else if (rec.id.startsWith('temp-')) {
-            // Replace any existing temp ID with a proper UUID
-            const oldId = rec.id;
-            rec.id = generateUUID();
-            console.log(`Replaced temp ID ${oldId} with UUID ${rec.id}`);
-          }
-          
+        .map(rec => {          
           // Map city to destination and vice versa for consistency
           if (rec.city && !rec.destination) {
             rec.destination = rec.city;
@@ -778,15 +767,6 @@ export const submitVotes = async (voteData) => {
       throw new Error('Missing or invalid rankings array in vote data');
     }
     
-    // Helper function to generate a proper UUID v4
-    const generateUUID = () => {
-      // Implementation based on RFC4122 version 4
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = (Math.random() * 16) | 0;
-        const v = c === 'x' ? r : ((r & 0x3) | 0x8);
-        return v.toString(16);
-      });
-    };
     
     // Helper to check if string is a valid UUID
     const isValidUUID = (id) => {
@@ -796,23 +776,28 @@ export const submitVotes = async (voteData) => {
     
     // Check each ranking for recommendation_id and ensure it's a valid UUID
     const invalidIds = [];
-    voteData.rankings = voteData.rankings.map(ranking => {
+    const tempIds = [];
+    
+    for (const ranking of voteData.rankings) {
       if (!ranking.recommendation_id) {
         console.error('Ranking missing recommendation_id:', ranking);
         invalidIds.push('missing');
-        ranking.recommendation_id = generateUUID(); // Generate a new UUID
+      } else if (ranking.recommendation_id.startsWith('temp-')) {
+        console.error('Temporary ID detected:', ranking.recommendation_id);
+        tempIds.push(ranking.recommendation_id);
       } else if (!isValidUUID(ranking.recommendation_id)) {
-        // Replace invalid UUIDs with valid ones
-        const oldId = ranking.recommendation_id;
-        ranking.recommendation_id = generateUUID();
-        console.log(`Replaced invalid ID ${oldId} with UUID ${ranking.recommendation_id}`);
-        invalidIds.push(oldId);
+        console.error('Invalid recommendation_id format:', ranking.recommendation_id);
+        invalidIds.push(ranking.recommendation_id);
       }
-      return ranking;
-    });
+    }
+    
+    // Reject votes with temporary or invalid IDs
+    if (tempIds.length > 0) {
+      throw new Error(`Cannot submit votes with temporary IDs. Found ${tempIds.length} temporary IDs. Please reload the page.`);
+    }
     
     if (invalidIds.length > 0) {
-      console.warn(`Fixed ${invalidIds.length} invalid recommendation IDs`);
+      throw new Error(`Cannot submit votes with invalid IDs. Found ${invalidIds.length} invalid recommendation IDs.`);
     }
     
     console.log('Sending vote request to API:', `${API_BASE_URL}/recommendations/vote`);
@@ -921,6 +906,86 @@ export const getVotes = async (tripId, userId = null) => {
     return data;
   } catch (error) {
     console.error('Error getting votes:', error);
+    throw error;
+  }
+};
+
+/**
+ * Calculate and update the winner for a trip
+ * @param {string} tripId - The ID of the trip
+ * @returns {Promise<Object>} The winner details
+ */
+export const calculateWinner = async (tripId) => {
+  try {
+    console.log(`Calculating winner for trip ${tripId}`);
+    
+    const response = await fetch(`${API_BASE_URL}/recommendations/calculate-winner/${tripId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    // Handle response
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorDetail;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorDetail = errorData.detail || `HTTP error! Status: ${response.status}`;
+      } catch (e) {
+        errorDetail = errorText || `HTTP error! Status: ${response.status}`;
+      }
+      
+      throw new Error(errorDetail);
+    }
+
+    const data = await response.json();
+    console.log('Winner calculation result:', data);
+    return data;
+  } catch (error) {
+    console.error('Error calculating winner:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get the winner for a trip
+ * @param {string} tripId - The ID of the trip
+ * @returns {Promise<Object>} The winner details or status of voting
+ */
+export const getTripWinner = async (tripId) => {
+  try {
+    console.log(`Getting winner for trip ${tripId}`);
+    
+    const response = await fetch(`${API_BASE_URL}/recommendations/winner/${tripId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    // Handle response
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorDetail;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorDetail = errorData.detail || `HTTP error! Status: ${response.status}`;
+      } catch (e) {
+        errorDetail = errorText || `HTTP error! Status: ${response.status}`;
+      }
+      
+      throw new Error(errorDetail);
+    }
+
+    const data = await response.json();
+    console.log('Winner data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error getting trip winner:', error);
     throw error;
   }
 }; 

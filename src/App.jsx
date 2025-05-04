@@ -27,12 +27,14 @@ const App = () => {
         <Route path="/recommendations" element={<AIRecommendationsPage />} />
         <Route path="/recommendations/:tripId" element={<AIRecommendationsPage />} />
         <Route path="/voting" element={<VotingPage />} />
+        <Route path="/voting/:tripId" element={<VotingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/dashboard/:tripId" element={<DashboardPage />} />
         <Route path="/share" element={<SocialSharePage />} />
         <Route path="/survey" element={<TripSurvey />} />
         <Route path="/survey/:tripId/:participantId" element={<TripSurvey />} />
         <Route path="/winner" element={<WinnerPage />} />
+        <Route path="/winner/:tripId" element={<WinnerPage />} />
         <Route path="/donate" element={<DonationPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/contact" element={<ContactPage />} />

@@ -48,6 +48,16 @@ const VotingPage = () => {
   const [participants, setParticipants] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
 
+  // Log tripId for debugging
+  useEffect(() => {
+    console.log('VotingPage - Current tripId:', tripId);
+    console.log('VotingPage - Location state:', location.state);
+    
+    if (!tripId) {
+      setError('No trip ID provided. Please go back and try again.');
+    }
+  }, [tripId, location.state]);
+
   const processRecommendations = useCallback((recs) => {
     if (!recs || recs.length === 0) return [];
     
@@ -59,12 +69,14 @@ const VotingPage = () => {
       // Create a copy of the recommendation
       const processed = { ...rec };
       
-      // Ensure ID is preserved - if missing, generate a stable ID based on the destination
+      // Ensure ID is present - throw an error if missing instead of generating a temp ID
       if (!processed.id) {
-        console.warn('Recommendation missing ID, generating one:', processed);
-        // Use a more stable ID based on the destination and index
-        const baseText = `${processed.city || processed.destination || "unknown"}-${processed.country || "unknown"}-${index}`;
-        processed.id = `temp-${baseText.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+        const errorMsg = `Recommendation missing ID for ${processed.city || processed.destination || "unknown destination"}`;
+        console.error(errorMsg, processed);
+        throw new Error(errorMsg);
+      } else {
+        // Log the existing ID for debugging
+        console.log(`Using recommendation ID: ${processed.id} for ${processed.city || processed.destination}`);
       }
       
       // Determine location name from available fields
@@ -166,6 +178,15 @@ const VotingPage = () => {
             // Log the raw recommendations to debug
             console.log('Raw recommendations from API:', result.recommendations);
             
+            // Verify that each recommendation has a valid ID
+            const missingIds = result.recommendations.filter(rec => !rec.id);
+            if (missingIds.length > 0) {
+              console.error('Recommendations with missing IDs:', missingIds);
+              setError(`Error: ${missingIds.length} destinations are missing IDs. Please contact support.`);
+              setLoading(false);
+              return;
+            }
+            
             // Sort by timestamp to get the most recent recommendations
             const sortedRecommendations = [...result.recommendations];
             
@@ -200,18 +221,33 @@ const VotingPage = () => {
                 const mostRecentTimestamp = timestamps[0];
                 console.log(`Using most recent recommendation set from: ${mostRecentTimestamp}`);
                 const mostRecentSet = recommendationSets[mostRecentTimestamp];
-                const processed = processRecommendations(mostRecentSet);
-                console.log('Processed recommendations:', processed);
-                setDestinations(processed);
+                try {
+                  const processed = processRecommendations(mostRecentSet);
+                  console.log('Processed recommendations:', processed);
+                  setDestinations(processed);
+                } catch (processError) {
+                  console.error('Error processing recommendations:', processError);
+                  setError(`Error processing destinations: ${processError.message}`);
+                }
               } else {
+                try {
+                  const processed = processRecommendations(sortedRecommendations);
+                  console.log('Processed recommendations:', processed);
+                  setDestinations(processed);
+                } catch (processError) {
+                  console.error('Error processing recommendations:', processError);
+                  setError(`Error processing destinations: ${processError.message}`);
+                }
+              }
+            } else {
+              try {
                 const processed = processRecommendations(sortedRecommendations);
                 console.log('Processed recommendations:', processed);
                 setDestinations(processed);
+              } catch (processError) {
+                console.error('Error processing recommendations:', processError);
+                setError(`Error processing destinations: ${processError.message}`);
               }
-            } else {
-              const processed = processRecommendations(sortedRecommendations);
-              console.log('Processed recommendations:', processed);
-              setDestinations(processed);
             }
           } else {
             setError('No recommendations found for this trip');
@@ -227,9 +263,14 @@ const VotingPage = () => {
     } else if (location.state?.recommendations) {
       // Log recommendations from location state
       console.log('Recommendations from location state:', location.state.recommendations);
-      const processed = processRecommendations(location.state.recommendations);
-      console.log('Processed recommendations from state:', processed);
-      setDestinations(processed);
+      try {
+        const processed = processRecommendations(location.state.recommendations);
+        console.log('Processed recommendations from state:', processed);
+        setDestinations(processed);
+      } catch (processError) {
+        console.error('Error processing recommendations from state:', processError);
+        setError(`Error processing destinations: ${processError.message}`);
+      }
     }
   }, [tripId, location.state, processRecommendations]);
 
@@ -273,6 +314,14 @@ const VotingPage = () => {
       if (missingIds.length > 0) {
         console.error('Destinations missing IDs:', missingIds);
         setError(`${missingIds.length} destinations are missing IDs. Cannot submit vote.`);
+        return;
+      }
+      
+      // Check for temporary IDs that should not be submitted
+      const tempIds = destinations.filter(dest => dest.id && dest.id.startsWith('temp-'));
+      if (tempIds.length > 0) {
+        console.error('Found destinations with temporary IDs:', tempIds);
+        setError(`Error: ${tempIds.length} destinations have temporary IDs. Please reload the page or contact support.`);
         return;
       }
       
@@ -323,8 +372,8 @@ const VotingPage = () => {
         const response = await submitVotes(voteData);
         console.log('Vote submission response:', response);
         
-        // Navigate to winner page or show success message
-        navigate('/winner', { state: { tripId } });
+        // Navigate to the trip-specific winner page
+        navigate(`/winner/${tripId}`);
       } catch (submitError) {
         console.error('Error during submission:', submitError);
         const errorMessage = submitError.message || 'Unknown error during vote submission';
@@ -354,10 +403,19 @@ const VotingPage = () => {
       setSubmitting(true);
       setUserDialogOpen(false);
       
+      // Check for destinations with temporary IDs
+      const tempIds = destinations.filter(dest => dest.id && dest.id.startsWith('temp-'));
+      if (tempIds.length > 0) {
+        console.error('Found destinations with temporary IDs:', tempIds);
+        setError(`Error: ${tempIds.length} destinations have temporary IDs. Please reload the page or contact support.`);
+        setSubmitting(false);
+        return;
+      }
+      
       // Create vote data with ranking positions and user ID
       const voteData = {
         trip_id: tripId,
-        user_id: userId, // Use the directly passed userId rather than state
+        user_id: userId,
         rankings: destinations.map((destination, index) => {
           console.log(`Destination ${index+1}:`, destination.destination || destination.city, 'ID:', destination.id);
           return {
@@ -368,12 +426,13 @@ const VotingPage = () => {
       };
       
       console.log('Submitting vote data:', JSON.stringify(voteData));
+      console.log('Trip ID:', tripId);
       
       // Submit to backend
       submitVotes(voteData)
         .then(() => {
-          // Navigate to winner page or show success message
-          navigate('/winner', { state: { tripId } });
+          // Navigate to the trip-specific winner page
+          navigate(`/winner/${tripId}`);
         })
         .catch(err => {
           setError(`Failed to submit votes: ${err.message}`);
@@ -505,6 +564,12 @@ const VotingPage = () => {
         {error && (
           <Alert severity="error" sx={{ mb: 4 }}>
             {error}
+          </Alert>
+        )}
+        
+        {!tripId && (
+          <Alert severity="warning" sx={{ mb: 4 }}>
+            Trip ID is missing. Please go back to the dashboard or recommendations page.
           </Alert>
         )}
         

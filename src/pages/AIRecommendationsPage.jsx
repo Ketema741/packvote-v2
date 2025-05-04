@@ -40,15 +40,34 @@ const AIRecommendationsPage = () => {
   const effectiveTripId = tripId || (location.state && location.state.tripId);
 
   const processRecommendations = useCallback((recs) => {
-    if (!recs || recs.length === 0) return [];
+    if (!recs || recs.length === 0) {
+      console.log('No recommendations to process');
+      return [];
+    }
+    
+    console.log(`Processing ${recs.length} recommendations`);
     
     // Process recommendations to limit activities and ensure proper structures
-    return recs.map(rec => {
+    const processedRecs = recs.map((rec, index) => {
       // Skip invalid recommendations
-      if (!rec) return null;
+      if (!rec) {
+        console.log(`Recommendation at index ${index} is null or undefined`);
+        return null;
+      }
       
       // Create a copy of the recommendation
       const processed = { ...rec };
+      
+      // Ensure ID is present - create a temporary one if missing
+      if (!processed.id) {
+        console.warn(`Recommendation missing ID for ${processed.city || processed.destination || "unknown destination"} - generating temporary ID`);
+        // Generate a temporary ID for display purposes
+        processed.id = `temp-${Date.now()}-${index}`;
+        processed.has_temp_id = true; // Mark this so we know it's not a real DB ID
+      }
+      
+      // Log the recommendation ID for debugging
+      console.log(`Processing recommendation with ID: ${processed.id} for ${processed.city || processed.destination || "unknown"}`);
       
       // Determine location name from available fields
       processed.locationDisplayName = processed.city || processed.destination || "Unknown Location";
@@ -64,6 +83,10 @@ const AIRecommendationsPage = () => {
       
       return processed;
     }).filter(Boolean); // Filter out any null entries
+    
+    console.log(`After processing: ${processedRecs.length} valid recommendations remain`);
+    
+    return processedRecs;
   }, []);
 
   const fetchRecommendations = useCallback(async () => {
@@ -88,58 +111,70 @@ const AIRecommendationsPage = () => {
         
         if (result && result.recommendations && result.recommendations.length > 0) {
           console.log('Found existing recommendations:', result.recommendations.length);
+          console.log('Raw recommendations from API:', JSON.stringify(result.recommendations));
+          
+          // Check for recommendations with missing IDs
+          const missingIds = result.recommendations.filter(rec => !rec.id);
+          if (missingIds.length > 0) {
+            console.error(`Found ${missingIds.length} recommendations with missing IDs:`, missingIds);
+            setToast({
+              open: true,
+              message: `Found ${missingIds.length} recommendations with missing IDs. Will regenerate recommendations.`,
+              severity: 'warning'
+            });
+            
+            // Throw error to trigger regeneration
+            throw new Error('Recommendations with missing IDs detected');
+          }
           
           // Sort the recommendations by timestamp if available
           // For multiple recommendation sets, this will ensure we only show the latest
           const sortedRecommendations = [...result.recommendations];
+          console.log('Recommendations before sorting:', sortedRecommendations.length);
           
-          // Check if recommendations have timestamps
+          // Sort recommendations by timestamp, newest first
           if (sortedRecommendations[0] && sortedRecommendations[0].created_at) {
-            // Sort by timestamp, newest first
             sortedRecommendations.sort((a, b) => {
               const dateA = new Date(a.created_at || 0);
               const dateB = new Date(b.created_at || 0);
               return dateB - dateA;
             });
-            
-            // Group recommendations by timestamp (to find distinct sets)
-            const recommendationSets = sortedRecommendations.reduce((sets, rec) => {
-              const timestamp = rec.created_at || 'unknown';
-              if (!sets[timestamp]) {
-                sets[timestamp] = [];
-              }
-              sets[timestamp].push(rec);
-              return sets;
-            }, {});
-            
-            // Get the most recent set of recommendations
-            const timestamps = Object.keys(recommendationSets).sort((a, b) => {
-              // Sort timestamps, newest first (if they are valid dates)
-              if (a === 'unknown') return 1;
-              if (b === 'unknown') return -1;
-              return new Date(b) - new Date(a);
-            });
-            
-            if (timestamps.length > 0) {
-              const mostRecentTimestamp = timestamps[0];
-              console.log(`Using most recent recommendation set from: ${mostRecentTimestamp}`);
-              const mostRecentSet = recommendationSets[mostRecentTimestamp];
-              setRecommendations(processRecommendations(mostRecentSet));
-              setLoading(false);
-              return;
-            }
-          } 
+            console.log('Sorted recommendations by timestamp, newest first');
+          }
           
-          // Fallback if no timestamp info available or couldn't group properly
-          console.log('No timestamp info available, using all recommendations');
-          setRecommendations(processRecommendations(sortedRecommendations));
+          // Take only the most recent 3 recommendations
+          const mostRecentRecs = sortedRecommendations.slice(0, 3);
+          console.log(`Taking the ${mostRecentRecs.length} most recent recommendations`);
+          
+          // Process the recommendations
+          const processed = processRecommendations(mostRecentRecs);
+          console.log(`Processed ${processed.length} of ${mostRecentRecs.length} recommendations`);
+          console.log('Processed recommendations:', processed);
+          
+          // Check if any recommendations were filtered out
+          if (processed.length < mostRecentRecs.length) {
+            console.warn(`${mostRecentRecs.length - processed.length} recommendations were filtered out due to issues`);
+            
+            if (processed.length === 0) {
+              // If all recommendations were filtered out, generate new ones
+              throw new Error('All recommendations were filtered out due to issues');
+            }
+            
+            setToast({
+              open: true,
+              message: `${mostRecentRecs.length - processed.length} recommendations were filtered out due to issues. You can regenerate if needed.`,
+              severity: 'warning'
+            });
+          }
+          
+          setRecommendations(processed);
           setLoading(false);
           return;
         } else {
           console.log('No existing recommendations found, will generate new ones');
         }
       } catch (fetchErr) {
-        // Only log the error but continue to generate new recommendations
+        // Log the error and continue to generate new recommendations
         console.log('Error fetching existing recommendations:', fetchErr.message);
       }
       
@@ -149,7 +184,75 @@ const AIRecommendationsPage = () => {
       try {
         const newRecommendations = await generateTravelRecommendations(effectiveTripId);
         console.log('Successfully generated new recommendations:', newRecommendations.recommendations.length);
-        setRecommendations(processRecommendations(newRecommendations.recommendations));
+        console.log('Raw generated recommendations:', JSON.stringify(newRecommendations.recommendations));
+        
+        // Check for recommendations with missing IDs
+        const missingIds = newRecommendations.recommendations.filter(rec => !rec.id);
+        if (missingIds.length > 0) {
+          console.error(`Generated ${missingIds.length} recommendations with missing IDs:`, missingIds);
+          
+          // Filter out recommendations that are missing IDs
+          const validRecs = newRecommendations.recommendations.filter(rec => rec.id);
+          
+          if (validRecs.length === 0) {
+            setToast({
+              open: true,
+              message: 'All generated recommendations are missing IDs. Please try again later.',
+              severity: 'error'
+            });
+            return;
+          }
+          
+          setToast({
+            open: true,
+            message: `Filtered out ${missingIds.length} recommendations that were missing IDs.`,
+            severity: 'warning'
+          });
+          
+          // Sort by created_at if available and take only the 3 most recent
+          const sortedValidRecs = [...validRecs];
+          if (sortedValidRecs[0] && sortedValidRecs[0].created_at) {
+            sortedValidRecs.sort((a, b) => {
+              const dateA = new Date(a.created_at || 0);
+              const dateB = new Date(b.created_at || 0);
+              return dateB - dateA;
+            });
+          }
+          const mostRecentRecs = sortedValidRecs.slice(0, 3);
+          
+          setRecommendations(processRecommendations(mostRecentRecs));
+        } else {
+          // Sort by created_at if available and take only the 3 most recent
+          const sortedRecs = [...newRecommendations.recommendations];
+          if (sortedRecs[0] && sortedRecs[0].created_at) {
+            sortedRecs.sort((a, b) => {
+              const dateA = new Date(a.created_at || 0);
+              const dateB = new Date(b.created_at || 0);
+              return dateB - dateA;
+            });
+          }
+          const mostRecentRecs = sortedRecs.slice(0, 3);
+          
+          // Process the most recent recommendations
+          const processed = processRecommendations(mostRecentRecs);
+          
+          // Check if any were filtered out during processing
+          if (processed.length < mostRecentRecs.length) {
+            setToast({
+              open: true,
+              message: `${mostRecentRecs.length - processed.length} recommendations were filtered out due to issues.`,
+              severity: 'warning'
+            });
+          } else {
+            setToast({
+              open: true,
+              message: 'New recommendations generated successfully!',
+              severity: 'success'
+            });
+          }
+          
+          setRecommendations(processed);
+        }
       } catch (genErr) {
         console.error('Failed to generate recommendations:', genErr);
         setError(`Failed to generate recommendations: ${genErr.message}`);
@@ -159,39 +262,26 @@ const AIRecommendationsPage = () => {
           if (retryResult && retryResult.recommendations && retryResult.recommendations.length > 0) {
             console.log('Found recommendations on retry');
             
-            // Apply the same timestamp sorting logic on retry
+            // Sort recommendations by timestamp, newest first
             const sortedRetryRecs = [...retryResult.recommendations];
             if (sortedRetryRecs[0] && sortedRetryRecs[0].created_at) {
-              // Sort by timestamp, newest first
               sortedRetryRecs.sort((a, b) => {
                 const dateA = new Date(a.created_at || 0);
                 const dateB = new Date(b.created_at || 0);
                 return dateB - dateA;
               });
-              
-              // Group and get the most recent set
-              const recSets = sortedRetryRecs.reduce((sets, rec) => {
-                const timestamp = rec.created_at || 'unknown';
-                if (!sets[timestamp]) {
-                  sets[timestamp] = [];
-                }
-                sets[timestamp].push(rec);
-                return sets;
-              }, {});
-              
-              const timestamps = Object.keys(recSets).sort((a, b) => {
-                if (a === 'unknown') return 1;
-                if (b === 'unknown') return -1;
-                return new Date(b) - new Date(a);
-              });
-              
-              if (timestamps.length > 0) {
-                setRecommendations(processRecommendations(recSets[timestamps[0]]));
-              } else {
-                setRecommendations(processRecommendations(sortedRetryRecs));
-              }
-            } else {
-              setRecommendations(processRecommendations(sortedRetryRecs));
+              console.log('Sorted retry recommendations by timestamp, newest first');
+            }
+            
+            // Take only the most recent 3 recommendations
+            const mostRecentRetryRecs = sortedRetryRecs.slice(0, 3);
+            console.log(`Taking the ${mostRecentRetryRecs.length} most recent retry recommendations`);
+            
+            // Process the recommendations
+            const processed = processRecommendations(mostRecentRetryRecs);
+            if (processed.length > 0) {
+              console.log(`Found ${processed.length} valid recommendations from retry`);
+              setRecommendations(processed);
             }
           }
         } catch (retryErr) {
@@ -219,18 +309,84 @@ const AIRecommendationsPage = () => {
         severity: 'info'
       });
       
+      console.log('Calling generateTravelRecommendations API with tripId:', effectiveTripId);
+      
       // Set a higher temperature for more variety
       const newRecommendations = await generateTravelRecommendations(effectiveTripId, {
         temperature: 0.9
       });
       
-      setRecommendations(processRecommendations(newRecommendations.recommendations));
+      console.log('API Response from generateTravelRecommendations:', newRecommendations);
+      console.log('Recommendations count:', newRecommendations.recommendations?.length || 0);
+      console.log('Sample recommendation:', newRecommendations.recommendations?.[0]);
       
-      setToast({
-        open: true,
-        message: 'New recommendations generated successfully!',
-        severity: 'success'
-      });
+      // Check for recommendations with missing IDs
+      const missingIds = newRecommendations.recommendations.filter(rec => !rec.id);
+      if (missingIds.length > 0) {
+        console.error(`Generated ${missingIds.length} recommendations with missing IDs:`, missingIds);
+        
+        // Filter out recommendations that are missing IDs
+        const validRecs = newRecommendations.recommendations.filter(rec => rec.id);
+        
+        if (validRecs.length === 0) {
+          setToast({
+            open: true,
+            message: 'All generated recommendations are missing IDs. Please try again later.',
+            severity: 'error'
+          });
+          return;
+        }
+        
+        setToast({
+          open: true,
+          message: `Filtered out ${missingIds.length} recommendations that were missing IDs.`,
+          severity: 'warning'
+        });
+        
+        // Sort by created_at if available and take only the 3 most recent
+        const sortedValidRecs = [...validRecs];
+        if (sortedValidRecs[0] && sortedValidRecs[0].created_at) {
+          sortedValidRecs.sort((a, b) => {
+            const dateA = new Date(a.created_at || 0);
+            const dateB = new Date(b.created_at || 0);
+            return dateB - dateA;
+          });
+        }
+        const mostRecentRecs = sortedValidRecs.slice(0, 3);
+        
+        setRecommendations(processRecommendations(mostRecentRecs));
+      } else {
+        // Sort by created_at if available and take only the 3 most recent
+        const sortedRecs = [...newRecommendations.recommendations];
+        if (sortedRecs[0] && sortedRecs[0].created_at) {
+          sortedRecs.sort((a, b) => {
+            const dateA = new Date(a.created_at || 0);
+            const dateB = new Date(b.created_at || 0);
+            return dateB - dateA;
+          });
+        }
+        const mostRecentRecs = sortedRecs.slice(0, 3);
+        
+        // Process the most recent recommendations
+        const processed = processRecommendations(mostRecentRecs);
+        
+        // Check if any were filtered out during processing
+        if (processed.length < mostRecentRecs.length) {
+          setToast({
+            open: true,
+            message: `${mostRecentRecs.length - processed.length} recommendations were filtered out due to issues.`,
+            severity: 'warning'
+          });
+        } else {
+          setToast({
+            open: true,
+            message: 'New recommendations generated successfully!',
+            severity: 'success'
+          });
+        }
+        
+        setRecommendations(processed);
+      }
     } catch (err) {
       setError(`Failed to generate new recommendations: ${err.message}`);
       setToast({
@@ -287,7 +443,70 @@ const AIRecommendationsPage = () => {
   }, [recommendations, handleImageLoaded]);
 
   const handleStartVote = () => {
-    navigate('/voting', { state: { tripId: effectiveTripId, recommendations } });
+    // Ensure we have a valid tripId and make it explicit in the state
+    console.log('AIRecommendationsPage - Starting vote with tripId:', effectiveTripId);
+    
+    if (!effectiveTripId) {
+      setToast({
+        open: true,
+        message: 'Trip ID is missing. Cannot start voting.',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    // Check if we have enough recommendations to start voting (at least 2)
+    if (recommendations.length < 2) {
+      setToast({
+        open: true,
+        message: 'Need at least 2 recommendations to start voting. Try regenerating.',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    // Double-check for recommendations without IDs
+    const missingIds = recommendations.filter(rec => !rec || !rec.id);
+    if (missingIds.length > 0) {
+      console.error('Recommendations missing IDs:', missingIds);
+      
+      // Count the number of recommendations that DO have IDs
+      const validRecs = recommendations.filter(rec => rec && rec.id);
+      
+      // If we still have at least 2 valid recommendations, we can proceed with just those
+      if (validRecs.length >= 2) {
+        setToast({
+          open: true,
+          message: `Proceeding with ${validRecs.length} valid recommendations, filtering out ${missingIds.length} invalid ones.`,
+          severity: 'warning'
+        });
+        
+        // Navigate to the tripId-specific voting route with only the valid recommendations
+        navigate(`/voting/${effectiveTripId}`, { 
+          state: { 
+            tripId: effectiveTripId, 
+            recommendations: validRecs 
+          }
+        });
+        return;
+      }
+      
+      // Otherwise, show an error and suggest regenerating
+      setToast({
+        open: true,
+        message: `${missingIds.length} recommendations are missing IDs. Please regenerate recommendations.`,
+        severity: 'error'
+      });
+      return;
+    }
+    
+    // Navigate to the tripId-specific voting route with recommendations in state
+    navigate(`/voting/${effectiveTripId}`, { 
+      state: { 
+        tripId: effectiveTripId, 
+        recommendations 
+      }
+    });
   };
 
   const handleGoBack = () => {

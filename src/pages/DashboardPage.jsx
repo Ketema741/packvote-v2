@@ -214,7 +214,7 @@ const DashboardPage = () => {
     (tripData.progress.completed / tripData.progress.total) * 100 : 0;
   
   // Determine if enough participants have responded to enable AI recommendations
-  const canGenerateRecommendations = progress >= 50;
+  const canGenerateRecommendations = progress >= 66.67;
 
   if (loading) {
     return (
@@ -349,118 +349,114 @@ const DashboardPage = () => {
           </Grid>
 
           {/* Statistics Section */}
-          <Grid item xs={12} md={4}>
-            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
-              <Typography variant="h6" gutterBottom>
-                Budget
-              </Typography>
-              <Typography variant="h4" color="primary">
-                ${tripData.budget.amount.toLocaleString()}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {tripData.totalResponses === 0 
-                  ? "No budget data available yet"
-                  : tripData.totalResponses === 1 
-                    ? "Based on 1 response" 
-                    : `Average from ${tripData.totalResponses} responses`}
-              </Typography>
-            </Paper>
-          </Grid>
+          <Grid item xs={12}>
+            <Paper elevation={0} sx={{ p: 4, bgcolor: 'background.paper', borderRadius: 3, mb: 4 }}>
+              <Grid container spacing={4}>
+                {/* Budget Section */}
+                <Grid item xs={12} md={4}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: '1.5rem', fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center' }}>
+                      <span role="img" aria-label="money" style={{ marginRight: '8px', fontSize: '1.8rem' }}>💰</span>
+                      Budget
+                    </Typography>
+                    <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      ${tripData.budget.amount.toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {tripData.totalResponses === 0 
+                        ? "No budget data yet"
+                        : tripData.totalResponses === 1 
+                          ? "From 1 response" 
+                          : `Average from ${tripData.totalResponses} responses`}
+                    </Typography>
+                  </Box>
+                </Grid>
 
-          <Grid item xs={12} md={8}>
-            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
-              <Typography variant="h6" gutterBottom>
-                Trip Dates
-              </Typography>
-              
-              <Box>
-                {tripData.respondedParticipants.length > 0 ? (
-                  <>
-                    {/* Prioritize showing overlapping dates if they exist */}
+                {/* Trip Dates Section */}
+                <Grid item xs={12} md={4}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: '1.5rem', fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center' }}>
+                      <span role="img" aria-label="calendar" style={{ marginRight: '8px', fontSize: '1.8rem' }}>📅</span>
+                      Trip Dates
+                    </Typography>
                     {Array.isArray(tripData.overlappingRanges) && tripData.overlappingRanges.length > 0 ? (
-                      <Box>
-                        <Typography variant="body1" color="primary" sx={{ fontWeight: 'medium' }}>
-                          Overlapping date ranges:
-                        </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         {tripData.overlappingRanges.map((range, index) => (
-                          <Box key={index} sx={{ mb: 1, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
-                            <Typography variant="body1">
-                              {range.start} to {range.end} ({range.days} days)
+                          <Box key={index} sx={{ 
+                            mb: 1, 
+                            px: 2, 
+                            py: 1, 
+                            borderRadius: 2,
+                            bgcolor: 'transparent',
+                            border: 'none'
+                          }}>
+                            <Typography variant="body1" sx={{ fontWeight: 'regular' }}>
+                              {range.start} to {range.end.split(',')?.[0]}
+                              <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                ({range.days} {range.days === 1 ? 'day' : 'days'})
+                              </Typography>
                             </Typography>
                           </Box>
                         ))}
                       </Box>
                     ) : (
-                      <Box sx={{ mb: 3, color: 'text.secondary' }}>
-                        <WarningIcon color="warning" sx={{ verticalAlign: 'middle', mr: 1 }} />
-                        <Typography variant="body2" display="inline">
-                          No overlapping dates found. Please adjust preferred dates to find a time that works for everyone.
+                      <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+                        <WarningIcon color="warning" sx={{ mr: 1 }} />
+                        <Typography variant="body2">
+                          No overlapping dates found
                         </Typography>
                       </Box>
                     )}
-                  </>
-                ) : (
-                  <Typography color="text.secondary">
-                    Waiting for participants to respond with their date preferences.
-                  </Typography>
-                )}
-              </Box>
-            </Paper>
-          </Grid>
+                  </Box>
+                </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
-              <Typography variant="h6" gutterBottom>
-                Trip Vibes
-              </Typography>
-              {tripData.vibes && tripData.vibes.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {tripData.vibes.map((vibe, index) => (
-                    <Chip 
-                      key={index} 
-                      label={vibe} 
-                      color="primary" 
-                      variant="outlined"
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    No common vibes found yet. Showing all vibes from participants:
-                  </Typography>
-                  
-                  {/* Show all vibes from individual participants */}
-                  {tripData.respondedParticipants.some(p => p.vibeChoices && p.vibeChoices.length > 0) ? (
-                    <Box sx={{ mt: 1 }}>
-                      {tripData.respondedParticipants.map((participant, index) => (
-                        participant.vibeChoices && participant.vibeChoices.length > 0 ? (
-                          <Box key={index} sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                              {participant.name}:
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 2 }}>
-                              {participant.vibeChoices.map((vibe, i) => (
-                                <Chip 
-                                  key={i} 
-                                  label={vibe} 
-                                  size="small"
-                                  color="default" 
-                                  variant="outlined"
-                                />
-                              ))}
-                            </Box>
-                          </Box>
-                        ) : null
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No vibes selected by any participant.
+                {/* Trip Vibes Section */}
+                <Grid item xs={12} md={4}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: '1.5rem', fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center' }}>
+                      <span role="img" aria-label="vibes" style={{ marginRight: '8px', fontSize: '1.8rem' }}>✨</span>
+                      Trip Vibes
                     </Typography>
-                  )}
-                </Box>
-              )}
+                    {tripData.vibes && tripData.vibes.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
+                        {tripData.vibes.map((vibe, index) => {
+                          // Match emojis to common vibe types
+                          let emoji = "🌟";
+                          if (vibe.toLowerCase().includes("beach")) emoji = "🏖️";
+                          else if (vibe.toLowerCase().includes("adventure") || vibe.toLowerCase().includes("outdoor")) emoji = "🏔️";
+                          else if (vibe.toLowerCase().includes("culture") || vibe.toLowerCase().includes("sight")) emoji = "🏛️";
+                          else if (vibe.toLowerCase().includes("party") || vibe.toLowerCase().includes("night")) emoji = "🎉";
+                          else if (vibe.toLowerCase().includes("nature") || vibe.toLowerCase().includes("remote")) emoji = "🌲";
+                          else if (vibe.toLowerCase().includes("family")) emoji = "👨‍👩‍👧‍👦";
+                          else if (vibe.toLowerCase().includes("wellness") || vibe.toLowerCase().includes("retreat")) emoji = "🧘";
+                          else if (vibe.toLowerCase().includes("expedition")) emoji = "🧭";
+                          else if (vibe.toLowerCase().includes("food")) emoji = "🍽️";
+                          
+                          return (
+                            <Chip 
+                              key={index} 
+                              label={<>
+                                <span style={{ marginRight: '4px' }}>{emoji}</span> {vibe}
+                              </>} 
+                              color="primary" 
+                              variant="outlined"
+                              sx={{ 
+                                borderRadius: '16px', 
+                                fontWeight: 'medium',
+                                px: 1
+                              }}
+                            />
+                          );
+                        })}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No common vibes selected yet
+                      </Typography>
+                    )}
+                  </Box>
+                </Grid>
+              </Grid>
             </Paper>
           </Grid>
 
@@ -482,7 +478,19 @@ const DashboardPage = () => {
                       borderColor: 'divider'
                     }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar src={participant.image || `https://i.pravatar.cc/150?u=${participant.id}`} alt={participant.name} />
+                        <Avatar 
+                          sx={{ 
+                            bgcolor: `hsl(${(participant.id.charCodeAt(0) * 10) % 360}, 70%, 80%)`,
+                            color: `hsl(${(participant.id.charCodeAt(0) * 10) % 360}, 80%, 30%)`
+                          }}
+                        >
+                          {(() => {
+                            // Use the participant ID to consistently select an icon
+                            const travelIcons = ["✈️", "🚗", "🚂", "🚢", "🚁", "🏝️", "🗺️", "🧳", "🚘", "🚠", "🛩️", "🏔️", "🚲"];
+                            const iconIndex = Math.abs(participant.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % travelIcons.length;
+                            return travelIcons[iconIndex];
+                          })()}
+                        </Avatar>
                         <Typography sx={{ ml: 2 }}>{participant.name}</Typography>
                       </Box>
                       <Button 
@@ -530,7 +538,7 @@ const DashboardPage = () => {
             <Typography variant="body2" color="text.secondary">
               {canGenerateRecommendations ? 
                 'Ready to generate recommendations!' : 
-                'Enabled when 50% or more have responded'}
+                'Enabled when at least 2/3 of participants have responded'}
             </Typography>
           </Grid>
         </Grid>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Box, 
   Container, 
@@ -10,28 +10,176 @@ import {
   IconButton,
   AppBar,
   Toolbar,
-  Link
+  Link,
+  Snackbar,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LinkIcon from '@mui/icons-material/Link';
 import CloseIcon from '@mui/icons-material/Close';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import html2canvas from 'html2canvas';
 import '../styles/LandingPage.css';
 import '../styles/SocialSharePage.css';
 
 const SocialSharePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [caption, setCaption] = useState('');
-  
-  const handleDownload = () => {
-    // TODO: Implement image download functionality
-    console.log('Downloading PNG...');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [tripData, setTripData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const shareCardRef = useRef(null);
+
+  // Set default caption based on destination
+  useEffect(() => {
+    if (location.state && (location.state.winnerDestination || location.state.tripId)) {
+      const destination = location.state.winnerDestination || {};
+      setTripData({
+        destination: destination.city || destination.destination || 'our trip',
+        country: destination.country || '',
+        dates: location.state.dates || 'soon',
+        travelers: location.state.travelers || '',
+        price: location.state.price || '',
+        tripId: location.state.tripId || ''
+      });
+      
+      // Set a default caption
+      const destName = destination.city || destination.destination || 'our trip';
+      setCaption(`I'm excited to announce we're going to ${destName}${destination.country ? `, ${destination.country}` : ''}! Join me for an amazing adventure!`);
+      setLoading(false);
+    } else {
+      setLoading(false);
+      // If no data was passed, use default values
+      setTripData({
+        destination: 'our trip',
+        country: '',
+        dates: 'soon',
+        travelers: '',
+        price: '',
+        tripId: ''
+      });
+    }
+  }, [location.state]);
+
+  const handleDownload = async () => {
+    if (!shareCardRef.current) return;
+
+    try {
+      setLoading(true);
+      
+      // Create a canvas from the share card
+      const canvas = await html2canvas(shareCardRef.current, {
+        scale: 2, // Higher quality
+        logging: false,
+        useCORS: true, // Allow loading cross-origin images
+        backgroundColor: '#FFFFFF'
+      });
+      
+      // Convert to data URL and download
+      const image = canvas.toDataURL('image/png', 1.0);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = image;
+      downloadLink.download = `${tripData.destination.toLowerCase().replace(/\s+/g, '-')}-trip.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      setSnackbar({
+        open: true,
+        message: 'Image downloaded successfully!',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error generating image:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to download image. Please try again.',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCopyLink = () => {
-    // TODO: Implement copy link functionality
-    console.log('Copying share link...');
+    if (!tripData.tripId) {
+      setSnackbar({
+        open: true,
+        message: 'No trip ID available to generate a share link.',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    // Create a share link to the winner page for this trip
+    const baseUrl = window.location.origin;
+    const shareLink = `${baseUrl}/winner/${tripData.tripId}`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(shareLink)
+      .then(() => {
+        setSnackbar({
+          open: true,
+          message: 'Share link copied to clipboard!',
+          severity: 'success'
+        });
+      })
+      .catch(err => {
+        console.error('Failed to copy link:', err);
+        setSnackbar({
+          open: true,
+          message: 'Failed to copy link. Please try again.',
+          severity: 'error'
+        });
+      });
   };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // Get the appropriate illustration based on destination
+  const getDestinationEmojis = () => {
+    const destination = tripData?.destination?.toLowerCase() || '';
+    
+    // Match destination to appropriate emojis
+    if (destination.includes('beach') || destination.includes('island') || destination.includes('coast') || 
+        destination.includes('bali') || destination.includes('hawaii') || destination.includes('caribbean')) {
+      return { scene: '🏝️', elements: ['🌴', '🏖️', '🌊'] };
+    } else if (destination.includes('mountain') || destination.includes('alps') || 
+              destination.includes('hiking') || destination.includes('trek')) {
+      return { scene: '🏔️', elements: ['⛰️', '🥾', '🌲'] };
+    } else if (destination.includes('paris') || destination.includes('france')) {
+      return { scene: '🗼', elements: ['🥐', '🥖', '🍷'] };
+    } else if (destination.includes('rome') || destination.includes('italy')) {
+      return { scene: '🏛️', elements: ['🍕', '🍝', '🏺'] };
+    } else if (destination.includes('tokyo') || destination.includes('japan')) {
+      return { scene: '⛩️', elements: ['🍣', '🗾', '🌸'] };
+    } else if (destination.includes('new york') || destination.includes('nyc')) {
+      return { scene: '🗽', elements: ['🏙️', '🚕', '🍎'] };
+    } else {
+      // Default travel theme
+      return { scene: '✈️', elements: ['🧳', '🗺️', '📸'] };
+    }
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="md" sx={{ pt: 12, pb: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 200px)' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Preparing your share card...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  // Get destination emojis for illustration
+  const destinationEmojis = getDestinationEmojis();
 
   return (
     <div className="landing-page">
@@ -94,50 +242,60 @@ const SocialSharePage = () => {
               Share Your Trip
             </Typography>
           
-            <Box className="share-preview" sx={{ 
-              my: 4, 
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 2,
-              overflow: 'hidden'
-            }}>
+            <Box 
+              ref={shareCardRef}
+              className="share-preview" 
+              sx={{ 
+                my: 4, 
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                overflow: 'hidden',
+                backgroundColor: 'white'
+              }}
+            >
               <Box className="preview-illustration" sx={{ 
-                bgcolor: '#f8f9fa', 
-                p: 2,
-                height: '200px',
+                background: 'linear-gradient(120deg, #e0f7fa 0%, #80deea 100%)', 
+                p: 3,
+                height: '230px',
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
+                position: 'relative'
               }}>
-                {/* TODO update this to match the chosen location */}
-                <Box className="illustration-elements">
-                  <Box className="scene" sx={{ position: 'relative', height: '100%', width: '100%' }}>
-                    <Box className="sun" sx={{ 
-                      position: 'absolute',
-                      top: '20px',
-                      right: '40px',
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      bgcolor: '#FFD700'
-                    }}></Box>
-                    <Box className="palm-trees" sx={{ 
-                      position: 'absolute',
-                      bottom: '0',
-                      left: '30px',
-                      color: '#2E7D32'
-                    }}>🌴🌴</Box>
-                    <Box className="beach-chair" sx={{ 
-                      position: 'absolute',
-                      bottom: '10px',
-                      left: '120px'
-                    }}>🏖️</Box>
-                    <Box className="building" sx={{ 
-                      position: 'absolute',
-                      bottom: '20px',
-                      right: '60px'
-                    }}>🏛️</Box>
-                  </Box>
+                <Box className="destination-scene" sx={{
+                  fontSize: '80px',
+                  textAlign: 'center',
+                  mb: 2
+                }}>
+                  {destinationEmojis.scene}
+                </Box>
+                
+                <Box sx={{ 
+                  position: 'absolute',
+                  bottom: '20px',
+                  left: '30px',
+                  fontSize: '32px'
+                }}>
+                  {destinationEmojis.elements[0]}
+                </Box>
+                
+                <Box sx={{ 
+                  position: 'absolute',
+                  top: '30px',
+                  right: '40px',
+                  fontSize: '32px'
+                }}>
+                  {destinationEmojis.elements[1]}
+                </Box>
+                
+                <Box sx={{ 
+                  position: 'absolute',
+                  bottom: '40px',
+                  right: '50px',
+                  fontSize: '32px'
+                }}>
+                  {destinationEmojis.elements[2]}
                 </Box>
               </Box>
               <Box className="preview-text" sx={{ 
@@ -148,9 +306,20 @@ const SocialSharePage = () => {
                 <Typography variant="body1" sx={{ fontSize: '1.1rem', color: 'text.secondary' }}>
                   We're going to
                 </Typography>
-                <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                  Paris!
+                <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
+                  {tripData?.destination}
+                  {tripData?.country ? `, ${tripData.country}` : ''}
                 </Typography>
+                {tripData?.dates && (
+                  <Typography variant="body1" sx={{ color: 'text.secondary', mt: 1 }}>
+                    📅 {tripData.dates}
+                  </Typography>
+                )}
+                {tripData?.travelers && (
+                  <Typography variant="body1" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                    👥 {tripData.travelers}
+                  </Typography>
+                )}
               </Box>
             </Box>
 
@@ -191,6 +360,7 @@ const SocialSharePage = () => {
                   onClick={handleCopyLink}
                   className="primary-button"
                   sx={{ minWidth: '180px' }}
+                  disabled={!tripData?.tripId}
                 >
                   Copy Share Link
                 </Button>
@@ -199,6 +369,22 @@ const SocialSharePage = () => {
           </Box>
         </Paper>
       </Container>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       {/* Footer */}
       <footer className="footer">

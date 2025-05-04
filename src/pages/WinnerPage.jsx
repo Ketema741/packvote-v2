@@ -313,7 +313,19 @@ const WinnerPage = () => {
   }, [tripId]);
 
   const handleShare = () => {
-    navigate('/share', { state: { tripId, winnerDestination: winnerDetails } });
+    const tripDetails = getTripDetailsObject();
+    
+    // Prepare the data to pass to the share page
+    const shareData = {
+      winnerDestination: winnerDetails,
+      tripId: tripId,
+      dates: tripDetails.dates,
+      travelers: tripDetails.travelers,
+      price: tripDetails.price
+    };
+    
+    // Navigate to the share page with the data
+    navigate('/share', { state: shareData });
   };
 
   const handleDownload = async () => {

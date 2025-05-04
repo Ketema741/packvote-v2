@@ -687,6 +687,8 @@ export const generateTravelRecommendations = async (tripId, options = {}) => {
  */
 export const getTravelRecommendations = async (tripId) => {
   try {
+    console.log('Getting travel recommendations for trip:', tripId);
+    
     const response = await fetch(`${API_BASE_URL}/recommendations/${tripId}`, {
       method: 'GET',
       headers: {
@@ -705,12 +707,36 @@ export const getTravelRecommendations = async (tripId) => {
     }
 
     const data = await response.json();
+    console.log('Raw recommendation data from API:', data);
+    
+    // Helper function to generate a proper UUID v4
+    const generateUUID = () => {
+      // Implementation based on RFC4122 version 4
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : ((r & 0x3) | 0x8);
+        return v.toString(16);
+      });
+    };
     
     // Process the recommendations to handle field mapping and filter invalid ones
     if (data && data.recommendations) {
       data.recommendations = data.recommendations
         .filter(rec => rec && (rec.city || rec.destination)) // Filter out invalid recommendations
         .map(rec => {
+          // Log missing ID
+          if (!rec.id) {
+            console.warn('Recommendation missing ID:', rec);
+            // Generate a proper UUID for frontend and backend use
+            rec.id = generateUUID();
+            console.log(`Generated UUID ${rec.id} for recommendation: ${rec.city || rec.destination}`);
+          } else if (rec.id.startsWith('temp-')) {
+            // Replace any existing temp ID with a proper UUID
+            const oldId = rec.id;
+            rec.id = generateUUID();
+            console.log(`Replaced temp ID ${oldId} with UUID ${rec.id}`);
+          }
+          
           // Map city to destination and vice versa for consistency
           if (rec.city && !rec.destination) {
             rec.destination = rec.city;
@@ -719,6 +745,8 @@ export const getTravelRecommendations = async (tripId) => {
           }
           return rec;
         });
+      
+      console.log('Processed recommendations:', data.recommendations);
     }
     
     return data;
@@ -735,6 +763,61 @@ export const getTravelRecommendations = async (tripId) => {
  */
 export const submitVotes = async (voteData) => {
   try {
+    console.log('submitVotes called with data:', JSON.stringify(voteData));
+    
+    // Validate data before sending
+    if (!voteData.trip_id) {
+      throw new Error('Missing trip_id in vote data');
+    }
+    
+    if (!voteData.user_id) {
+      throw new Error('Missing user_id in vote data');
+    }
+    
+    if (!voteData.rankings || !Array.isArray(voteData.rankings) || voteData.rankings.length === 0) {
+      throw new Error('Missing or invalid rankings array in vote data');
+    }
+    
+    // Helper function to generate a proper UUID v4
+    const generateUUID = () => {
+      // Implementation based on RFC4122 version 4
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : ((r & 0x3) | 0x8);
+        return v.toString(16);
+      });
+    };
+    
+    // Helper to check if string is a valid UUID
+    const isValidUUID = (id) => {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidPattern.test(id);
+    };
+    
+    // Check each ranking for recommendation_id and ensure it's a valid UUID
+    const invalidIds = [];
+    voteData.rankings = voteData.rankings.map(ranking => {
+      if (!ranking.recommendation_id) {
+        console.error('Ranking missing recommendation_id:', ranking);
+        invalidIds.push('missing');
+        ranking.recommendation_id = generateUUID(); // Generate a new UUID
+      } else if (!isValidUUID(ranking.recommendation_id)) {
+        // Replace invalid UUIDs with valid ones
+        const oldId = ranking.recommendation_id;
+        ranking.recommendation_id = generateUUID();
+        console.log(`Replaced invalid ID ${oldId} with UUID ${ranking.recommendation_id}`);
+        invalidIds.push(oldId);
+      }
+      return ranking;
+    });
+    
+    if (invalidIds.length > 0) {
+      console.warn(`Fixed ${invalidIds.length} invalid recommendation IDs`);
+    }
+    
+    console.log('Sending vote request to API:', `${API_BASE_URL}/recommendations/vote`);
+    console.log('Final vote data:', JSON.stringify(voteData));
+    
     const response = await fetch(`${API_BASE_URL}/recommendations/vote`, {
       method: 'POST',
       headers: {
@@ -743,14 +826,101 @@ export const submitVotes = async (voteData) => {
       body: JSON.stringify(voteData),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+    // Get the response body for error details
+    const responseText = await response.text();
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      responseData = { detail: responseText };
     }
 
-    return await response.json();
+    if (!response.ok) {
+      console.error('Error response from vote API:', responseData);
+      
+      // Format a more helpful error message
+      const statusError = `Status: ${response.status}`;
+      const detailError = responseData.detail ? `Detail: ${responseData.detail}` : '';
+      throw new Error([
+        'Failed to submit votes',
+        statusError,
+        detailError
+      ].filter(Boolean).join(' - '));
+    }
+
+    console.log('Vote submission successful:', responseData);
+    
+    // Verify that votes were actually saved by calling the getVotes function
+    try {
+      console.log('Verifying votes were saved...');
+      const verifyResult = await getVotes(voteData.trip_id, voteData.user_id);
+      
+      if (verifyResult.count === 0) {
+        console.error('Votes were not saved to the database!');
+        throw new Error('Votes were submitted successfully but were not found in the database');
+      }
+      
+      console.log(`Verified ${verifyResult.count} votes were saved to the database`);
+      
+      // Add verification result to the response
+      responseData.verification = {
+        count: verifyResult.count,
+        votes: verifyResult.votes
+      };
+    } catch (verifyError) {
+      console.error('Error verifying votes:', verifyError);
+      // Don't throw here, just log the error
+    }
+    
+    return responseData;
   } catch (error) {
     console.error('Error submitting votes:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get votes/rankings for a trip, optionally filtered by user
+ * @param {string} tripId - Trip ID
+ * @param {string} userId - Optional user ID to filter votes by
+ * @returns {Promise<Object>} Votes data
+ */
+export const getVotes = async (tripId, userId = null) => {
+  try {
+    console.log(`Getting votes for trip ${tripId}${userId ? ` and user ${userId}` : ''}`);
+    
+    let url = `${API_BASE_URL}/recommendations/votes/${tripId}`;
+    if (userId) {
+      url += `?user_id=${userId}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    // Handle response
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorDetail;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorDetail = errorData.detail || `HTTP error! Status: ${response.status}`;
+      } catch (e) {
+        errorDetail = errorText || `HTTP error! Status: ${response.status}`;
+      }
+      
+      throw new Error(errorDetail);
+    }
+
+    const data = await response.json();
+    console.log('Received vote data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error getting votes:', error);
     throw error;
   }
 }; 

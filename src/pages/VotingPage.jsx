@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { 
   Container, 
   Typography, 
@@ -13,18 +12,20 @@ import {
   IconButton,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import BeachAccessIcon from '@mui/icons-material/BeachAccess';
-import { getTravelRecommendations, submitVotes } from '../utils/api';
+import { getTravelRecommendations, submitVotes, getTripDetails } from '../utils/api';
 import '../styles/LandingPage.css';
 import '../styles/VotingPage.css';
 
@@ -41,6 +42,118 @@ const VotingPage = () => {
   const [loading, setLoading] = useState(!location.state?.recommendations);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState({});
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [participants, setParticipants] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+
+  const processRecommendations = useCallback((recs) => {
+    if (!recs || recs.length === 0) return [];
+    
+    // Process recommendations to ensure proper structures
+    return recs.map((rec, index) => {
+      // Skip invalid recommendations
+      if (!rec) return null;
+      
+      // Create a copy of the recommendation
+      const processed = { ...rec };
+      
+      // Ensure ID is preserved - if missing, generate a stable ID based on the destination
+      if (!processed.id) {
+        console.warn('Recommendation missing ID, generating one:', processed);
+        // Use a more stable ID based on the destination and index
+        const baseText = `${processed.city || processed.destination || "unknown"}-${processed.country || "unknown"}-${index}`;
+        processed.id = `temp-${baseText.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+      }
+      
+      // Determine location name from available fields
+      processed.locationDisplayName = processed.city || processed.destination || "Unknown Location";
+      
+      return processed;
+    }).filter(Boolean); // Filter out any null entries
+  }, []);
+
+  // Function to format time remaining as string
+  const formatTimeRemaining = (milliseconds) => {
+    if (!milliseconds || milliseconds <= 0) return 'Voting ended';
+    
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      return `${days}d ${hours % 24}h remaining`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes % 60}m remaining`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s remaining`;
+    } else {
+      return `${seconds}s remaining`;
+    }
+  };
+
+  // Effect for countdown timer
+  useEffect(() => {
+    if (!timeRemaining) return;
+    
+    const timer = setInterval(() => {
+      setTimeRemaining(prevTime => {
+        if (prevTime <= 1000) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prevTime - 1000;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [timeRemaining]);
+
+  // Fetch trip details and calculate deadline
+  useEffect(() => {
+    if (!tripId) return;
+    
+    const fetchTripDetails = async () => {
+      try {
+        const data = await getTripDetails(tripId);
+        
+        // Get participants who completed the survey
+        if (data.participants && data.survey_responses) {
+          // Find participants who have responded
+          const respondedParticipants = data.participants.filter(participant => {
+            return data.survey_responses.some(response => response.user_id === participant.id);
+          });
+          
+          setParticipants(respondedParticipants);
+        }
+        
+        // Find the latest survey response timestamp
+        if (data.survey_responses && data.survey_responses.length > 0) {
+          // Sort by created_at timestamp, newest first
+          const sortedResponses = [...data.survey_responses].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+          
+          // Calculate deadline (48 hours after the last survey)
+          const latestResponse = sortedResponses[0];
+          const latestTimestamp = new Date(latestResponse.created_at);
+          const deadlineTimestamp = new Date(latestTimestamp.getTime() + (48 * 60 * 60 * 1000));
+          
+          // Calculate time remaining
+          const now = new Date();
+          const msRemaining = deadlineTimestamp - now;
+          
+          setTimeRemaining(Math.max(0, msRemaining));
+        }
+      } catch (err) {
+        console.error('Error fetching trip details:', err);
+      }
+    };
+    
+    fetchTripDetails();
+  }, [tripId]);
 
   useEffect(() => {
     // If recommendations weren't passed via location state, fetch them
@@ -50,7 +163,56 @@ const VotingPage = () => {
           setLoading(true);
           const result = await getTravelRecommendations(tripId);
           if (result.recommendations && result.recommendations.length > 0) {
-            setDestinations(result.recommendations);
+            // Log the raw recommendations to debug
+            console.log('Raw recommendations from API:', result.recommendations);
+            
+            // Sort by timestamp to get the most recent recommendations
+            const sortedRecommendations = [...result.recommendations];
+            
+            // Check if recommendations have timestamps
+            if (sortedRecommendations[0] && sortedRecommendations[0].created_at) {
+              // Sort by timestamp, newest first
+              sortedRecommendations.sort((a, b) => {
+                const dateA = new Date(a.created_at || 0);
+                const dateB = new Date(b.created_at || 0);
+                return dateB - dateA;
+              });
+              
+              // Group recommendations by timestamp (to find distinct sets)
+              const recommendationSets = sortedRecommendations.reduce((sets, rec) => {
+                const timestamp = rec.created_at || 'unknown';
+                if (!sets[timestamp]) {
+                  sets[timestamp] = [];
+                }
+                sets[timestamp].push(rec);
+                return sets;
+              }, {});
+              
+              // Get the most recent set of recommendations
+              const timestamps = Object.keys(recommendationSets).sort((a, b) => {
+                // Sort timestamps, newest first (if they are valid dates)
+                if (a === 'unknown') return 1;
+                if (b === 'unknown') return -1;
+                return new Date(b) - new Date(a);
+              });
+              
+              if (timestamps.length > 0) {
+                const mostRecentTimestamp = timestamps[0];
+                console.log(`Using most recent recommendation set from: ${mostRecentTimestamp}`);
+                const mostRecentSet = recommendationSets[mostRecentTimestamp];
+                const processed = processRecommendations(mostRecentSet);
+                console.log('Processed recommendations:', processed);
+                setDestinations(processed);
+              } else {
+                const processed = processRecommendations(sortedRecommendations);
+                console.log('Processed recommendations:', processed);
+                setDestinations(processed);
+              }
+            } else {
+              const processed = processRecommendations(sortedRecommendations);
+              console.log('Processed recommendations:', processed);
+              setDestinations(processed);
+            }
           } else {
             setError('No recommendations found for this trip');
           }
@@ -62,18 +224,14 @@ const VotingPage = () => {
       };
       
       fetchRecommendations();
+    } else if (location.state?.recommendations) {
+      // Log recommendations from location state
+      console.log('Recommendations from location state:', location.state.recommendations);
+      const processed = processRecommendations(location.state.recommendations);
+      console.log('Processed recommendations from state:', processed);
+      setDestinations(processed);
     }
-  }, [tripId, location.state]);
-
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-
-    const items = Array.from(destinations);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setDestinations(items);
-  };
+  }, [tripId, location.state, processRecommendations]);
 
   const handleMoveUp = (index) => {
     if (index === 0) return;
@@ -101,52 +259,154 @@ const VotingPage = () => {
       return;
     }
     
+    // If no user is selected, open the dialog to select one
+    if (!selectedUserId) {
+      setUserDialogOpen(true);
+      return;
+    }
+    
     try {
       setSubmitting(true);
       
-      // Create vote data with ranking positions
+      // Check if all destinations have valid IDs
+      const missingIds = destinations.filter(dest => !dest.id);
+      if (missingIds.length > 0) {
+        console.error('Destinations missing IDs:', missingIds);
+        setError(`${missingIds.length} destinations are missing IDs. Cannot submit vote.`);
+        return;
+      }
+      
+      // Check for duplicate IDs
+      const idCounts = {};
+      destinations.forEach(dest => {
+        if (dest.id) {
+          idCounts[dest.id] = (idCounts[dest.id] || 0) + 1;
+        }
+      });
+      
+      const duplicateIds = Object.entries(idCounts)
+        .filter(([, count]) => count > 1)
+        .map(([id]) => id);
+      
+      if (duplicateIds.length > 0) {
+        console.error('Duplicate recommendation IDs found:', duplicateIds);
+        setError(`Found ${duplicateIds.length} duplicate recommendation IDs. Please reload the page and try again.`);
+        return;
+      }
+      
+      // Create vote data with ranking positions and user ID
       const voteData = {
         trip_id: tripId,
-        rankings: destinations.map((destination, index) => ({
-          recommendation_id: destination.id,
-          rank_position: index + 1
-        }))
+        user_id: selectedUserId,
+        rankings: destinations.map((destination, index) => {
+          console.log(`Destination ${index+1}:`, destination.destination || destination.city, 'ID:', destination.id);
+          return {
+            recommendation_id: destination.id,
+            rank_position: index + 1
+          };
+        })
       };
       
-      // Submit to backend
-      await submitVotes(voteData);
+      console.log('Submitting vote data:', JSON.stringify(voteData));
       
-      // Navigate to winner page or show success message
-      navigate('/winner', { state: { tripId } });
+      // Add detailed debugging
+      console.log('Vote payload details:');
+      console.log('- trip_id:', voteData.trip_id, 'type:', typeof voteData.trip_id);
+      console.log('- user_id:', voteData.user_id, 'type:', typeof voteData.user_id);
+      console.log('- Rankings:');
+      voteData.rankings.forEach((ranking, idx) => {
+        console.log(`  ${idx+1}. recommendation_id: ${ranking.recommendation_id} (${typeof ranking.recommendation_id}), rank_position: ${ranking.rank_position} (${typeof ranking.rank_position})`);
+      });
+      
+      try {
+        // Submit to backend
+        const response = await submitVotes(voteData);
+        console.log('Vote submission response:', response);
+        
+        // Navigate to winner page or show success message
+        navigate('/winner', { state: { tripId } });
+      } catch (submitError) {
+        console.error('Error during submission:', submitError);
+        const errorMessage = submitError.message || 'Unknown error during vote submission';
+        setError(`Failed to submit votes: ${errorMessage}`);
+        
+        // Try to get more details if available
+        if (submitError.response) {
+          console.error('Response data:', submitError.response.data);
+          console.error('Response status:', submitError.response.status);
+        }
+      }
     } catch (err) {
-      setError(`Failed to submit votes: ${err.message}`);
+      const errorMessage = err.message || 'Unknown error preparing vote data';
+      setError(`Failed to submit votes: ${errorMessage}`);
+      console.error('Vote submission error:', err);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Utility function to format budget tier
-  const formatBudgetTier = (tier) => {
-    switch (tier) {
-      case 'budget':
-        return { text: 'Budget-Friendly', icon: <AttachMoneyIcon /> };
-      case 'moderate':
-        return { text: 'Moderate', icon: <><AttachMoneyIcon /><AttachMoneyIcon /></> };
-      case 'luxury':
-        return { text: 'Luxury', icon: <><AttachMoneyIcon /><AttachMoneyIcon /><AttachMoneyIcon /></> };
-      default:
-        return { text: tier, icon: <AttachMoneyIcon /> };
+  const handleUserSelect = (userId) => {
+    // Set the selected user ID first
+    setSelectedUserId(userId);
+    
+    // Then proceed with submission
+    try {
+      setSubmitting(true);
+      setUserDialogOpen(false);
+      
+      // Create vote data with ranking positions and user ID
+      const voteData = {
+        trip_id: tripId,
+        user_id: userId, // Use the directly passed userId rather than state
+        rankings: destinations.map((destination, index) => {
+          console.log(`Destination ${index+1}:`, destination.destination || destination.city, 'ID:', destination.id);
+          return {
+            recommendation_id: destination.id,
+            rank_position: index + 1
+          };
+        })
+      };
+      
+      console.log('Submitting vote data:', JSON.stringify(voteData));
+      
+      // Submit to backend
+      submitVotes(voteData)
+        .then(() => {
+          // Navigate to winner page or show success message
+          navigate('/winner', { state: { tripId } });
+        })
+        .catch(err => {
+          setError(`Failed to submit votes: ${err.message}`);
+          console.error('Vote submission error:', err);
+          setSubmitting(false);
+        });
+    } catch (err) {
+      setError(`Failed to prepare vote data: ${err.message}`);
+      console.error('Vote preparation error:', err);
+      setSubmitting(false);
+      setUserDialogOpen(false);
     }
   };
 
+  const handleImageLoaded = useCallback((id) => {
+    setImagesLoaded(prev => ({ ...prev, [id]: true }));
+  }, []);
+
   // Get image URL for a destination
-  const getImageUrl = (destination) => {
-    if (destination.image_url) return destination.image_url;
+  const getImageUrl = (destination, index) => {
+    // Use the same placeholder image logic as AIRecommendationsPage
+    const placeholderImages = [
+      'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Travel generic
+      'https://images.pexels.com/photos/1051073/pexels-photo-1051073.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Beach
+      'https://images.pexels.com/photos/466685/pexels-photo-466685.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',  // City
+      'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Mountain
+      'https://images.pexels.com/photos/1271619/pexels-photo-1271619.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Landmark
+    ];
     
-    // Generate fallback image URL using Unsplash
-    const dest = destination.destination.toLowerCase().replace(/,/g, '').replace(/ /g, '-');
-    const country = destination.country.toLowerCase().replace(/ /g, '-');
-    return `https://source.unsplash.com/featured/1200x800/?${dest},${country},travel`;
+    // Select a placeholder image based on destination name for consistency
+    const locationText = destination.locationDisplayName || destination.city || destination.destination || "Unknown";
+    const placeholderIndex = Math.abs(locationText.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)) % placeholderImages.length;
+    return placeholderImages[placeholderIndex];
   };
 
   if (loading) {
@@ -256,7 +516,7 @@ const VotingPage = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
             <Chip
               icon={<AccessTimeIcon />}
-              label="Voting ends in 23h"
+              label={timeRemaining !== null ? formatTimeRemaining(timeRemaining) : "Calculating time..."}
               color="primary"
               variant="outlined"
             />
@@ -268,134 +528,103 @@ const VotingPage = () => {
             color="text.secondary" 
             sx={{ mb: 4 }}
           >
-            Drag and drop to rank your preferences
+            Use the arrows to rank your preferences
           </Typography>
 
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="destinations">
-              {(provided) => (
-                <Box
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  sx={{ mb: 4 }}
+          <Box sx={{ mb: 4 }}>
+            {destinations.map((destination, index) => (
+              <Paper
+                key={destination.id || `destination-${index}`}
+                elevation={1}
+                sx={{ 
+                  mb: 2, 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: 'background.paper',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Box 
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    mr: 2,
+                    flexShrink: 0
+                  }}
                 >
-                  {destinations.map((destination, index) => (
-                    <Draggable
-                      key={destination.id || `destination-${index}`}
-                      draggableId={destination.id || `destination-${index}`}
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <Paper
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          elevation={snapshot.isDragging ? 6 : 1}
-                          sx={{ 
-                            mb: 2, 
-                            display: 'flex', 
-                            alignItems: 'center',
-                            p: 2,
-                            borderRadius: 2,
-                            bgcolor: snapshot.isDragging ? 'rgba(0, 0, 0, 0.02)' : 'background.paper',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          <Box 
-                            {...provided.dragHandleProps} 
-                            sx={{ 
-                              mr: 2, 
-                              color: 'text.secondary',
-                              cursor: 'grab'
-                            }}
-                          >
-                            <DragIndicatorIcon />
-                          </Box>
-                          <Box 
-                            sx={{ 
-                              width: '80px', 
-                              height: '60px', 
-                              borderRadius: 1, 
-                              overflow: 'hidden',
-                              mr: 2,
-                              flexShrink: 0
-                            }}
-                          >
-                            <img 
-                              src={getImageUrl(destination)} 
-                              alt={destination.destination} 
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'cover' 
-                              }} 
-                            />
-                          </Box>
-                          <Box sx={{ flexGrow: 1 }}>
-                            <Typography 
-                              variant="h6" 
-                              sx={{ 
-                                fontWeight: 500
-                              }}
-                            >
-                              {destination.destination}
-                              <Typography 
-                                component="span" 
-                                color="text.secondary" 
-                                sx={{ ml: 1, fontSize: '0.9rem' }}
-                              >
-                                {destination.country}
-                              </Typography>
-                            </Typography>
-                            
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                              {/* Budget tier */}
-                              <Chip 
-                                size="small" 
-                                variant="outlined" 
-                                label={formatBudgetTier(destination.budget_tier).text}
-                                icon={formatBudgetTier(destination.budget_tier).icon}
-                              />
-                              
-                              {/* One matching vibe */}
-                              {destination.matching_vibes && destination.matching_vibes.length > 0 && (
-                                <Chip 
-                                  size="small" 
-                                  variant="outlined" 
-                                  icon={<BeachAccessIcon />}
-                                  label={destination.matching_vibes[0]}
-                                />
-                              )}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <IconButton 
-                              size="small" 
-                              aria-label="Move up"
-                              disabled={index === 0}
-                              sx={{ color: index === 0 ? 'text.disabled' : 'text.secondary' }}
-                              onClick={() => handleMoveUp(index)}
-                            >
-                              <ArrowUpwardIcon />
-                            </IconButton>
-                            <IconButton 
-                              size="small" 
-                              aria-label="Move down"
-                              disabled={index === destinations.length - 1}
-                              sx={{ color: index === destinations.length - 1 ? 'text.disabled' : 'text.secondary' }}
-                              onClick={() => handleMoveDown(index)}
-                            >
-                              <ArrowDownwardIcon />
-                            </IconButton>
-                          </Box>
-                        </Paper>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
+                  {index + 1}
                 </Box>
-              )}
-            </Droppable>
-          </DragDropContext>
+                <Box 
+                  sx={{ 
+                    width: '80px', 
+                    height: '60px', 
+                    borderRadius: 1, 
+                    overflow: 'hidden',
+                    mr: 2,
+                    flexShrink: 0
+                  }}
+                  className={`card-image ${!imagesLoaded[index] ? 'loading' : ''}`}
+                >
+                  <img 
+                    src={getImageUrl(destination, index)} 
+                    alt={destination.destination} 
+                    onLoad={() => handleImageLoaded(index)}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover' 
+                    }} 
+                  />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 500
+                    }}
+                  >
+                    {destination.destination}
+                    <Typography 
+                      component="span" 
+                      color="text.secondary" 
+                      sx={{ ml: 1, fontSize: '0.9rem' }}
+                    >
+                      {destination.country}
+                    </Typography>
+                  </Typography>
+                </Box>
+                <Box>
+                  <IconButton 
+                    size="small" 
+                    aria-label="Move up"
+                    disabled={index === 0}
+                    sx={{ color: index === 0 ? 'text.disabled' : 'text.secondary' }}
+                    onClick={() => handleMoveUp(index)}
+                  >
+                    <ArrowUpwardIcon />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
+                    aria-label="Move down"
+                    disabled={index === destinations.length - 1}
+                    sx={{ color: index === destinations.length - 1 ? 'text.disabled' : 'text.secondary' }}
+                    onClick={() => handleMoveDown(index)}
+                  >
+                    <ArrowDownwardIcon />
+                  </IconButton>
+                </Box>
+              </Paper>
+            ))}
+          </Box>
 
           <Box sx={{ textAlign: 'center' }}>
             <Button 
@@ -415,6 +644,37 @@ const VotingPage = () => {
           </Box>
         </Paper>
       </Container>
+
+      {/* User selection dialog */}
+      <Dialog open={userDialogOpen} onClose={() => setUserDialogOpen(false)}>
+        <DialogTitle>Who are you?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Please select your name to submit your vote.
+          </DialogContentText>
+          {participants.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+              {participants.map((participant) => (
+                <Button 
+                  key={participant.id}
+                  variant="outlined"
+                  onClick={() => handleUserSelect(participant.id)}
+                  sx={{ py: 1.5, textAlign: 'left', justifyContent: 'flex-start' }}
+                >
+                  {participant.name}
+                </Button>
+              ))}
+            </Box>
+          ) : (
+            <Typography color="error">
+              No participants found who completed the survey.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUserDialogOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Footer */}
       <footer className="footer">

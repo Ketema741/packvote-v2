@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -49,7 +49,6 @@ const WinnerPage = () => {
   const [votingComplete, setVotingComplete] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [pendingVoters, setPendingVoters] = useState([]);
-  const [tripStats, setTripStats] = useState(null);
   const [optimalDateRanges, setOptimalDateRanges] = useState([]);
 
   // If we have a tripId in location state but not in URL, redirect to the URL version
@@ -80,51 +79,44 @@ const WinnerPage = () => {
   };
 
   // Fetch all required data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!tripId) {
-      setError('Trip ID is missing. Please go back and try again.');
+      setError("No trip ID provided");
       setLoading(false);
       return;
     }
-
+    
     try {
+      console.log(`Fetching data for trip ${tripId}`);
       setLoading(true);
       
-      // Get trip details
+      // Get trip details which includes participants and survey responses
       const tripDetails = await getTripDetails(tripId);
-      setTripData(tripDetails);
       console.log('Trip details:', tripDetails);
       
-      // Calculate trip stats from survey responses
-      if (tripDetails.survey_responses && tripDetails.survey_responses.length > 0) {
-        const stats = calculateSurveyStats(tripDetails.survey_responses);
-        setTripStats(stats);
-        console.log('Calculated trip stats:', stats);
+      if (tripDetails && tripDetails.participants) {
+        setTripData(tripDetails);
         
-        // Set optimal date ranges based on overlapping dates and trip lengths
-        if (stats.overlappingRanges && stats.overlappingRanges.length > 0) {
-          // Sort by longest duration first
-          const sortedRanges = [...stats.overlappingRanges].sort((a, b) => {
-            const daysA = Math.ceil((a.end - a.start) / (1000 * 60 * 60 * 24)) + 1;
-            const daysB = Math.ceil((b.end - b.start) / (1000 * 60 * 60 * 24)) + 1;
-            return daysB - daysA; // Descending order
-          });
+        // Calculate remaining voters if voting isn't complete
+        const votedParticipants = new Set(tripDetails.votes ? tripDetails.votes.map(vote => vote.user_id) : []);
+        const pendingParticipants = tripDetails.participants.filter(p => !votedParticipants.has(p.id));
+        setPendingVoters(pendingParticipants);
+        
+        // Calculate voting deadline if provided
+        if (tripDetails.voting_deadline) {
+          const deadline = new Date(tripDetails.voting_deadline).getTime();
+          const now = new Date().getTime();
+          const remaining = deadline - now;
           
-          // Format date ranges for display
-          const formattedRanges = sortedRanges.map(range => {
-            const days = Math.ceil((range.end - range.start) / (1000 * 60 * 60 * 24)) + 1;
-            return {
-              start: range.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
-              end: range.end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-              days: days
-            };
-          });
-          
-          setOptimalDateRanges(formattedRanges);
-          console.log('Formatted optimal date ranges:', formattedRanges);
+          if (remaining > 0) {
+            setTimeRemaining(remaining);
+          } else {
+            // If deadline has passed, set to zero to trigger calculation
+            setTimeRemaining(0);
+          }
         }
         
-        // Extract preferred trip lengths from survey responses
+        // Extract trip lengths from survey responses if available
         const tripLengths = tripDetails.survey_responses
           .map(response => response.trip_length)
           .filter(length => !!length);
@@ -155,56 +147,24 @@ const WinnerPage = () => {
         setVotingComplete(true);
         setWinnerDetails(winnerData.winner.winner_details);
         console.log('Winner details:', winnerData.winner.winner_details);
-      } else {
-        // Voting is still in progress
+      } else if (winnerData.message === 'No winner yet' || winnerData.message === 'Voting in progress') {
+        // No winner yet, keep the voting view
+        console.log('Voting still in progress');
         setVotingComplete(false);
-        
-        // Set pending voters data
-        if (winnerData.pending_voters) {
-          setPendingVoters(winnerData.pending_voters);
-        }
-        
-        // Calculate time remaining based on voting deadline
-        // First, determine when the voting period started
-        let votingStart = null;
-        
-        // Use the first survey submission as the start of the voting period
-        if (tripDetails.survey_responses && tripDetails.survey_responses.length > 0) {
-          // Sort by created_at timestamp, oldest first
-          const sortedResponses = [...tripDetails.survey_responses].sort((a, b) => {
-            return new Date(a.created_at) - new Date(b.created_at);
-          });
-          
-          // Find the first survey response
-          const firstResponse = sortedResponses[0];
-          votingStart = new Date(firstResponse.created_at);
-          
-          // Calculate deadline (72 hours after the first survey)
-          const deadlineTimestamp = new Date(votingStart.getTime() + (72 * 60 * 60 * 1000));
-          
-          // Calculate time remaining
-          const now = new Date();
-          const msRemaining = deadlineTimestamp - now;
-          
-          if (msRemaining <= 0) {
-            // If time has expired, calculate the winner immediately
-            handleCalculateWinner();
-          } else {
-            setTimeRemaining(msRemaining);
-          }
-        }
+      } else {
+        // Some error occurred
+        setError(winnerData.message || 'Failed to get winner data');
       }
-      
-    } catch (err) {
-      console.error('Error loading winner data:', err);
-      setError(`Failed to load data: ${err.message}`);
+    } catch (error) {
+      console.error("Error fetching trip data:", error);
+      setError(error.message || "Failed to load trip data");
     } finally {
       setLoading(false);
     }
-  };
+  }, [tripId]);
   
   // Function to calculate winner when deadline reaches
-  const handleCalculateWinner = async () => {
+  const handleCalculateWinner = useCallback(async () => {
     try {
       console.log('Calculating winner...');
       setLoading(true);
@@ -224,7 +184,7 @@ const WinnerPage = () => {
         // Recalculate trip stats for dates
         if (updatedTripDetails.survey_responses && updatedTripDetails.survey_responses.length > 0) {
           const stats = calculateSurveyStats(updatedTripDetails.survey_responses);
-          setTripStats(stats);
+          console.log('Recalculated trip stats:', stats);
           
           // Set optimal date ranges based on overlapping dates
           if (stats.overlappingRanges && stats.overlappingRanges.length > 0) {
@@ -286,7 +246,7 @@ const WinnerPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tripId]);
 
   // Effect for countdown timer with auto-calculation of winner when expired
   useEffect(() => {
@@ -305,12 +265,12 @@ const WinnerPage = () => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [timeRemaining]);
+  }, [timeRemaining, handleCalculateWinner]);
 
   // Initial data load
   useEffect(() => {
     fetchData();
-  }, [tripId]);
+  }, [tripId, fetchData]);
 
   const handleShare = () => {
     const tripDetails = getTripDetailsObject();

@@ -19,7 +19,6 @@ import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import SecurityIcon from '@mui/icons-material/Security';
 import PaymentIcon from '@mui/icons-material/Payment';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import { useNavigate } from 'react-router-dom';

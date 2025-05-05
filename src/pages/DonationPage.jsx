@@ -18,7 +18,7 @@ const DonationPage = () => {
   const navigate = useNavigate();
   
   const handlePayPalDonation = () => {
-    window.open('https://www.paypal.com/donate/?business=marina.bennett.wyss%40gmail.com&no_recurring=0&item_name=Support+PackVote+-+Help+us+keep+this+service+free+for+everyone%21&currency_code=USD', '_blank');
+    window.open('https://www.paypal.com/donate/?hosted_button_id=J68S3LM4HXDGU', '_blank');
   };
 
   return (

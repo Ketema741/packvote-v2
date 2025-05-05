@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, Card, CardMedia, CircularProgress, Alert, ButtonGroup, Divider, Chip } from '@mui/material';
 import { getDestinationImage } from '../utils/imageService';
+import DevSettings from './DevSettings';
 
 // Popular landmarks to test with
 const POPULAR_LANDMARKS = [
@@ -139,6 +140,9 @@ const UnsplashApiTest = () => {
       <Typography variant="h4" gutterBottom>
         Unsplash API Test
       </Typography>
+      
+      {/* Development Settings Panel */}
+      <DevSettings />
       
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Box, Button } from '@mui/material';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import CreateTrip from './pages/CreateTrip';
@@ -16,6 +17,7 @@ import ContactPage from './pages/ContactPage';
 import DocsPage from './pages/DocsPage';
 import NextStepPage from './pages/NextStepPage';
 import UnsplashApiTest from './components/UnsplashApiTest';
+import DevSettings from './components/DevSettings';
 
 const App = () => {
   // Determine if we're in development environment
@@ -49,9 +51,32 @@ const App = () => {
         {isDevelopment && (
           <>
             <Route path="/dev/image-test" element={<UnsplashApiTest />} />
+            <Route path="/dev/settings" element={<DevSettings />} />
           </>
         )}
       </Routes>
+      
+      {/* Show a small dev settings button in development mode */}
+      {isDevelopment && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 9999,
+          }}
+        >
+          <Button
+            variant="contained"
+            size="small"
+            color="warning"
+            onClick={() => window.location.href = '/dev/settings'}
+            sx={{ borderRadius: 8, px: 1, py: 0.5, fontSize: '0.7rem' }}
+          >
+            Dev Settings
+          </Button>
+        </Box>
+      )}
     </>
   );
 };

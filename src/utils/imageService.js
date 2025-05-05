@@ -1,7 +1,6 @@
 /**
  * Image service for fetching destination images with caching
  */
-import axios from 'axios';
 
 // Unsplash API configuration
 const UNSPLASH_API_URL = 'https://api.unsplash.com/search/photos';
@@ -18,15 +17,58 @@ const TRAVEL_COLLECTIONS = [
   '3682272'  // Architecture & Travel
 ];
 
-// Local cache to reduce API calls
-const imageCache = {
-  destinations: {},
-  categories: {},
-  timestamp: Date.now()
-};
+// Cache configuration
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const CACHE_KEY = 'unsplash_image_cache';
 
-// Cache duration in milliseconds (1 day)
-const CACHE_DURATION = 24 * 60 * 60 * 1000;
+// Try to load cache from localStorage
+let imageCache;
+try {
+  const storedCache = localStorage.getItem(CACHE_KEY);
+  if (storedCache) {
+    const parsedCache = JSON.parse(storedCache);
+    // Verify the cache has the expected structure and isn't expired
+    if (parsedCache && parsedCache.timestamp && 
+        Date.now() - parsedCache.timestamp < CACHE_DURATION) {
+      imageCache = parsedCache;
+      console.log('Using persisted image cache with', 
+        Object.keys(parsedCache.destinations).length, 'destinations cached');
+    } else {
+      // Cache is expired, create a new one
+      imageCache = {
+        destinations: {},
+        categories: {},
+        timestamp: Date.now()
+      };
+      console.log('Image cache expired, creating new cache');
+    }
+  } else {
+    // No cache found, create a new one
+    imageCache = {
+      destinations: {},
+      categories: {},
+      timestamp: Date.now()
+    };
+    console.log('No persisted image cache found, creating new cache');
+  }
+} catch (error) {
+  console.error('Error loading image cache from localStorage:', error);
+  // Fallback to in-memory cache
+  imageCache = {
+    destinations: {},
+    categories: {},
+    timestamp: Date.now()
+  };
+}
+
+// Save cache to localStorage
+const saveCache = () => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(imageCache));
+  } catch (error) {
+    console.error('Error saving image cache to localStorage:', error);
+  }
+};
 
 // Fallback images if API fails or quota exceeded
 const FALLBACK_IMAGES = {
@@ -62,6 +104,7 @@ const clearCacheIfNeeded = () => {
     imageCache.destinations = {};
     imageCache.categories = {};
     imageCache.timestamp = now;
+    saveCache();
     console.log('Image cache cleared due to age');
   }
 };
@@ -103,6 +146,35 @@ const getFallbackImage = (destination) => {
 };
 
 /**
+ * Add a caching wrapper around an async image fetch function
+ * @param {Function} fetchFn - The async function that will fetch an image
+ * @param {string} cacheKey - The key to use for caching
+ * @param {Function} getFallbackFn - Function to get a fallback image if fetch fails
+ * @returns {Promise<string>} - The image URL
+ */
+const withCache = async (fetchFn, cacheKey, getFallbackFn) => {
+  // Check cache first
+  if (imageCache.destinations[cacheKey]) {
+    console.log(`Using cached image for ${cacheKey}`);
+    return imageCache.destinations[cacheKey];
+  }
+  
+  try {
+    // Call the fetch function
+    const imageUrl = await fetchFn();
+    
+    // Cache the result
+    imageCache.destinations[cacheKey] = imageUrl;
+    saveCache();
+    
+    return imageUrl;
+  } catch (error) {
+    console.error('Error in cache wrapper:', error);
+    return getFallbackFn();
+  }
+};
+
+/**
  * Fetch destination image from Unsplash API with caching
  * @param {Object} destination - Destination object with name/city/country information
  * @returns {Promise<string>} - Image URL
@@ -123,174 +195,175 @@ export const getDestinationImage = async (destination) => {
     return FALLBACK_IMAGES.default[0];
   }
   
-  // Check cache first
-  if (imageCache.destinations[queryText]) {
-    console.log(`Using cached image for ${queryText}`);
-    return imageCache.destinations[queryText];
-  }
-  
-  // Don't make API call if no access key
-  if (!UNSPLASH_ACCESS_KEY) {
-    console.warn('Unsplash API key not found. Configure REACT_APP_UNSPLASH_ACCESS_KEY in your environment');
-    console.log('Using fallback image for', queryText);
-    return getFallbackImage(queryText);
-  }
-  
-  try {
-    // Focus the query on the specific location only - adding more terms often dilutes results
-    // The simpler the query, the more likely we get relevant location images
-    queryText = destName;
-    
-    // Add a random collection ID to help improve results
-    const randomCollectionIndex = Math.floor(Math.random() * TRAVEL_COLLECTIONS.length);
-    const collectionId = TRAVEL_COLLECTIONS[randomCollectionIndex];
-    
-    // Make API request - using very specific parameters for better results
-    console.log(`Making Unsplash API request for "${queryText}" with collection ${collectionId}`);
-    
-    // Build the URL with optimal parameters
-    const url = `${UNSPLASH_API_URL}?query=${encodeURIComponent(queryText)}`
-      + `&collections=${collectionId}`
-      + `&orientation=landscape`
-      + `&content_filter=high` // High quality content only
-      + `&per_page=10`; // Get more options to choose from
-    
-    const headers = {
-      'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
-    };
-    
-    console.log('Request URL:', url);
-    
-    const response = await fetch(url, { headers });
-    
-    if (!response.ok) {
-      throw new Error(`Unsplash API returned ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    console.log(`Unsplash API response for "${queryText}":`, {
-      totalResults: data.total,
-      resultCount: data.results?.length || 0
-    });
-    
-    // Check if we have results
-    if (data.results && data.results.length > 0) {
-      // Sort results by relevance score if available
-      const sortedResults = [...data.results].sort((a, b) => {
-        // First prioritize results with location data that matches our query
-        const aHasLocation = a.tags?.some(tag => 
-          tag.title?.toLowerCase().includes(queryText.toLowerCase())
-        );
-        const bHasLocation = b.tags?.some(tag => 
-          tag.title?.toLowerCase().includes(queryText.toLowerCase())
-        );
-        
-        if (aHasLocation && !bHasLocation) return -1;
-        if (!aHasLocation && bHasLocation) return 1;
-        
-        // Then sort by relevance
-        return b.likes - a.likes;
-      });
+  // Use the withCache wrapper to handle caching logic
+  return withCache(
+    async () => {
+      // Add a development mode flag that forces using cached/fallback images
+      const forceFallback = localStorage.getItem('force_image_fallbacks') === 'true';
       
-      // Get a result from the top 3 to ensure quality
-      const randomIndex = Math.floor(Math.random() * Math.min(3, sortedResults.length));
-      const imageUrl = sortedResults[randomIndex].urls.regular;
-      
-      // Cache the result
-      imageCache.destinations[queryText] = imageUrl;
-      console.log(`✅ Successfully fetched and cached Unsplash image for ${queryText}:`, imageUrl);
-      
-      return imageUrl;
-    } else {
-      console.log(`No results found for "${queryText}" with collection, trying without collection`);
-      
-      // Try again without collection constraint
-      const urlWithoutCollection = `${UNSPLASH_API_URL}?query=${encodeURIComponent(queryText)}`
-        + `&orientation=landscape`
-        + `&content_filter=high`
-        + `&per_page=10`;
-      
-      const secondResponse = await fetch(urlWithoutCollection, { headers });
-      
-      if (!secondResponse.ok) {
-        throw new Error(`Unsplash API returned ${secondResponse.status}: ${secondResponse.statusText}`);
+      // Don't make API call if no access key or in fallback mode
+      if (!UNSPLASH_ACCESS_KEY || forceFallback) {
+        if (forceFallback) {
+          console.log('Development mode: forcing fallback images to conserve API quota');
+        } else {
+          console.warn('Unsplash API key not found. Configure REACT_APP_UNSPLASH_ACCESS_KEY in your environment');
+        }
+        console.log('Using fallback image for', queryText);
+        return getFallbackImage(queryText);
       }
       
-      const secondData = await secondResponse.json();
-      
-      if (secondData.results && secondData.results.length > 0) {
-        // Get the most relevant result - prioritize those with location tags
-        const sortedResults = [...secondData.results].sort((a, b) => {
-          // First prioritize results with location tags
-          const aHasLocation = a.tags?.some(tag => 
-            tag.title?.toLowerCase().includes(queryText.toLowerCase())
-          );
-          const bHasLocation = b.tags?.some(tag => 
-            tag.title?.toLowerCase().includes(queryText.toLowerCase())
-          );
-          
-          if (aHasLocation && !bHasLocation) return -1;
-          if (!aHasLocation && bHasLocation) return 1;
-          
-          // Then sort by relevance/likes
-          return b.likes - a.likes;
+      try {
+        // Focus the query on the specific location only - adding more terms often dilutes results
+        // The simpler the query, the more likely we get relevant location images
+        const simplifiedQuery = destName;
+        
+        // Add a random collection ID to help improve results
+        const randomCollectionIndex = Math.floor(Math.random() * TRAVEL_COLLECTIONS.length);
+        const collectionId = TRAVEL_COLLECTIONS[randomCollectionIndex];
+        
+        // Make API request - using very specific parameters for better results
+        console.log(`Making Unsplash API request for "${simplifiedQuery}" with collection ${collectionId}`);
+        
+        // Build the URL with optimal parameters
+        const url = `${UNSPLASH_API_URL}?query=${encodeURIComponent(simplifiedQuery)}`
+          + `&collections=${collectionId}`
+          + `&orientation=landscape`
+          + `&content_filter=high` // High quality content only
+          + `&per_page=10`; // Get more options to choose from
+        
+        const headers = {
+          'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+        };
+        
+        console.log('Request URL:', url);
+        
+        const response = await fetch(url, { headers });
+        
+        if (!response.ok) {
+          throw new Error(`Unsplash API returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        console.log(`Unsplash API response for "${simplifiedQuery}":`, {
+          totalResults: data.total,
+          resultCount: data.results?.length || 0
         });
         
-        const imageUrl = sortedResults[0].urls.regular;
+        // Check if we have results
+        if (data.results && data.results.length > 0) {
+          // Sort results by relevance score if available
+          const sortedResults = [...data.results].sort((a, b) => {
+            // First prioritize results with location data that matches our query
+            const aHasLocation = a.tags?.some(tag => 
+              tag.title?.toLowerCase().includes(simplifiedQuery.toLowerCase())
+            );
+            const bHasLocation = b.tags?.some(tag => 
+              tag.title?.toLowerCase().includes(simplifiedQuery.toLowerCase())
+            );
+            
+            if (aHasLocation && !bHasLocation) return -1;
+            if (!aHasLocation && bHasLocation) return 1;
+            
+            // Then sort by relevance
+            return b.likes - a.likes;
+          });
+          
+          // Get a result from the top 3 to ensure quality
+          const randomIndex = Math.floor(Math.random() * Math.min(3, sortedResults.length));
+          const imageUrl = sortedResults[randomIndex].urls.regular;
+          
+          console.log(`✅ Successfully fetched Unsplash image for ${simplifiedQuery}:`, imageUrl);
+          
+          return imageUrl;
+        } else {
+          console.log(`No results found for "${simplifiedQuery}" with collection, trying without collection`);
+          
+          // Try again without collection constraint
+          const urlWithoutCollection = `${UNSPLASH_API_URL}?query=${encodeURIComponent(simplifiedQuery)}`
+            + `&orientation=landscape`
+            + `&content_filter=high`
+            + `&per_page=10`;
+          
+          const secondResponse = await fetch(urlWithoutCollection, { headers });
+          
+          if (!secondResponse.ok) {
+            throw new Error(`Unsplash API returned ${secondResponse.status}: ${secondResponse.statusText}`);
+          }
+          
+          const secondData = await secondResponse.json();
+          
+          if (secondData.results && secondData.results.length > 0) {
+            // Get the most relevant result - prioritize those with location tags
+            const sortedResults = [...secondData.results].sort((a, b) => {
+              // First prioritize results with location tags
+              const aHasLocation = a.tags?.some(tag => 
+                tag.title?.toLowerCase().includes(simplifiedQuery.toLowerCase())
+              );
+              const bHasLocation = b.tags?.some(tag => 
+                tag.title?.toLowerCase().includes(simplifiedQuery.toLowerCase())
+              );
+              
+              if (aHasLocation && !bHasLocation) return -1;
+              if (!aHasLocation && bHasLocation) return 1;
+              
+              // Then sort by relevance/likes
+              return b.likes - a.likes;
+            });
+            
+            const imageUrl = sortedResults[0].urls.regular;
+            
+            console.log(`✅ Successfully fetched Unsplash image for ${simplifiedQuery} without collection:`, imageUrl);
+            
+            return imageUrl;
+          }
+        }
         
-        // Cache the result
-        imageCache.destinations[queryText] = imageUrl;
-        console.log(`✅ Successfully fetched and cached Unsplash image for ${queryText} without collection:`, imageUrl);
+        // If city name alone doesn't work, try with country
+        if (country) {
+          console.log(`Trying with country: "${destName}, ${country}"`);
+          const countryUrl = `${UNSPLASH_API_URL}?query=${encodeURIComponent(`${destName} ${country}`)}`
+            + `&orientation=landscape`
+            + `&content_filter=high`
+            + `&per_page=10`;
+          
+          const countryResponse = await fetch(countryUrl, { headers });
+          
+          if (!countryResponse.ok) {
+            throw new Error(`Unsplash API returned ${countryResponse.status}: ${countryResponse.statusText}`);
+          }
+          
+          const countryData = await countryResponse.json();
+          
+          console.log(`Country search results for "${destName}, ${country}":`, {
+            totalResults: countryData.total,
+            resultCount: countryData.results?.length || 0
+          });
+          
+          if (countryData.results && countryData.results.length > 0) {
+            // Get the best result
+            const sortedResults = [...countryData.results].sort((a, b) => b.likes - a.likes);
+            const imageUrl = sortedResults[0].urls.regular;
+            
+            console.log(`✅ Successfully fetched image for "${destName}, ${country}":`, imageUrl);
+            return imageUrl;
+          }
+        }
         
-        return imageUrl;
+        // If all else fails, throw an error to trigger fallback
+        throw new Error('No suitable image found');
+      } catch (error) {
+        console.error('❌ Error fetching image from Unsplash:', error);
+        if (error.response) {
+          console.error('Error response data:', error.response.data);
+          console.error('Error response status:', error.response.status);
+        }
+        throw error; // Let withCache handle the fallback
       }
-    }
-    
-    // If city name alone doesn't work, try with country
-    if (country) {
-      console.log(`Trying with country: "${destName}, ${country}"`);
-      const countryUrl = `${UNSPLASH_API_URL}?query=${encodeURIComponent(`${destName} ${country}`)}`
-        + `&orientation=landscape`
-        + `&content_filter=high`
-        + `&per_page=10`;
-      
-      const countryResponse = await fetch(countryUrl, { headers });
-      
-      if (!countryResponse.ok) {
-        throw new Error(`Unsplash API returned ${countryResponse.status}: ${countryResponse.statusText}`);
-      }
-      
-      const countryData = await countryResponse.json();
-      
-      console.log(`Country search results for "${destName}, ${country}":`, {
-        totalResults: countryData.total,
-        resultCount: countryData.results?.length || 0
-      });
-      
-      if (countryData.results && countryData.results.length > 0) {
-        // Get the best result
-        const sortedResults = [...countryData.results].sort((a, b) => b.likes - a.likes);
-        const imageUrl = sortedResults[0].urls.regular;
-        
-        // Cache the result
-        imageCache.destinations[queryText] = imageUrl;
-        console.log(`✅ Successfully fetched and cached image for "${destName}, ${country}":`, imageUrl);
-        return imageUrl;
-      }
-    }
-    
-    // If all else fails, use fallback
-    console.log(`⚠️ Using fallback image for ${queryText} - no results from Unsplash`);
-    return getFallbackImage(queryText);
-  } catch (error) {
-    console.error('❌ Error fetching image from Unsplash:', error);
-    if (error.response) {
-      console.error('Error response data:', error.response.data);
-      console.error('Error response status:', error.response.status);
-    }
-    return getFallbackImage(queryText);
-  }
+    },
+    queryText,
+    () => getFallbackImage(queryText)
+  );
 };
 
 /**
@@ -306,52 +379,48 @@ export const getCategoryImage = async (category) => {
     return FALLBACK_IMAGES.default[0];
   }
   
-  // Check cache first
-  if (imageCache.categories[category]) {
-    return imageCache.categories[category];
-  }
-  
-  // Check if we have fallbacks for this category
-  if (FALLBACK_IMAGES[category]) {
-    const randomIndex = Math.floor(Math.random() * FALLBACK_IMAGES[category].length);
-    return FALLBACK_IMAGES[category][randomIndex];
-  }
-  
-  // Don't make API call if no access key
-  if (!UNSPLASH_ACCESS_KEY) {
-    return FALLBACK_IMAGES.default[0];
-  }
-  
-  try {
-    // Make API request
-    const response = await axios.get(UNSPLASH_API_URL, {
-      params: {
-        query: `${category} travel`,
-        orientation: 'landscape',
-        per_page: 3
-      },
-      headers: {
-        Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}`
+  // Use withCache to handle caching logic
+  return withCache(
+    async () => {
+      // Check if we have fallbacks for this category
+      if (FALLBACK_IMAGES[category]) {
+        const randomIndex = Math.floor(Math.random() * FALLBACK_IMAGES[category].length);
+        return FALLBACK_IMAGES[category][randomIndex];
       }
-    });
-    
-    // Check if we have results
-    if (response.data.results && response.data.results.length > 0) {
-      const randomIndex = Math.floor(Math.random() * Math.min(3, response.data.results.length));
-      const imageUrl = response.data.results[randomIndex].urls.regular;
       
-      // Cache the result
-      imageCache.categories[category] = imageUrl;
+      // Add a development mode flag that forces using cached/fallback images
+      const forceFallback = localStorage.getItem('force_image_fallbacks') === 'true';
       
-      return imageUrl;
-    }
-    
-    // If no results, use fallback
-    return FALLBACK_IMAGES.default[0];
-  } catch (error) {
-    console.error('Error fetching category image from Unsplash:', error);
-    return FALLBACK_IMAGES.default[0];
-  }
+      // Don't make API call if no access key or in fallback mode
+      if (!UNSPLASH_ACCESS_KEY || forceFallback) {
+        return FALLBACK_IMAGES.default[0];
+      }
+      
+      // Make API request
+      const response = await fetch(`${UNSPLASH_API_URL}?query=${encodeURIComponent(category + " travel")}&orientation=landscape&content_filter=high&per_page=3`, {
+        headers: {
+          'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Unsplash API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Check if we have results
+      if (data.results && data.results.length > 0) {
+        const randomIndex = Math.floor(Math.random() * Math.min(3, data.results.length));
+        return data.results[randomIndex].urls.regular;
+      }
+      
+      // If no results, throw error to trigger fallback
+      throw new Error(`No results found for category ${category}`);
+    },
+    `category_${category}`,
+    () => FALLBACK_IMAGES.default[0]
+  );
 };
 
 /**
@@ -372,4 +441,18 @@ export const getImageSync = (destination) => {
   
   // Use fallback if not in cache
   return getFallbackImage(queryText);
+};
+
+/**
+ * Toggle development mode to use only cached/fallback images and save API quota
+ * @param {boolean} enabled - Whether to enable development mode
+ */
+export const toggleDevelopmentMode = (enabled) => {
+  if (enabled) {
+    localStorage.setItem('force_image_fallbacks', 'true');
+    console.log('Development mode enabled: Using only cached and fallback images to save API quota');
+  } else {
+    localStorage.removeItem('force_image_fallbacks');
+    console.log('Development mode disabled: Using Unsplash API when needed');
+  }
 }; 

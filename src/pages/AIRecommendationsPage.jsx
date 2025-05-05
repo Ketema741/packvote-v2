@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { getTravelRecommendations, generateTravelRecommendations, getTripDetails } from '../utils/api';
+import { getDestinationImage, getImageSync } from '../utils/imageService';
 import '../styles/AIRecommendationsPage.css';
 import '../styles/LandingPage.css';
 
@@ -30,6 +31,7 @@ const AIRecommendationsPage = () => {
   const [error, setError] = useState(null);
   const [imagesLoaded, setImagesLoaded] = useState({});
   const [expandedCards, setExpandedCards] = useState({});
+  const [destinationImages, setDestinationImages] = useState({});
   const [toast, setToast] = useState({
     open: false,
     message: '',
@@ -414,33 +416,64 @@ const AIRecommendationsPage = () => {
     fetchRecommendations();
   }, [fetchRecommendations]);
 
-  // Preload images when recommendations change
+  // Load destination images when recommendations change
+  useEffect(() => {
+    if (!recommendations || recommendations.length === 0) return;
+    
+    // Initialize with fallback/sync images first for immediate display
+    const initialImages = {};
+    recommendations.forEach((recommendation, index) => {
+      if (!recommendation) return;
+      initialImages[index] = getImageSync(recommendation);
+    });
+    setDestinationImages(initialImages);
+    
+    // Then load images from Unsplash API asynchronously
+    const loadImages = async () => {
+      const imagePromises = recommendations.map(async (recommendation, index) => {
+        if (!recommendation) return null;
+        
+        try {
+          const imageUrl = await getDestinationImage(recommendation);
+          return { index, imageUrl };
+        } catch (err) {
+          console.error('Error loading image for', recommendation.locationDisplayName, err);
+          return { index, imageUrl: getImageSync(recommendation) };
+        }
+      });
+      
+      // Update images as they load
+      const results = await Promise.all(imagePromises);
+      const newImages = { ...initialImages };
+      
+      results.forEach(result => {
+        if (result) {
+          newImages[result.index] = result.imageUrl;
+        }
+      });
+      
+      setDestinationImages(newImages);
+    };
+    
+    loadImages();
+  }, [recommendations]);
+
+  // Replace the preload images effect with our new imageService
   useEffect(() => {
     if (!recommendations || recommendations.length === 0) return;
     
     recommendations.forEach((recommendation, index) => {
-      if (!recommendation) return; // Skip if recommendation is undefined
+      if (!recommendation) return;
       
-      // Determine which placeholder image to use based on the destination name
-      const placeholderImages = [
-        'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Travel generic
-        'https://images.pexels.com/photos/1051073/pexels-photo-1051073.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Beach
-        'https://images.pexels.com/photos/466685/pexels-photo-466685.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',  // City
-        'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Mountain
-        'https://images.pexels.com/photos/1271619/pexels-photo-1271619.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Landmark
-      ];
-      
-      // Select a placeholder image based on destination name for consistency
-      const locationText = recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown";
-      const placeholderIndex = Math.abs(locationText.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)) % placeholderImages.length;
-      const imageUrl = placeholderImages[placeholderIndex];
+      // Use the image from our state (either sync or async loaded)
+      const imageUrl = destinationImages[index] || getImageSync(recommendation);
       
       // Preload the image
       const img = new Image();
       img.src = imageUrl; 
       img.onload = () => handleImageLoaded(index);
     });
-  }, [recommendations, handleImageLoaded]);
+  }, [recommendations, destinationImages, handleImageLoaded]);
 
   const handleStartVote = () => {
     // Ensure we have a valid tripId and make it explicit in the state
@@ -690,19 +723,8 @@ const AIRecommendationsPage = () => {
             {recommendations.map((recommendation, index) => {
               if (!recommendation) return null; // Skip if recommendation is undefined
               
-              // Determine which placeholder image to use based on the destination name
-              const placeholderImages = [
-                'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Travel generic
-                'https://images.pexels.com/photos/1051073/pexels-photo-1051073.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Beach
-                'https://images.pexels.com/photos/466685/pexels-photo-466685.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',  // City
-                'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Mountain
-                'https://images.pexels.com/photos/1271619/pexels-photo-1271619.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Landmark
-              ];
-              
-              // Select a placeholder image based on destination name for consistency
-              const locationText = recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown";
-              const placeholderIndex = Math.abs(locationText.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)) % placeholderImages.length;
-              const imageUrl = placeholderImages[placeholderIndex];
+              // Get image URL from our destinationImages state
+              const imageUrl = destinationImages[index] || getImageSync(recommendation);
               
               const isExpanded = expandedCards[index] || false;
               

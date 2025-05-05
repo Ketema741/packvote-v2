@@ -30,6 +30,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TuneIcon from '@mui/icons-material/Tune';
 import { getTripDetails, getTripWinner, calculateWinner, calculateSurveyStats } from '../utils/api';
+import { getDestinationImage, getImageSync } from '../utils/imageService';
 import '../styles/LandingPage.css';
 import '../styles/WinnerPage.css';
 
@@ -50,6 +51,7 @@ const WinnerPage = () => {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [pendingVoters, setPendingVoters] = useState([]);
   const [optimalDateRanges, setOptimalDateRanges] = useState([]);
+  const [destinationImage, setDestinationImage] = useState('');
 
   // If we have a tripId in location state but not in URL, redirect to the URL version
   useEffect(() => {
@@ -267,6 +269,27 @@ const WinnerPage = () => {
     return () => clearInterval(timer);
   }, [timeRemaining, handleCalculateWinner]);
 
+  // Replace the getDestinationImage function with our new version
+  useEffect(() => {
+    if (!winnerDetails) return;
+    
+    // Initialize with a fallback image
+    setDestinationImage(getImageSync(winnerDetails));
+    
+    // Then load from API
+    const loadImage = async () => {
+      try {
+        const imageUrl = await getDestinationImage(winnerDetails);
+        setDestinationImage(imageUrl);
+      } catch (err) {
+        console.error('Error loading winner destination image:', err);
+        // Keep the fallback image if there's an error
+      }
+    };
+    
+    loadImage();
+  }, [winnerDetails]);
+
   // Initial data load
   useEffect(() => {
     fetchData();
@@ -360,13 +383,6 @@ const WinnerPage = () => {
 
   const handleBuyCoffee = () => {
     navigate('/donate');
-  };
-
-  const getDestinationImage = () => {
-    if (winnerDetails && winnerDetails.image_urls && winnerDetails.image_urls.length > 0) {
-      return winnerDetails.image_urls[0];
-    }
-    return "https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800"; // Default fallback image
   };
 
   // Get winner trip details
@@ -626,7 +642,7 @@ const WinnerPage = () => {
             <CardMedia
               component="img"
               height="400"
-              image={getDestinationImage()}
+              image={destinationImage || getImageSync(winnerDetails)}
               alt={`${tripDetails.destination} view`}
               crossOrigin="anonymous"
             />

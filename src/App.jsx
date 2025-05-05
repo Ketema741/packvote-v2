@@ -15,8 +15,12 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import ContactPage from './pages/ContactPage';
 import DocsPage from './pages/DocsPage';
 import NextStepPage from './pages/NextStepPage';
+import UnsplashApiTest from './components/UnsplashApiTest';
 
 const App = () => {
+  // Determine if we're in development environment
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   return (
     <>
       <Navbar />
@@ -40,6 +44,13 @@ const App = () => {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/next-step" element={<NextStepPage />} />
+        
+        {/* Development-only routes */}
+        {isDevelopment && (
+          <>
+            <Route path="/dev/image-test" element={<UnsplashApiTest />} />
+          </>
+        )}
       </Routes>
     </>
   );

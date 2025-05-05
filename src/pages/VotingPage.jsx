@@ -26,6 +26,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import { getTravelRecommendations, submitVotes, getTripDetails } from '../utils/api';
+import { getDestinationImage, getImageSync } from '../utils/imageService';
 import '../styles/LandingPage.css';
 import '../styles/VotingPage.css';
 
@@ -47,6 +48,7 @@ const VotingPage = () => {
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [participants, setParticipants] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [destinationImages, setDestinationImages] = useState({});
 
   // Log tripId for debugging
   useEffect(() => {
@@ -451,22 +453,47 @@ const VotingPage = () => {
     setImagesLoaded(prev => ({ ...prev, [id]: true }));
   }, []);
 
-  // Get image URL for a destination
-  const getImageUrl = (destination, index) => {
-    // Use the same placeholder image logic as AIRecommendationsPage
-    const placeholderImages = [
-      'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Travel generic
-      'https://images.pexels.com/photos/1051073/pexels-photo-1051073.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Beach
-      'https://images.pexels.com/photos/466685/pexels-photo-466685.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',  // City
-      'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Mountain
-      'https://images.pexels.com/photos/1271619/pexels-photo-1271619.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2', // Landmark
-    ];
+  // Load destination images when destinations change
+  useEffect(() => {
+    if (!destinations || destinations.length === 0) return;
     
-    // Select a placeholder image based on destination name for consistency
-    const locationText = destination.locationDisplayName || destination.city || destination.destination || "Unknown";
-    const placeholderIndex = Math.abs(locationText.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)) % placeholderImages.length;
-    return placeholderImages[placeholderIndex];
-  };
+    // Initialize with fallback/sync images for immediate display
+    const initialImages = {};
+    destinations.forEach((destination, index) => {
+      if (!destination) return;
+      initialImages[index] = getImageSync(destination);
+    });
+    setDestinationImages(initialImages);
+    
+    // Then load images from API asynchronously
+    const loadImages = async () => {
+      const imagePromises = destinations.map(async (destination, index) => {
+        if (!destination) return null;
+        
+        try {
+          const imageUrl = await getDestinationImage(destination);
+          return { index, imageUrl };
+        } catch (err) {
+          console.error('Error loading image for', destination.locationDisplayName, err);
+          return { index, imageUrl: getImageSync(destination) };
+        }
+      });
+      
+      // Update images as they load
+      const results = await Promise.all(imagePromises);
+      const newImages = { ...initialImages };
+      
+      results.forEach(result => {
+        if (result) {
+          newImages[result.index] = result.imageUrl;
+        }
+      });
+      
+      setDestinationImages(newImages);
+    };
+    
+    loadImages();
+  }, [destinations]);
 
   if (loading) {
     return (
@@ -640,7 +667,7 @@ const VotingPage = () => {
                   className={`card-image ${!imagesLoaded[index] ? 'loading' : ''}`}
                 >
                   <img 
-                    src={getImageUrl(destination, index)} 
+                    src={destinationImages[index] || getImageSync(destination)} 
                     alt={destination.destination} 
                     onLoad={() => handleImageLoaded(index)}
                     style={{ 

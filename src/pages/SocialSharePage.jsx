@@ -20,6 +20,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import CloseIcon from '@mui/icons-material/Close';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import html2canvas from 'html2canvas';
+import { getDestinationImage, getImageSync } from '../utils/imageService';
 import '../styles/LandingPage.css';
 import '../styles/SocialSharePage.css';
 
@@ -30,6 +31,7 @@ const SocialSharePage = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [tripData, setTripData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [destinationImage, setDestinationImage] = useState('');
   const shareCardRef = useRef(null);
 
   // Set default caption based on destination
@@ -62,6 +64,36 @@ const SocialSharePage = () => {
       });
     }
   }, [location.state]);
+
+  // Add an effect to load destination images
+  useEffect(() => {
+    if (!tripData || !tripData.destination) return;
+    
+    // Create a temporary destination object with the properties needed for the image service
+    const destinationObj = {
+      city: tripData.destination.split(',')[0], // First part before comma
+      country: tripData.destination.includes(',') ? tripData.destination.split(',')[1].trim() : ''
+    };
+    
+    // Start with a fallback image
+    setDestinationImage(getImageSync(destinationObj));
+    
+    // Then load from API
+    const loadImage = async () => {
+      try {
+        setLoading(true);
+        const imageUrl = await getDestinationImage(destinationObj);
+        setDestinationImage(imageUrl);
+      } catch (err) {
+        console.error('Error loading destination image:', err);
+        // Keep fallback image if there's an error
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadImage();
+  }, [tripData]);
 
   const handleDownload = async () => {
     if (!shareCardRef.current) return;
@@ -255,47 +287,40 @@ const SocialSharePage = () => {
               }}
             >
               <Box className="preview-illustration" sx={{ 
-                background: 'linear-gradient(120deg, #e0f7fa 0%, #80deea 100%)', 
+                backgroundImage: `url(${destinationImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 p: 3,
                 height: '230px',
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center',
+                alignItems: 'flex-end',
                 position: 'relative'
               }}>
-                <Box className="destination-scene" sx={{
-                  fontSize: '80px',
-                  textAlign: 'center',
-                  mb: 2
-                }}>
-                  {destinationEmojis.scene}
-                </Box>
-                
-                <Box sx={{ 
-                  position: 'absolute',
-                  bottom: '20px',
-                  left: '30px',
-                  fontSize: '32px'
-                }}>
-                  {destinationEmojis.elements[0]}
-                </Box>
-                
-                <Box sx={{ 
-                  position: 'absolute',
-                  top: '30px',
-                  right: '40px',
-                  fontSize: '32px'
-                }}>
-                  {destinationEmojis.elements[1]}
-                </Box>
-                
-                <Box sx={{ 
-                  position: 'absolute',
-                  bottom: '40px',
-                  right: '50px',
-                  fontSize: '32px'
-                }}>
-                  {destinationEmojis.elements[2]}
+                <Box 
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Dark overlay
+                    backdropFilter: 'blur(1px)'
+                  }}
+                />
+                <Box 
+                  sx={{
+                    position: 'relative',
+                    zIndex: 1,
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: '8px',
+                    padding: '4px 12px',
+                    mb: 2
+                  }}
+                >
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                    {destinationEmojis.scene} {tripData?.destination.split(',')[0]}
+                  </Typography>
                 </Box>
               </Box>
               <Box className="preview-text" sx={{ 

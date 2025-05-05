@@ -138,6 +138,30 @@ const WinnerPage = () => {
             }
           }));
         }
+
+        // Calculate overlapping date ranges from survey responses
+        if (tripDetails.survey_responses && tripDetails.survey_responses.length > 0) {
+          const stats = calculateSurveyStats(tripDetails.survey_responses);
+          console.log('Calculated stats with overlapping ranges:', stats);
+          
+          // Format overlapping date ranges for display
+          if (stats.overlappingRanges && stats.overlappingRanges.length > 0) {
+            const formattedRanges = stats.overlappingRanges.map(range => {
+              const days = Math.ceil((range.end - range.start) / (1000 * 60 * 60 * 24)) + 1;
+              return {
+                start: range.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+                end: range.end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+                days: days
+              };
+            });
+            
+            // Sort by longest duration first
+            formattedRanges.sort((a, b) => b.days - a.days);
+            
+            setOptimalDateRanges(formattedRanges);
+            console.log('Formatted optimal date ranges:', formattedRanges);
+          }
+        }
       }
       
       // Get winner information which also checks voting status

@@ -18,7 +18,7 @@ const Navbar = () => {
           }}
           onClick={() => navigate('/')}
         >
-          Group Travel AI
+          PackVote
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <Link href="/docs" color="inherit" underline="none">Docs</Link>

@@ -61,7 +61,7 @@ describe('DocsPage', () => {
   });
 
   it('navigates to home when clicking the logo', async () => {
-    const logo = screen.getByText('Group Travel AI');
+    const logo = screen.getByText('PackVote');
     await logo.click();
     expect(mockNavigate).toHaveBeenCalledWith('/');
   });

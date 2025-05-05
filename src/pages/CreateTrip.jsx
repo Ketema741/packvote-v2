@@ -245,7 +245,7 @@ const CreateTrip = () => {
             }}
             onClick={() => navigate('/')}
           >
-            Group Travel AI
+            PackVote
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>

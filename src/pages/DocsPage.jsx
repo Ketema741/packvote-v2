@@ -42,7 +42,7 @@ const DocsPage = () => {
             }}
             onClick={() => navigate('/')}
           >
-            Group Travel AI
+            PackVote
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
@@ -74,7 +74,7 @@ const DocsPage = () => {
               Getting Started
             </Typography>
             <Typography paragraph>
-              Group Travel AI helps you and your friends decide on the perfect travel destination. 
+              PackVote helps you and your friends decide on the perfect travel destination. 
               Here's how to get started in 4 simple steps:
             </Typography>
             <List>

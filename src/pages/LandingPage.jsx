@@ -29,7 +29,7 @@ const LandingPage = () => {
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Typography variant="h6" component="div" sx={{ color: 'primary.main', fontWeight: 600 }}>
-            Group Travel AI
+            PackVote
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>

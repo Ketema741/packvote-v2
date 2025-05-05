@@ -18,7 +18,7 @@ const DonationPage = () => {
   const navigate = useNavigate();
   
   const handlePayPalDonation = () => {
-    window.open('https://www.paypal.com/donate/?business=marina.bennett.wyss%40gmail.com&no_recurring=0&item_name=Support+Group+Travel+AI+-+Help+us+keep+this+service+free+for+everyone%21&currency_code=USD', '_blank');
+    window.open('https://www.paypal.com/donate/?business=marina.bennett.wyss%40gmail.com&no_recurring=0&item_name=Support+PackVote+-+Help+us+keep+this+service+free+for+everyone%21&currency_code=USD', '_blank');
   };
 
   return (
@@ -36,7 +36,7 @@ const DonationPage = () => {
             }}
             onClick={() => navigate('/')}
           >
-            Group Travel AI
+            PackVote
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
@@ -60,7 +60,7 @@ const DonationPage = () => {
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
           <Box className="donation-header" sx={{ textAlign: 'center', mb: 4 }}>
             <Typography variant="h3" component="h1" gutterBottom>
-              Support Group Travel AI
+              Support PackVote
             </Typography>
             <Typography variant="h6" color="text.secondary" className="subtitle">
               Help us keep travel planning magical & free ✨
@@ -81,7 +81,7 @@ const DonationPage = () => {
             
             <Box className="donation-text" sx={{ maxWidth: '700px' }}>
               <Typography paragraph>
-                We're committed to keeping Group Travel AI completely free for everyone. Your support helps us cover essential costs like:
+                We're committed to keeping PackVote completely free for everyone. Your support helps us cover essential costs like:
               </Typography>
               <ul className="features-list costs">
                 <li>🤖 AI API costs for smart recommendations</li>

@@ -1,6 +1,6 @@
-# Group Travel App UI
+# PackVote UI
 
-This repository contains the frontend interface for the Group Travel App. The application provides a user-friendly interface for creating group trips, collecting participant preferences through surveys, and managing the trip planning process.
+This repository contains the frontend interface for the PackVote App. The application provides a user-friendly interface for creating group trips, collecting participant preferences through surveys, and managing the trip planning process.
 
 ## Features
 
@@ -32,8 +32,8 @@ This repository contains the frontend interface for the Group Travel App. The ap
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-org/group-travel-app-ui.git
-cd group-travel-app-ui
+git clone https://github.com/your-org/packvote-ui.git
+cd packvote-ui
 ```
 
 2. Install dependencies:
@@ -117,4 +117,4 @@ This is a React-based application using:
 
 ## License
 
-Proprietary - All rights reserved 
+Proprietary - All rights reserved

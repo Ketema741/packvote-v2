@@ -140,7 +140,7 @@ const PrivacyPolicy = () => {
             8. Contact Us
           </Typography>
           <Typography paragraph>
-            If you have questions about this privacy policy or your personal data, please contact us at <Link href="mailto:privacy@aitravelapp.com" color="primary">privacy@aitravelapp.com</Link>.
+            If you have questions about this privacy policy or your personal data, please contact us at <Link href="mailto:packvote@gmail.com" color="primary">packvote@gmail.com</Link>.
           </Typography>
 
           <Typography variant="body2" sx={{ mt: 4, color: 'text.secondary', fontStyle: 'italic' }}>

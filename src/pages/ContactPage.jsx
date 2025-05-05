@@ -67,12 +67,12 @@ const ContactPage = () => {
           }}>
             <EmailIcon sx={{ fontSize: 32, color: 'primary.main' }} />
             <Link 
-              href="mailto:marina@gratitudedriven.com"
+              href="mailto:packvote@gmail.com"
               variant="h5"
               underline="hover"
               sx={{ color: 'primary.main' }}
             >
-              marina@gratitudedriven.com
+              packvote@gmail.com
             </Link>
           </Box>
 

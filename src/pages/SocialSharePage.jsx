@@ -13,7 +13,8 @@ import {
   Link,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  CardMedia
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import LinkIcon from '@mui/icons-material/Link';
@@ -44,13 +45,20 @@ const SocialSharePage = () => {
         dates: location.state.dates || 'soon',
         travelers: location.state.travelers || '',
         price: location.state.price || '',
-        tripId: location.state.tripId || ''
+        tripId: location.state.tripId || '',
+        // Store the original winnerDestination object to use with image service
+        winnerDestination: location.state.winnerDestination
       });
+      
+      // Also set the destination image directly if it was passed
+      if (location.state.imageUrl) {
+        setDestinationImage(location.state.imageUrl);
+        setLoading(false);
+      }
       
       // Set a default caption
       const destName = destination.city || destination.destination || 'our trip';
-      setCaption(`I'm excited to announce we're going to ${destName}${destination.country ? `, ${destination.country}` : ''}! Join me for an amazing adventure!`);
-      setLoading(false);
+      setCaption(`I'm excited to announce we're going to ${destName}${destination.country ? `, ${destination.country}` : ''}!`);
     } else {
       setLoading(false);
       // If no data was passed, use default values
@@ -65,35 +73,57 @@ const SocialSharePage = () => {
     }
   }, [location.state]);
 
-  // Add an effect to load destination images
+  // Load destination image - using same approach as WinnerPage
   useEffect(() => {
-    if (!tripData || !tripData.destination) return;
+    if (!tripData) return;
     
-    // Create a temporary destination object with the properties needed for the image service
-    const destinationObj = {
-      city: tripData.destination.split(',')[0], // First part before comma
-      country: tripData.destination.includes(',') ? tripData.destination.split(',')[1].trim() : ''
-    };
+    // Skip if we already have an image from the location state
+    if (location.state && location.state.imageUrl) {
+      setDestinationImage(location.state.imageUrl);
+      setLoading(false);
+      return;
+    }
     
-    // Start with a fallback image
-    setDestinationImage(getImageSync(destinationObj));
+    // Initialize with a fallback image
+    if (tripData.winnerDestination) {
+      setDestinationImage(getImageSync(tripData.winnerDestination));
+    }
     
     // Then load from API
     const loadImage = async () => {
       try {
         setLoading(true);
-        const imageUrl = await getDestinationImage(destinationObj);
-        setDestinationImage(imageUrl);
+        // Use the original winnerDestination object for the image service
+        const imageUrl = await getDestinationImage(tripData.winnerDestination || {});
+        if (imageUrl) {
+          // Preload the image to ensure it's fully loaded before rendering
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            setDestinationImage(imageUrl);
+            setLoading(false);
+          };
+          img.onerror = () => {
+            console.error('Error loading destination image');
+            setLoading(false);
+          };
+          img.src = imageUrl;
+        } else {
+          setLoading(false);
+        }
       } catch (err) {
         console.error('Error loading destination image:', err);
-        // Keep fallback image if there's an error
-      } finally {
+        // Keep the fallback image if there's an error
         setLoading(false);
       }
     };
     
-    loadImage();
-  }, [tripData]);
+    if (tripData.winnerDestination) {
+      loadImage();
+    } else {
+      setLoading(false);
+    }
+  }, [tripData, location.state]);
 
   const handleDownload = async () => {
     if (!shareCardRef.current) return;
@@ -103,17 +133,20 @@ const SocialSharePage = () => {
       
       // Create a canvas from the share card
       const canvas = await html2canvas(shareCardRef.current, {
-        scale: 2, // Higher quality
+        scale: 3, // Increased scale for better quality
         logging: false,
         useCORS: true, // Allow loading cross-origin images
-        backgroundColor: '#FFFFFF'
+        allowTaint: true,
+        backgroundColor: '#FFFFFF',
+        imageTimeout: 15000, // Longer timeout for images
+        removeContainer: false // Helps with rendering
       });
       
       // Convert to data URL and download
       const image = canvas.toDataURL('image/png', 1.0);
       const downloadLink = document.createElement('a');
       downloadLink.href = image;
-      downloadLink.download = `${tripData.destination.toLowerCase().replace(/\s+/g, '-')}-trip.png`;
+      downloadLink.download = `${tripData?.destination ? tripData.destination.toLowerCase().replace(/\s+/g, '-') : 'trip'}-share.png`;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
@@ -276,6 +309,7 @@ const SocialSharePage = () => {
           
             <Box 
               ref={shareCardRef}
+              id="social-share-card"
               className="share-preview" 
               sx={{ 
                 my: 4, 
@@ -283,20 +317,82 @@ const SocialSharePage = () => {
                 borderColor: 'divider',
                 borderRadius: 2,
                 overflow: 'hidden',
-                backgroundColor: 'white'
+                backgroundColor: 'white',
+                width: '100%',
+                maxWidth: '360px', // Adjusted width for phone size
+                height: '640px', // 9:16 aspect ratio (360px × 1.778 ≈ 640px)
+                margin: '0 auto',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
-              <Box className="preview-illustration" sx={{ 
-                backgroundImage: `url(${destinationImage})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                p: 3,
-                height: '230px',
+              {/* PackVote Brand Banner at the top */}
+              <Box sx={{
+                bgcolor: 'primary.main',
+                color: 'white',
+                py: 0.75,
+                px: 2,
                 display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'flex-end',
-                position: 'relative'
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                zIndex: 2
               }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  PackVote
+                </Typography>
+                <Typography variant="caption">
+                  Plan your perfect trip together ♡
+                </Typography>
+              </Box>
+              
+              <Box 
+                className="preview-illustration" 
+                sx={{ 
+                  height: '40%', // 40% of the card height
+                  position: 'relative',
+                  flexShrink: 0,
+                  overflow: 'hidden', // Ensure image stays within bounds
+                  borderBottom: '3px solid #f5f5f5' // Add a subtle separator
+                }}
+              >
+                {/* Using CardMedia just like WinnerPage */}
+                <CardMedia
+                  component="img"
+                  image={destinationImage}
+                  alt={`${tripData?.destination || 'Destination'} view`}
+                  crossOrigin="anonymous"
+                  sx={{
+                    height: '100%',
+                    width: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                    display: 'block', // Prevents inline display issues
+                    imageRendering: 'auto' // Let browser optimize image rendering
+                  }}
+                />
+                
+                {/* Loading indicator */}
+                {loading && (
+                  <Box 
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      bgcolor: 'rgba(255, 255, 255, 0.7)',
+                      zIndex: 3
+                    }}
+                  >
+                    <CircularProgress size={40} />
+                  </Box>
+                )}
+                
+                {/* Image overlay */}
                 <Box 
                   sx={{
                     position: 'absolute',
@@ -304,47 +400,102 @@ const SocialSharePage = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Dark overlay
-                    backdropFilter: 'blur(1px)'
+                    backgroundColor: 'rgba(0, 0, 0, 0.25)', // Slightly lighter overlay
+                    backdropFilter: 'blur(0px)', // Remove blur for sharper image
+                    zIndex: 1
                   }}
                 />
-                <Box 
-                  sx={{
-                    position: 'relative',
-                    zIndex: 1,
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    borderRadius: '8px',
-                    padding: '4px 12px',
-                    mb: 2
-                  }}
-                >
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {destinationEmojis.scene} {tripData?.destination.split(',')[0]}
-                  </Typography>
-                </Box>
               </Box>
               <Box className="preview-text" sx={{ 
                 bgcolor: 'white', 
                 p: 3,
-                textAlign: 'center'
+                pt: 5, // Even more top padding for better separation
+                mt: 1, // Small margin at top
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                flex: 1,
+                position: 'relative', // For positioning
+                zIndex: 2 // Ensure it's above the image
               }}>
                 <Typography variant="body1" sx={{ fontSize: '1.1rem', color: 'text.secondary' }}>
                   We're going to
                 </Typography>
-                <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
+                <Typography 
+                  variant="h3" 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    color: 'primary.main', 
+                    mb: 1,
+                    fontSize: '2.2rem',
+                    lineHeight: 1.2,
+                    wordBreak: 'break-word',
+                    mt: 1
+                  }}
+                >
                   {tripData?.destination}
-                  {tripData?.country ? `, ${tripData.country}` : ''}
                 </Typography>
-                {tripData?.dates && (
-                  <Typography variant="body1" sx={{ color: 'text.secondary', mt: 1 }}>
-                    📅 {tripData.dates}
+                {tripData?.country && (
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      color: 'text.secondary', 
+                      mb: 2,
+                      fontWeight: 'medium'
+                    }}
+                  >
+                    {tripData.country}
                   </Typography>
                 )}
-                {tripData?.travelers && (
-                  <Typography variant="body1" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                    👥 {tripData.travelers}
-                  </Typography>
-                )}
+                
+                {/* Emoji elements to make it more visually appealing */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 2, 
+                  fontSize: '2rem',
+                  my: 3,
+                  justifyContent: 'center' 
+                }}>
+                  {destinationEmojis.scene}
+                  {destinationEmojis.elements.map((emoji, index) => (
+                    <span key={index}>{emoji}</span>
+                  ))}
+                </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 1,
+                  mt: 2
+                }}>
+                  {tripData?.dates && (
+                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                      📅 {tripData.dates}
+                    </Typography>
+                  )}
+                  {tripData?.travelers && (
+                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                      👥 {tripData.travelers}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+              
+              {/* PackVote Watermark */}
+              <Box sx={{
+                bgcolor: 'primary.light',
+                color: 'primary.contrastText',
+                py: 1.5,
+                px: 2,
+                textAlign: 'center',
+                fontSize: '0.75rem',
+                fontWeight: 'medium',
+                mt: 'auto'
+              }}>
+                Created with PackVote.com
               </Box>
             </Box>
 

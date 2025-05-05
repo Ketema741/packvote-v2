@@ -328,7 +328,8 @@ const WinnerPage = () => {
       tripId: tripId,
       dates: tripDetails.dates,
       travelers: tripDetails.travelers,
-      price: tripDetails.price
+      price: tripDetails.price,
+      imageUrl: destinationImage // Pass the actual image URL
     };
     
     // Navigate to the share page with the data

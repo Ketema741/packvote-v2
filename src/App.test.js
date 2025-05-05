@@ -15,6 +15,6 @@ test('renders Navbar with correct title', async () => {
       <Navbar />
     </BrowserRouter>
   );
-  const titleElement = screen.getByText(/Group Travel AI/i);
+  const titleElement = screen.getByText(/PackVote/i);
   expect(titleElement).toBeInTheDocument();
 }); 

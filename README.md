@@ -115,6 +115,45 @@ This is a React-based application using:
 3. Ensure all tests pass
 4. Submit a pull request
 
+## Development Workflow
+
+This repository follows a structured development workflow with separate development and production environments:
+
+### Branch Structure
+- `main` - Production branch, protected from direct pushes
+- `dev` - Development branch for testing changes before production
+
+### Branch Protection Setup
+To enable branch protection in GitHub:
+
+1. Go to the repository on GitHub
+2. Navigate to Settings > Branches
+3. Under "Branch protection rules", click "Add rule"
+4. For the "main" branch:
+   - Check "Require a pull request before merging"
+   - Check "Require approvals" (at least 1)
+   - Check "Require status checks to pass before merging"
+   - Select the CI workflow status checks
+   - Check "Include administrators" to apply rules to everyone
+   - Click "Create"
+
+### Environment Configuration
+- Development environment uses development API endpoints and Supabase project
+- Production environment uses production API endpoints and Supabase project
+- Environment variables are stored as GitHub Secrets and used by the deployment workflows
+
+### CI/CD Pipeline
+- Tests run automatically on both `dev` and `main` branches
+- Development deployments occur automatically when changes are pushed to `dev`
+- Production deployments require passing tests and occur after merging to `main`
+
+### Development Process
+1. Create feature branches from `dev`
+2. Implement and test your changes locally
+3. Submit a pull request to merge into `dev`
+4. After testing in the development environment, create a pull request from `dev` to `main`
+5. Once approved and merged, changes will be deployed to production
+
 ## License
 
 Proprietary - All rights reserved

@@ -5,57 +5,60 @@ on:
     branches: [dev, main]
 
 jobs:
-  deploy-dev:
-    if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build
-        run: npm run build
-        env:
-          REACT_APP_API_URL: ${{ secrets.DEV_API_URL }}
-          REACT_APP_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          REACT_APP_SUPABASE_SCHEMA: "dev"
-      - name: Deploy to Development
-        run: |
-          # Add deployment commands here
-          echo "Deploying to DEV environment with dev schema"
-          # Example: deploy to dev environment
-          # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
+  # Commented out until deployment is ready
+  # deploy-dev:
+  #   if: github.ref == 'refs/heads/dev'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '20.x'
+  #     - name: Install dependencies
+  #       run: npm ci
+  #     - name: Build
+  #       run: npm run build
+  #       env:
+  #         REACT_APP_API_URL: ${{ secrets.DEV_API_URL }}
+  #         REACT_APP_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  #         REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  #         REACT_APP_SUPABASE_SCHEMA: "dev"
+  #     - name: Deploy to Development
+  #       run: |
+  #         # Add deployment commands here
+  #         echo "Deploying to DEV environment with dev schema"
+  #         # Example: deploy to dev environment
+  #         # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
 
-  deploy-prod:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    needs: [check-tests]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build
-        run: npm run build
-        env:
-          REACT_APP_API_URL: ${{ secrets.PROD_API_URL }}
-          REACT_APP_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          REACT_APP_SUPABASE_SCHEMA: "prod"
-      - name: Deploy to Production
-        run: |
-          # Add deployment commands here
-          echo "Deploying to PROD environment with prod schema"
-          # Example: deploy to production environment
-          # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
+  # Commented out until deployment is ready  
+  # deploy-prod:
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   needs: [check-tests]
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '20.x'
+  #     - name: Install dependencies
+  #       run: npm ci
+  #     - name: Build
+  #       run: npm run build
+  #       env:
+  #         REACT_APP_API_URL: ${{ secrets.PROD_API_URL }}
+  #         REACT_APP_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  #         REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  #         REACT_APP_SUPABASE_SCHEMA: "prod"
+  #     - name: Deploy to Production
+  #       run: |
+  #         # Add deployment commands here
+  #         echo "Deploying to PROD environment with prod schema"
+  #         # Example: deploy to production environment
+  #         # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
   
+  # This job will still run to ensure tests pass
   check-tests:
     runs-on: ubuntu-latest
     steps:

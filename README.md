@@ -134,6 +134,21 @@ This repository follows a structured development workflow with separate developm
 - Development deployments occur automatically when changes are pushed to `dev`
 - Production deployments require passing tests and occur after merging to `main`
 
+## Deployment Status
+
+**IMPORTANT: The application is not yet deployed to any environment.** 
+
+The GitHub Actions workflows in `.github/workflows/` currently contain placeholders for deployment steps, which have been commented out until actual deployment is implemented. Only the test jobs remain active to ensure code quality.
+
+Required secrets for future deployment:
+- `SUPABASE_URL` - URL of your Supabase project
+- `SUPABASE_ANON_KEY` - Anonymous key for Supabase client access
+- `DEV_API_URL`/`PROD_API_URL` - Currently uses localhost during development
+
+Currently, the application uses `localhost` for API connections. When deploying, these placeholder values will need to be updated with actual deployment URLs.
+
+Once deployment targets are established, the deployment workflows will be updated accordingly.
+
 ### Development Process
 1. Create feature branches from `dev`
 2. Implement and test your changes locally

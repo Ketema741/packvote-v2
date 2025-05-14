@@ -20,12 +20,13 @@ jobs:
         run: npm run build
         env:
           REACT_APP_API_URL: ${{ secrets.DEV_API_URL }}
-          REACT_APP_SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
-          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
+          REACT_APP_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          REACT_APP_SUPABASE_SCHEMA: "dev"
       - name: Deploy to Development
         run: |
           # Add deployment commands here
-          echo "Deploying to DEV environment"
+          echo "Deploying to DEV environment with dev schema"
           # Example: deploy to dev environment
           # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
 
@@ -45,12 +46,13 @@ jobs:
         run: npm run build
         env:
           REACT_APP_API_URL: ${{ secrets.PROD_API_URL }}
-          REACT_APP_SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
-          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.PROD_SUPABASE_ANON_KEY }}
+          REACT_APP_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          REACT_APP_SUPABASE_SCHEMA: "prod"
       - name: Deploy to Production
         run: |
           # Add deployment commands here
-          echo "Deploying to PROD environment"
+          echo "Deploying to PROD environment with prod schema"
           # Example: deploy to production environment
           # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
   

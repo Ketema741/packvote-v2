@@ -32,7 +32,7 @@ This repository contains the frontend interface for the PackVote App. The applic
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-org/packvote-ui.git
+git clone https://github.com/GratitudeDriven/packvote-ui.git
 cd packvote-ui
 ```
 
@@ -114,6 +114,47 @@ This is a React-based application using:
 2. Write tests for new functionality
 3. Ensure all tests pass
 4. Submit a pull request
+
+## Development Workflow
+
+This repository follows a structured development workflow with separate development and production environments:
+
+### Branch Structure
+- `main` - Production branch, protected from direct pushes
+- `dev` - Development branch for testing changes before production
+
+
+### Environment Configuration
+- Development environment uses development API endpoints and Supabase project
+- Production environment uses production API endpoints and Supabase project
+- Environment variables are stored as GitHub Secrets and used by the deployment workflows
+
+### CI/CD Pipeline
+- Tests run automatically on both `dev` and `main` branches
+- Development deployments occur automatically when changes are pushed to `dev`
+- Production deployments require passing tests and occur after merging to `main`
+
+## Deployment Status
+
+**IMPORTANT: The application is not yet deployed to any environment.** 
+
+The GitHub Actions workflows in `.github/workflows/` currently contain placeholders for deployment steps, which have been commented out until actual deployment is implemented. Only the test jobs remain active to ensure code quality.
+
+Required secrets for future deployment:
+- `SUPABASE_URL` - URL of your Supabase project
+- `SUPABASE_ANON_KEY` - Anonymous key for Supabase client access
+- `DEV_API_URL`/`PROD_API_URL` - Currently uses localhost during development
+
+Currently, the application uses `localhost` for API connections. When deploying, these placeholder values will need to be updated with actual deployment URLs.
+
+Once deployment targets are established, the deployment workflows will be updated accordingly.
+
+### Development Process
+1. Create feature branches from `dev`
+2. Implement and test your changes locally
+3. Submit a pull request to merge into `dev`
+4. After testing in the development environment, create a pull request from `dev` to `main`
+5. Once approved and merged, changes will be deployed to production
 
 ## License
 

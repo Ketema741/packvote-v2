@@ -64,6 +64,23 @@ export const trackMetric = (metricName, increment = 1) => {
     metrics[metricName] += increment;
   }
   metrics.lastUpdateTime = Date.now();
+  
+  // Send to server for Prometheus scraping (in production/development)
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      fetch('/api/metrics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ metric: metricName, value: increment }),
+      }).catch(error => {
+        console.error('Failed to update server metrics:', error);
+      });
+    } catch (e) {
+      console.error('Error sending metrics to server:', e);
+    }
+  }
 };
 
 /**

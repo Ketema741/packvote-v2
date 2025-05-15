@@ -16,8 +16,8 @@ app.use(express.static(path.join(__dirname, 'build')));
 const metrics = {
   pageLoads: 0,
   apiCalls: 0,
-  errors: 0,
-  navigations: 0,
+  totalErrors: 0,
+  navigationCount: 0,
   startTime: Date.now()
 };
 
@@ -35,10 +35,10 @@ app.get('/metrics', (req, res) => {
     `packvote_ui_api_calls_total ${metrics.apiCalls}`,
     '# HELP packvote_ui_errors_total Total number of errors',
     '# TYPE packvote_ui_errors_total counter',
-    `packvote_ui_errors_total ${metrics.errors}`,
+    `packvote_ui_errors_total ${metrics.totalErrors}`,
     '# HELP packvote_ui_navigation_total Total number of in-app navigations',
     '# TYPE packvote_ui_navigation_total counter',
-    `packvote_ui_navigation_total ${metrics.navigations}`,
+    `packvote_ui_navigation_total ${metrics.navigationCount}`,
     '# HELP packvote_ui_uptime_seconds Uptime in seconds',
     '# TYPE packvote_ui_uptime_seconds gauge',
     `packvote_ui_uptime_seconds ${uptime}`,
@@ -52,9 +52,19 @@ app.get('/metrics', (req, res) => {
 app.post('/api/metrics', express.json(), (req, res) => {
   const { metric, value = 1 } = req.body;
   
+  // Map frontend metrics to server metrics if needed
+  const metricMap = {
+    'navigationCount': 'navigationCount',
+    'pageLoads': 'pageLoads',
+    'apiCalls': 'apiCalls',
+    'totalErrors': 'totalErrors'
+  };
+  
+  const serverMetric = metricMap[metric] || metric;
+  
   // Only update known metrics
-  if (metric in metrics) {
-    metrics[metric] += value;
+  if (serverMetric in metrics) {
+    metrics[serverMetric] += value;
   }
   
   res.status(200).json({ success: true });

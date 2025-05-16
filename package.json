@@ -7,6 +7,8 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^5.15.11",
     "@mui/material": "^5.15.11",
+    "@sentry/react": "^7.91.0",
+    "@sentry/tracing": "^7.120.3",
     "axios": "^1.9.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
@@ -16,7 +18,8 @@
     "react-router-dom": "6.14.2",
     "react-scripts": "5.0.1",
     "survey-core": "^2.0.6",
-    "survey-react": "^1.12.33"
+    "survey-react": "^1.12.33",
+    "web-vitals": "^5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",

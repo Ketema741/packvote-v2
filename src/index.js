@@ -7,6 +7,9 @@ import App from './App.jsx';
 import './styles/variables.css';
 import './styles/index.css';
 import './styles/App.css';
+import reportWebVitals from './reportWebVitals';
+import { initMonitoring } from './utils/monitoring';
+import * as Sentry from '@sentry/react';
 
 const theme = createTheme({
   typography: {
@@ -39,6 +42,28 @@ const theme = createTheme({
   ],
 });
 
+// Initialize monitoring
+initMonitoring();
+
+// Initialize Sentry in production environment
+if (process.env.NODE_ENV === 'production' && process.env.REACT_APP_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.REACT_APP_SENTRY_DSN,
+    integrations: [
+      new Sentry.BrowserTracing({
+        // Set sampling rate for performance monitoring
+        tracesSampleRate: 0.2,
+      }),
+      new Sentry.Replay({
+        // Capture 10% of sessions for replay
+        sessionSampleRate: 0.1,
+      }),
+    ],
+    environment: process.env.REACT_APP_ENVIRONMENT || 'production',
+    release: process.env.REACT_APP_VERSION || '0.1.0',
+  });
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
@@ -49,4 +74,15 @@ root.render(
       </BrowserRouter>
     </ThemeProvider>
   </React.StrictMode>
-); 
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// You can also send to your analytics service or custom endpoint
+reportWebVitals((metrics) => {
+  // In production, send to monitoring backend
+  if (process.env.NODE_ENV === 'production') {
+    // Placeholder for sending metrics to backend
+    console.log('Web Vitals:', metrics);
+  }
+}); 

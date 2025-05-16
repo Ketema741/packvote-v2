@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { setupMonitoring } from './utils/monitoring';
 import { Box, Button } from '@mui/material';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
@@ -20,6 +21,11 @@ import UnsplashApiTest from './components/UnsplashApiTest';
 import DevSettings from './components/DevSettings';
 
 const App = () => {
+  // Initialize monitoring on app start
+  useEffect(() => {
+    setupMonitoring();
+  }, []);
+
   // Determine if we're in development environment
   const isDevelopment = process.env.NODE_ENV === 'development';
   

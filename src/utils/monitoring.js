@@ -5,6 +5,9 @@
  * in the frontend application.
  */
 
+import * as Sentry from '@sentry/react';
+import { BrowserTracing } from '@sentry/tracing';
+
 // Initialize performance monitoring
 export const initPerformanceMonitoring = () => {
   if (typeof window !== 'undefined' && window.performance) {
@@ -243,4 +246,143 @@ export const initMonitoring = () => {
     version: process.env.REACT_APP_VERSION || '0.1.0',
     timestamp: new Date().toISOString(),
   });
-}; 
+};
+
+/**
+ * Initialize Sentry for application monitoring
+ */
+export const setupMonitoring = () => {
+  const dsn = process.env.REACT_APP_SENTRY_DSN;
+  
+  // Only initialize if DSN is provided
+  if (!dsn) {
+    console.warn('Sentry DSN not provided. Monitoring will be limited to console logs.');
+  }
+  
+  Sentry.init({
+    dsn: dsn,
+    integrations: [new BrowserTracing()],
+    environment: process.env.REACT_APP_ENVIRONMENT || 'development',
+    release: process.env.REACT_APP_VERSION || '0.1.0',
+    
+    // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring
+    // We recommend adjusting this value in production
+    tracesSampleRate: 0.5,
+    
+    // Only enable in production to reduce noise during development
+    enabled: process.env.NODE_ENV === 'production' || !!dsn,
+    
+    // Capture errors from failed API requests
+    beforeSend(event) {
+      if (event.exception) {
+        console.error('[Sentry] Error captured:', event.exception);
+      }
+      return event;
+    }
+  });
+  
+  // Log initialization
+  console.log(`[Monitoring] Initialized for ${process.env.REACT_APP_ENVIRONMENT || 'development'} environment`);
+};
+
+/**
+ * Capture an error with additional context
+ * @param {Error} error - The error to capture
+ * @param {Object} context - Additional context for the error
+ */
+export const captureError = (error, context = {}) => {
+  console.error('[Error]', error, context);
+  
+  Sentry.captureException(error, { 
+    tags: context
+  });
+};
+
+/**
+ * Add a breadcrumb to track user actions
+ * @param {Object} breadcrumb - Breadcrumb data
+ */
+export const addBreadcrumb = (breadcrumb) => {
+  Sentry.addBreadcrumb(breadcrumb);
+};
+
+/**
+ * Set user context for error tracking
+ * @param {Object|null} user - User data or null to clear
+ */
+export const setUserContext = (user) => {
+  Sentry.setUser(user);
+};
+
+/**
+ * Performance monitoring for components
+ * @param {React.Component} Component - The component to monitor
+ * @param {string} name - Component name for the profiler
+ */
+export const withPerformanceMonitoring = (Component, name) => {
+  return Sentry.withProfiler(Component, { name });
+};
+
+/**
+ * Track API requests for performance monitoring
+ * @param {string} url - API URL
+ * @param {string} method - HTTP method
+ * @param {number} startTime - Request start timestamp
+ * @param {number} status - HTTP status code
+ */
+export const trackApiRequest = (url, method, startTime, status) => {
+  const duration = Date.now() - startTime;
+  
+  // Log API request timing
+  console.debug(`[API] ${method} ${url} - ${status} (${duration}ms)`);
+  
+  // Add breadcrumb for API call
+  addBreadcrumb({
+    category: 'api',
+    message: `${method} ${url}`,
+    data: {
+      url,
+      method,
+      status,
+      duration
+    },
+    level: status >= 400 ? 'error' : 'info'
+  });
+  
+  // Track as performance metric
+  if (window.performance && window.performance.mark) {
+    window.performance.mark(`api-${method}-${url}-end`);
+    try {
+      window.performance.measure(
+        `api-${method}-${url}`,
+        `api-${method}-${url}-start`,
+        `api-${method}-${url}-end`
+      );
+    } catch (e) {
+      // Measurement may fail if the start mark wasn't created
+      console.warn('Performance measurement failed:', e);
+    }
+  }
+};
+
+/**
+ * Start tracking an API request
+ * @param {string} url - API URL
+ * @param {string} method - HTTP method
+ * @returns {number} Start timestamp
+ */
+export const startApiRequest = (url, method) => {
+  const startTime = Date.now();
+  
+  // Mark the start of the request
+  if (window.performance && window.performance.mark) {
+    window.performance.mark(`api-${method}-${url}-start`);
+  }
+  
+  return startTime;
+};
+
+// Initialize monitoring on script load if enabled
+if (process.env.NODE_ENV === 'production') {
+  setupMonitoring();
+} 

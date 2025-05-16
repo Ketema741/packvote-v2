@@ -1,6 +1,8 @@
 /**
  * API service for interacting with the backend
  */
+import { startApiRequest, trackApiRequest, captureError } from './monitoring';
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
 
 /**
@@ -9,6 +11,9 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:800
  * @returns {Promise<Object>} Trip creation result
  */
 export const createTrip = async (tripData) => {
+  const url = `${API_BASE_URL}/trips/`;
+  const startTime = startApiRequest(url, 'POST');
+  
   try {
     // Transform the data to match the backend's expected format
     const backendData = {
@@ -28,7 +33,7 @@ export const createTrip = async (tripData) => {
       ]
     };
 
-    const response = await fetch(`${API_BASE_URL}/trips/`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,20 +41,42 @@ export const createTrip = async (tripData) => {
       body: JSON.stringify(backendData),
     });
 
+    // Track API response
+    trackApiRequest(url, 'POST', startTime, response.status);
+
     if (!response.ok) {
       const errorData = await response.json();
       
       // Handle duplicate trip error
       if (errorData.detail && errorData.detail.code === 'DUPLICATE_TRIP') {
-        throw new Error("A trip with this name and participants already exists. Please create a new trip with a different name or participants.");
+        const error = new Error("A trip with this name and participants already exists. Please create a new trip with a different name or participants.");
+        captureError(error, { 
+          endpoint: url, 
+          status: response.status,
+          errorCode: 'DUPLICATE_TRIP'
+        });
+        throw error;
       }
       
-      throw new Error(errorData.detail?.message || errorData.detail || `HTTP error! Status: ${response.status}`);
+      const error = new Error(errorData.detail?.message || errorData.detail || `HTTP error! Status: ${response.status}`);
+      captureError(error, { 
+        endpoint: url, 
+        status: response.status,
+        errorType: 'API_ERROR'
+      });
+      throw error;
     }
 
     return await response.json();
   } catch (error) {
     console.error('Error creating trip:', error);
+    // If the error wasn't already captured (e.g., network error)
+    if (!error.message.includes('A trip with this name') && !error.message.includes('HTTP error')) {
+      captureError(error, { 
+        endpoint: url, 
+        errorType: 'NETWORK_ERROR'
+      });
+    }
     throw error;
   }
 };
@@ -60,8 +87,11 @@ export const createTrip = async (tripData) => {
  * @returns {Promise<Object>} SMS sending result
  */
 export const sendSMS = async (participantId) => {
+  const url = `${API_BASE_URL}/send-sms`;
+  const startTime = startApiRequest(url, 'POST');
+  
   try {
-    const response = await fetch(`${API_BASE_URL}/send-sms`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,13 +99,29 @@ export const sendSMS = async (participantId) => {
       body: JSON.stringify({ participant_id: participantId }),
     });
 
+    // Track API response
+    trackApiRequest(url, 'POST', startTime, response.status);
+
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const error = new Error(`HTTP error! Status: ${response.status}`);
+      captureError(error, { 
+        endpoint: url, 
+        status: response.status,
+        participantId
+      });
+      throw error;
     }
 
     return await response.json();
   } catch (error) {
     console.error('Error sending SMS:', error);
+    if (!error.message.includes('HTTP error')) {
+      captureError(error, { 
+        endpoint: url, 
+        errorType: 'NETWORK_ERROR',
+        participantId
+      });
+    }
     throw error;
   }
 };
@@ -113,6 +159,9 @@ export const sendAllSMS = async (tripId) => {
  * @returns {Promise<Object>} Save result
  */
 export const saveSurveyResponse = async (participantId, responseData) => {
+  const url = `${API_BASE_URL}/survey-response`;
+  const startTime = startApiRequest(url, 'POST');
+  
   try {
     // Ensure all array fields are properly formatted
     const ensureArray = (value) => {
@@ -154,7 +203,7 @@ export const saveSurveyResponse = async (participantId, responseData) => {
     });
     console.log('JSON stringified data:', stringified);
 
-    const response = await fetch(`${API_BASE_URL}/survey-response`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -162,14 +211,30 @@ export const saveSurveyResponse = async (participantId, responseData) => {
       body: stringified,
     });
 
+    // Track API response
+    trackApiRequest(url, 'POST', startTime, response.status);
+
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+      const error = new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+      captureError(error, { 
+        endpoint: url, 
+        status: response.status,
+        participantId
+      });
+      throw error;
     }
 
     return await response.json();
   } catch (error) {
     console.error('Error saving survey response:', error);
+    if (!error.message.includes('HTTP error')) {
+      captureError(error, { 
+        endpoint: url, 
+        errorType: 'NETWORK_ERROR',
+        participantId
+      });
+    }
     throw error;
   }
 };

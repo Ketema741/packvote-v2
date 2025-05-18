@@ -35,6 +35,7 @@ const AIRecommendationsPage = () => {
   
   const [recommendations, setRecommendations] = useState([]);
   const [selectedRecIds, setSelectedRecIds] = useState([]);
+  const [expandedRecIds, setExpandedRecIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -118,7 +119,12 @@ const AIRecommendationsPage = () => {
       
       // Set regenerations remaining from trip data
       if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
-        setRegenerationsRemaining(tripDetails.regenerations_remaining);
+        console.log('Setting regenerations remaining to:', tripDetails.regenerations_remaining);
+        setRegenerationsRemaining(parseInt(tripDetails.regenerations_remaining, 10));
+      } else {
+        // Default to 0 if not specified
+        console.log('No regenerations_remaining found in trip details, defaulting to 0');
+        setRegenerationsRemaining(0);
       }
       
       // First, try to get existing recommendations from the database
@@ -316,6 +322,16 @@ const AIRecommendationsPage = () => {
   }, [effectiveTripId, processRecommendations]);
 
   const handleOpenFeedbackDialog = () => {
+    // Only proceed if regenerations remain
+    if (regenerationsRemaining <= 0) {
+      setToast({
+        open: true,
+        message: 'You have used all your free regenerations for this trip.',
+        severity: 'error'
+      });
+      return;
+    }
+    
     // If no recommendations are selected, select all of them
     if (selectedRecIds.length === 0) {
       const allRecIds = recommendations.map(rec => rec.id);
@@ -362,8 +378,14 @@ const AIRecommendationsPage = () => {
         previousRecommendations: recIdsToRegenerate
       });
       
-      // Set new regenerations remaining count
-      setRegenerationsRemaining(prev => Math.max(0, prev - 1));
+      // Update regenerations remaining from the API response if available
+      if (newRecommendations.regenerations_remaining !== undefined) {
+        console.log('Setting regenerations remaining from API response:', newRecommendations.regenerations_remaining);
+        setRegenerationsRemaining(newRecommendations.regenerations_remaining);
+      } else {
+        // Fallback to decrementing if API doesn't provide the updated count
+        setRegenerationsRemaining(prev => Math.max(0, prev - 1));
+      }
       
       // Process and set new recommendations
       if (newRecommendations && newRecommendations.recommendations) {
@@ -379,18 +401,63 @@ const AIRecommendationsPage = () => {
           // Initialize updatedRecs as a copy of the current recommendations
           const updatedRecs = [...recommendations];
           
+          // Get list of existing destination names to avoid duplicates
+          const existingDestinations = updatedRecs.map(rec => 
+            rec.city?.toLowerCase() || rec.destination?.toLowerCase() || ''
+          );
+          
+          console.log("Existing destinations:", existingDestinations);
+          
+          // Track which selected recommendations have been successfully replaced
+          const replacedIds = [];
+          
           // Now map through and replace selected recommendations
           for (let i = 0; i < updatedRecs.length; i++) {
             if (selectedRecIds.includes(updatedRecs[i].id)) {
-              // Find a new recommendation to replace this one
-              const newRec = newRecommendations.recommendations.find(r => 
-                !updatedRecs.some(existingRec => existingRec.id === r.id)
-              );
+              // Find a new recommendation that hasn't been used and has a different destination
+              const newRec = newRecommendations.recommendations.find(r => {
+                // Check if this recommendation is already used in the updated recs
+                const isAlreadyUsed = updatedRecs.some(existingRec => 
+                  existingRec.id === r.id && !selectedRecIds.includes(existingRec.id)
+                );
+                
+                // Get the destination names
+                const newDestinationName = r.city?.toLowerCase() || r.destination?.toLowerCase() || '';
+                const currentDestinationName = updatedRecs[i].city?.toLowerCase() || updatedRecs[i].destination?.toLowerCase() || '';
+                
+                // Check if this destination already exists in any recommendation (including the one being replaced)
+                const isDestinationInOtherRecs = updatedRecs.some((existingRec, index) => {
+                  // Skip comparing with the current recommendation being replaced
+                  if (index === i) return false;
+                  
+                  const existingDestName = existingRec.city?.toLowerCase() || existingRec.destination?.toLowerCase() || '';
+                  return existingDestName === newDestinationName;
+                });
+                
+                // Also ensure it's not the same as the one we're replacing
+                const isSameAsCurrentDestination = newDestinationName === currentDestinationName;
+                
+                // Only use recommendations that have unique destinations and aren't already used
+                return !isAlreadyUsed && !isDestinationInOtherRecs && !isSameAsCurrentDestination && !replacedIds.includes(r.id);
+              });
               
               if (newRec) {
+                console.log(`Replacing recommendation ${updatedRecs[i].city || updatedRecs[i].destination} with ${newRec.city || newRec.destination}`);
                 updatedRecs[i] = newRec;
+                replacedIds.push(newRec.id);
+              } else {
+                console.warn(`Could not find a suitable replacement for ${updatedRecs[i].city || updatedRecs[i].destination}`);
               }
             }
+          }
+          
+          // If we couldn't find valid replacements, show a warning
+          if (replacedIds.length < selectedRecIds.length) {
+            setToast({
+              open: true,
+              message: `Some destinations could not be replaced with unique alternatives. Try regenerating all recommendations.`,
+              severity: 'warning'
+            });
           }
           
           setRecommendations(processRecommendations(updatedRecs));
@@ -401,16 +468,51 @@ const AIRecommendationsPage = () => {
         
         setToast({
           open: true,
-          message: `New recommendations generated! (${regenerationsRemaining - 1} regenerations remaining)`,
+          message: `New recommendations generated! (${regenerationsRemaining} regenerations remaining)`,
           severity: 'success'
         });
       }
       
       // Clear selected recommendations and feedback
       setSelectedRecIds([]);
+      setExpandedRecIds([]);
       setFeedbackText('');
     } catch (err) {
       console.error('Error regenerating recommendations:', err);
+      
+      // Check for specific error about no regenerations remaining
+      if (err.message && err.message.includes('No regenerations remaining')) {
+        console.log('Server indicates no regenerations remaining, updating UI state');
+        // Force update the UI state to match server
+        setRegenerationsRemaining(0);
+      }
+      
+      // Force refresh trip details to ensure we have the latest count
+      try {
+        const tripDetails = await getTripDetails(effectiveTripId);
+        if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
+          const serverCount = parseInt(tripDetails.regenerations_remaining, 10);
+          console.log('Server says regenerations remaining:', serverCount);
+          
+          // If there's a discrepancy between UI and server, always use server value
+          if (serverCount !== regenerationsRemaining) {
+            console.log(`Updating regenerations from ${regenerationsRemaining} to ${serverCount}`);
+            setRegenerationsRemaining(serverCount);
+            
+            // If server says zero but UI shows more, show a message to user
+            if (serverCount === 0 && regenerationsRemaining > 0) {
+              setToast({
+                open: true,
+                message: 'You have used all available regenerations for this trip.',
+                severity: 'info'
+              });
+            }
+          }
+        }
+      } catch (refreshErr) {
+        console.error('Failed to refresh trip details after error:', refreshErr);
+      }
+      
       setToast({
         open: true,
         message: `Error: ${err.message}`,
@@ -472,6 +574,68 @@ const AIRecommendationsPage = () => {
     // Open the feedback dialog to get user input
     handleOpenFeedbackDialog();
   };
+
+  // Force refetch trip details and regeneration count when navigating back
+  useEffect(() => {
+    const refreshTripDetails = async () => {
+      if (!effectiveTripId) return;
+      
+      try {
+        console.log('Refreshing trip details from server...');
+        // Set temporary loading state to prevent user actions during refresh
+        const wasGenerating = generating;
+        if (!wasGenerating) setGenerating(true);
+        
+        // Get latest trip details to update regeneration count
+        const tripDetails = await getTripDetails(effectiveTripId);
+        console.log('Refreshed trip details:', tripDetails);
+        
+        // Update regenerations remaining from server data
+        if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
+          const serverCount = parseInt(tripDetails.regenerations_remaining, 10);
+          console.log('Server says regenerations remaining:', serverCount);
+          
+          // If there's a discrepancy between UI and server, always use server value
+          if (serverCount !== regenerationsRemaining) {
+            console.log(`Updating regenerations from ${regenerationsRemaining} to ${serverCount}`);
+            setRegenerationsRemaining(serverCount);
+            
+            // If server says zero but UI shows more, show a message to user
+            if (serverCount === 0 && regenerationsRemaining > 0) {
+              setToast({
+                open: true,
+                message: 'You have used all available regenerations for this trip.',
+                severity: 'info'
+              });
+            }
+          }
+        }
+        
+        // Restore previous loading state
+        if (!wasGenerating) setGenerating(false);
+      } catch (err) {
+        console.error('Error refreshing trip details:', err);
+        setGenerating(false);
+      }
+    };
+    
+    // Listen for the 'focus' event on the window (when user navigates back to this page)
+    const handleFocus = () => {
+      console.log('Window focused, refreshing trip details');
+      refreshTripDetails();
+    };
+    
+    // Initial fetch
+    refreshTripDetails();
+    
+    // Add event listener
+    window.addEventListener('focus', handleFocus);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [effectiveTripId, generating, regenerationsRemaining]);
 
   useEffect(() => {
     fetchRecommendations();
@@ -553,8 +717,8 @@ const AIRecommendationsPage = () => {
     if (recommendations.length < 2) {
       setToast({
         open: true,
-        message: 'Need at least 2 recommendations to start voting. Try regenerating.',
-        severity: 'error'
+        message: 'Need at least 2 recommendations to start voting. Please regenerate or try again later.',
+        severity: 'warning'
       });
       return;
     }
@@ -797,10 +961,10 @@ const AIRecommendationsPage = () => {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {regenerationsRemaining > 0 && (
+              {regenerationsRemaining >= 0 && (
                 <Chip 
-                  label={`${regenerationsRemaining} regeneration${regenerationsRemaining === 1 ? '' : 's'} remaining`} 
-                  color={regenerationsRemaining === 1 ? "warning" : "success"}
+                  label={`${regenerationsRemaining} regeneration${regenerationsRemaining === 1 ? '' : 's'} remaining`}
+                  color={regenerationsRemaining === 0 ? "error" : regenerationsRemaining === 1 ? "warning" : "success"}
                   sx={{ mr: 1 }}
                 />
               )}
@@ -815,7 +979,6 @@ const AIRecommendationsPage = () => {
                 variant="contained"
                 onClick={handleStartVote}
                 className="primary-button"
-                disabled={generating || recommendations.length < 2}
               >
                 Start Vote
               </Button>
@@ -834,7 +997,7 @@ const AIRecommendationsPage = () => {
                 >
                   {selectedRecIds.length > 0 
                     ? `Regenerate Selected (${selectedRecIds.length})` 
-                    : "Regenerate All"}
+                    : regenerationsRemaining <= 0 ? "No Regenerations Left" : "Regenerate All"}
                 </Button>
               </Box>
   
@@ -854,7 +1017,7 @@ const AIRecommendationsPage = () => {
                       onClick={() => {
                         if (regenerationsRemaining > 0) {
                           console.log("Card clicked for:", recId);
-                          // Direct selection toggle
+                          // Direct selection toggle for regeneration
                           setSelectedRecIds(prev => 
                             prev.includes(recId) 
                               ? prev.filter(id => id !== recId) 
@@ -920,7 +1083,7 @@ const AIRecommendationsPage = () => {
                             my: 1.5,
                             transition: 'all 0.3s ease',
                             lineHeight: 1.6,
-                            ...(selectedRecIds.includes(recommendation.id) && {
+                            ...(expandedRecIds.includes(recommendation.id) && {
                               backgroundColor: 'rgba(0, 0, 0, 0.02)',
                               p: 1.5,
                               borderRadius: 1,
@@ -929,7 +1092,7 @@ const AIRecommendationsPage = () => {
                               mb: 2
                             })
                           }}>
-                            {selectedRecIds.includes(recommendation.id) 
+                            {expandedRecIds.includes(recommendation.id) 
                               ? recommendation.description
                               : recommendation.description && recommendation.description.length > 100
                                 ? `${recommendation.description.substring(0, 100)}...`
@@ -943,8 +1106,8 @@ const AIRecommendationsPage = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 console.log("Read more/less clicked for:", recId);
-                                // Toggle selection for expand/collapse
-                                setSelectedRecIds(prev => 
+                                // Toggle expansion for this recommendation
+                                setExpandedRecIds(prev => 
                                   prev.includes(recId) 
                                     ? prev.filter(id => id !== recId) 
                                     : [...prev, recId]
@@ -961,7 +1124,7 @@ const AIRecommendationsPage = () => {
                                 fontWeight: 'medium'
                               }}
                             >
-                              {selectedRecIds.includes(recommendation.id) ? 'Show less' : 'Read more'}
+                              {expandedRecIds.includes(recommendation.id) ? 'Show less' : 'Read more'}
                             </Button>
                           )}
                           

@@ -320,10 +320,29 @@ const DashboardPage = () => {
       
       // Get trip data to check if it needs regeneration
       const tripDetails = await getTripDetails(tripId);
+      console.log('Trip details for recommendations check:', tripDetails);
+      console.log('has_recommendations flag value:', tripDetails.has_recommendations);
+      console.log('has_recommendations type:', typeof tripDetails.has_recommendations);
+      
       const hasRecentRecommendations = tripDetails.has_recommendations === true;
+      console.log('hasRecentRecommendations evaluation result:', hasRecentRecommendations);
+      
+      // Check directly if the flag exists
+      if (!tripDetails.hasOwnProperty('has_recommendations')) {
+        console.log('has_recommendations flag is missing from API response');
+      }
+      
+      // Get regenerations count directly from the API response
+      // This ensures we're always using the most up-to-date value
+      const regenerationsRemaining = tripDetails.regenerations_remaining !== undefined 
+        ? parseInt(tripDetails.regenerations_remaining, 10) 
+        : 3; // Default to 3 if not specified
+      
+      console.log('Regenerations remaining from API:', regenerationsRemaining);
       
       if (!hasRecentRecommendations) {
         // Only generate if needed
+        console.log('No recent recommendations found, generating new ones');
         setToast({
           open: true,
           message: 'Generating new destination recommendations (this could take a few minutes)...',
@@ -331,20 +350,42 @@ const DashboardPage = () => {
         });
         
         // Generate recommendations
-        await generateTravelRecommendations(tripId);
+        const generatedRecs = await generateTravelRecommendations(tripId);
+        
+        // Update regenerations remaining from the generate API response if available
+        const updatedRegenerationsRemaining = generatedRecs.regenerations_remaining !== undefined
+          ? parseInt(generatedRecs.regenerations_remaining, 10)
+          : regenerationsRemaining;
+        
+        console.log('Updated regenerations remaining after generation:', updatedRegenerationsRemaining);
+        
+        // Navigate to AI recommendations page where existing recommendations will be shown if available
+        navigate(`/recommendations/${tripId}`, { 
+          state: { 
+            tripId,
+            fromDashboard: true,
+            timestamp: Date.now() // Add a timestamp to force refresh
+          }
+        });
       } else {
+        console.log('Recent recommendations found, loading existing data');
         setToast({
           open: true,
           message: 'Loading destination recommendations...',
           severity: 'info'
         });
+        
+        // Navigate to AI recommendations page where existing recommendations will be shown
+        navigate(`/recommendations/${tripId}`, { 
+          state: { 
+            tripId,
+            fromDashboard: true,
+            timestamp: Date.now() // Add a timestamp to force refresh
+          }
+        });
       }
-      
-      // Navigate to AI recommendations page where existing recommendations will be shown if available
-      navigate(`/recommendations/${tripId}`, { 
-        state: { tripId }
-      });
     } catch (error) {
+      console.error('Error in handleGetAIDestinations:', error);
       setToast({
         open: true,
         message: `Failed to load recommendations: ${error.message}`,

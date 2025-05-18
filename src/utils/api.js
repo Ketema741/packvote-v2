@@ -701,7 +701,13 @@ export const calculateSurveyStats = (responses) => {
  */
 export const generateTravelRecommendations = async (tripId, options = {}) => {
   try {
-    const { numRecommendations = 3, temperature = 0.7 } = options;
+    const { 
+      numRecommendations = 3, 
+      temperature = 0.7,
+      feedback = null,
+      previousRecommendations = null
+    } = options;
+    
     console.log('Generating travel recommendations for trip:', tripId);
      
     const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
@@ -712,7 +718,9 @@ export const generateTravelRecommendations = async (tripId, options = {}) => {
       body: JSON.stringify({
         trip_id: tripId,
         num_recommendations: numRecommendations,
-        temperature: temperature
+        temperature: temperature,
+        feedback: feedback,
+        previous_recommendations: previousRecommendations
       }),
     });
 
@@ -741,6 +749,37 @@ export const generateTravelRecommendations = async (tripId, options = {}) => {
     return data;
   } catch (error) {
     console.error('Error generating travel recommendations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Submit feedback for a recommendation
+ * @param {string} recommendationId - Recommendation ID
+ * @param {string} feedback - User feedback text
+ * @returns {Promise<Object>} Response with success message
+ */
+export const submitRecommendationFeedback = async (recommendationId, feedback) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/recommendations/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recommendation_id: recommendationId,
+        feedback: feedback
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error submitting recommendation feedback:', error);
     throw error;
   }
 };

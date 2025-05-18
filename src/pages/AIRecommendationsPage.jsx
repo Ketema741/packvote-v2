@@ -11,7 +11,16 @@ import {
   Alert,
   Snackbar,
   Container,
-  Chip
+  Chip,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  FormControlLabel,
+  Checkbox,
+  FormGroup
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { getTravelRecommendations, generateTravelRecommendations, getTripDetails } from '../utils/api';
@@ -25,13 +34,15 @@ const AIRecommendationsPage = () => {
   const { tripId } = useParams();
   
   const [recommendations, setRecommendations] = useState([]);
-  const [tripData, setTripData] = useState(null);
+  const [selectedRecIds, setSelectedRecIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [imagesLoaded, setImagesLoaded] = useState({});
-  const [expandedCards, setExpandedCards] = useState({});
   const [destinationImages, setDestinationImages] = useState({});
+  const [regenerationsRemaining, setRegenerationsRemaining] = useState(3);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
   const [toast, setToast] = useState({
     open: false,
     message: '',
@@ -103,8 +114,12 @@ const AIRecommendationsPage = () => {
       
       // Get trip details
       const tripDetails = await getTripDetails(effectiveTripId);
-      setTripData(tripDetails);
       console.log('Loaded trip details:', tripDetails);
+      
+      // Set regenerations remaining from trip data
+      if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
+        setRegenerationsRemaining(tripDetails.regenerations_remaining);
+      }
       
       // First, try to get existing recommendations from the database
       try {
@@ -300,105 +315,139 @@ const AIRecommendationsPage = () => {
     }
   }, [effectiveTripId, processRecommendations]);
 
-  const handleRegenerateRecommendations = async () => {
+  const handleOpenFeedbackDialog = () => {
+    // If no recommendations are selected, select all of them
+    if (selectedRecIds.length === 0) {
+      const allRecIds = recommendations.map(rec => rec.id);
+      setSelectedRecIds(allRecIds);
+    }
+    setFeedbackDialogOpen(true);
+  };
+
+  const handleCloseFeedbackDialog = () => {
+    setFeedbackDialogOpen(false);
+  };
+
+  const handleRegenerateWithFeedback = async () => {
+    setFeedbackDialogOpen(false);
+    
     if (!effectiveTripId) return;
+    
+    if (regenerationsRemaining <= 0) {
+      setToast({
+        open: true,
+        message: 'You have used all your free regenerations for this trip.',
+        severity: 'error'
+      });
+      return;
+    }
     
     try {
       setGenerating(true);
       setToast({
         open: true,
-        message: 'Generating new recommendations (this could take a few minutes)...',
+        message: 'Generating new recommendations based on your feedback (this could take a few minutes)...',
         severity: 'info'
       });
       
-      console.log('Calling generateTravelRecommendations API with tripId:', effectiveTripId);
+      // Get IDs of selected recommendations to regenerate
+      const recIdsToRegenerate = selectedRecIds.length > 0 ? selectedRecIds : recommendations.map(rec => rec.id);
       
-      // Set a higher temperature for more variety
+      console.log('Regenerating recommendations with feedback:', feedbackText);
+      console.log('Recommendations to regenerate:', recIdsToRegenerate);
+      
       const newRecommendations = await generateTravelRecommendations(effectiveTripId, {
-        temperature: 0.9
+        temperature: 0.9,
+        feedback: feedbackText,
+        previousRecommendations: recIdsToRegenerate
       });
       
-      console.log('API Response from generateTravelRecommendations:', newRecommendations);
-      console.log('Recommendations count:', newRecommendations.recommendations?.length || 0);
-      console.log('Sample recommendation:', newRecommendations.recommendations?.[0]);
+      // Set new regenerations remaining count
+      setRegenerationsRemaining(prev => Math.max(0, prev - 1));
       
-      // Check for recommendations with missing IDs
-      const missingIds = newRecommendations.recommendations.filter(rec => !rec.id);
-      if (missingIds.length > 0) {
-        console.error(`Generated ${missingIds.length} recommendations with missing IDs:`, missingIds);
+      // Process and set new recommendations
+      if (newRecommendations && newRecommendations.recommendations) {
+        console.log('Generated new recommendations:', newRecommendations.recommendations.length);
         
-        // Filter out recommendations that are missing IDs
-        const validRecs = newRecommendations.recommendations.filter(rec => rec.id);
-        
-        if (validRecs.length === 0) {
-          setToast({
-            open: true,
-            message: 'All generated recommendations are missing IDs. Please try again later.',
-            severity: 'error'
+        // Replace only the selected recommendations
+        if (selectedRecIds.length > 0 && selectedRecIds.length < recommendations.length) {
+          const newRecsMap = {};
+          newRecommendations.recommendations.forEach(rec => {
+            newRecsMap[rec.id] = rec;
           });
-          return;
+          
+          const updatedRecs = recommendations.map(rec => {
+            if (selectedRecIds.includes(rec.id)) {
+              // Get a new recommendation to replace this one
+              const newRec = newRecommendations.recommendations.find(r => !Object.values(updatedRecs).includes(r));
+              return newRec || rec;
+            }
+            return rec;
+          });
+          
+          setRecommendations(processRecommendations(updatedRecs));
+        } else {
+          // Replace all recommendations
+          setRecommendations(processRecommendations(newRecommendations.recommendations));
         }
         
         setToast({
           open: true,
-          message: `Filtered out ${missingIds.length} recommendations that were missing IDs.`,
-          severity: 'warning'
+          message: `New recommendations generated! (${regenerationsRemaining - 1} regenerations remaining)`,
+          severity: 'success'
         });
-        
-        // Sort by created_at if available and take only the 3 most recent
-        const sortedValidRecs = [...validRecs];
-        if (sortedValidRecs[0] && sortedValidRecs[0].created_at) {
-          sortedValidRecs.sort((a, b) => {
-            const dateA = new Date(a.created_at || 0);
-            const dateB = new Date(b.created_at || 0);
-            return dateB - dateA;
-          });
-        }
-        const mostRecentRecs = sortedValidRecs.slice(0, 3);
-        
-        setRecommendations(processRecommendations(mostRecentRecs));
-      } else {
-        // Sort by created_at if available and take only the 3 most recent
-        const sortedRecs = [...newRecommendations.recommendations];
-        if (sortedRecs[0] && sortedRecs[0].created_at) {
-          sortedRecs.sort((a, b) => {
-            const dateA = new Date(a.created_at || 0);
-            const dateB = new Date(b.created_at || 0);
-            return dateB - dateA;
-          });
-        }
-        const mostRecentRecs = sortedRecs.slice(0, 3);
-        
-        // Process the most recent recommendations
-        const processed = processRecommendations(mostRecentRecs);
-        
-        // Check if any were filtered out during processing
-        if (processed.length < mostRecentRecs.length) {
-          setToast({
-            open: true,
-            message: `${mostRecentRecs.length - processed.length} recommendations were filtered out due to issues.`,
-            severity: 'warning'
-          });
-        } else {
-          setToast({
-            open: true,
-            message: 'New recommendations generated successfully!',
-            severity: 'success'
-          });
-        }
-        
-        setRecommendations(processed);
       }
+      
+      // Clear selected recommendations and feedback
+      setSelectedRecIds([]);
+      setFeedbackText('');
     } catch (err) {
-      setError(`Failed to generate new recommendations: ${err.message}`);
+      console.error('Error regenerating recommendations:', err);
       setToast({
         open: true,
-        message: `Failed to generate new recommendations: ${err.message}`,
+        message: `Error: ${err.message}`,
         severity: 'error'
       });
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleToggleRecommendationSelection = (recId) => {
+    setSelectedRecIds(prev => {
+      if (prev.includes(recId)) {
+        return prev.filter(id => id !== recId);
+      } else {
+        return [...prev, recId];
+      }
+    });
+  };
+
+  const handleRegenerateRecommendations = async () => {
+    if (selectedRecIds.length === 0) {
+      // If no recommendations are selected, open the feedback dialog
+      handleOpenFeedbackDialog();
+      return;
+    }
+    
+    if (regenerationsRemaining <= 0) {
+      setToast({
+        open: true,
+        message: 'You have used all your free regenerations for this trip.',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    // Confirm if they really want to regenerate
+    const confirmed = window.confirm(
+      `Regenerating will replace ${selectedRecIds.length === recommendations.length ? 'all' : 'selected'} recommendations and they can't be recovered. You have ${regenerationsRemaining} regenerations remaining. Continue?`
+    );
+    
+    if (!confirmed) return;
+    
+    // Open the feedback dialog to get user input
+    handleOpenFeedbackDialog();
   };
 
   const handleImageLoaded = useCallback((id) => {
@@ -546,12 +595,6 @@ const AIRecommendationsPage = () => {
     navigate(`/dashboard/${effectiveTripId}`);
   };
 
-  const toggleCardExpansion = (index) => {
-    setExpandedCards(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
 
   // Get the budget tier text in a readable format
   const getBudgetTierText = (tier) => {
@@ -565,6 +608,90 @@ const AIRecommendationsPage = () => {
       default:
         return tier;
     }
+  };
+
+  // Add this section to render feedback dialog
+  const renderFeedbackDialog = () => {
+    const selectedCount = selectedRecIds.length;
+    const totalCount = recommendations.length;
+    
+    return (
+      <Dialog 
+        open={feedbackDialogOpen} 
+        onClose={handleCloseFeedbackDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Why don't you like {selectedCount === 0 || selectedCount === totalCount 
+            ? 'these recommendations' 
+            : `${selectedCount} of ${totalCount} recommendations`}?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Your feedback helps us generate better recommendations. 
+            After submitting, you'll have {regenerationsRemaining > 0 ? regenerationsRemaining - 1 : 0} regenerations remaining.
+          </DialogContentText>
+          {selectedCount === 0 && (
+            <DialogContentText sx={{ color: 'primary.main', mb: 2 }}>
+              All recommendations will be regenerated.
+            </DialogContentText>
+          )}
+          {selectedCount > 0 && selectedCount < totalCount && (
+            <DialogContentText sx={{ color: 'primary.main', mb: 2 }}>
+              Only selected destinations will be regenerated.
+            </DialogContentText>
+          )}
+          <TextField
+            autoFocus
+            margin="dense"
+            id="feedback"
+            label="Your Feedback"
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            value={feedbackText}
+            onChange={(e) => setFeedbackText(e.target.value)}
+            placeholder="Example: These destinations are too expensive, I'm looking for budget-friendly options. Or: These don't match our vibe, we want more adventure activities."
+          />
+          
+          {selectedCount === 0 && (
+            <FormGroup sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Select destinations to regenerate:
+              </Typography>
+              {recommendations.map((rec, index) => (
+                <FormControlLabel
+                  key={rec.id}
+                  control={
+                    <Checkbox 
+                      checked={selectedRecIds.includes(rec.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleToggleRecommendationSelection(rec.id);
+                      }}
+                    />
+                  }
+                  label={rec.city || rec.destination}
+                />
+              ))}
+            </FormGroup>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseFeedbackDialog}>Cancel</Button>
+          <Button 
+            onClick={handleRegenerateWithFeedback} 
+            variant="contained" 
+            color="primary"
+            disabled={regenerationsRemaining <= 0}
+          >
+            Regenerate {selectedCount > 0 && selectedCount < totalCount ? 'Selected' : ''} Recommendations
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
   };
 
   if (loading) {
@@ -648,230 +775,201 @@ const AIRecommendationsPage = () => {
                 Tailored to your group's budgets, dates & vibes
               </Typography>
             </Box>
-            <Box>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              {regenerationsRemaining > 0 && (
+                <Chip 
+                  label={`${regenerationsRemaining} regeneration${regenerationsRemaining === 1 ? '' : 's'} remaining`} 
+                  color={regenerationsRemaining === 1 ? "warning" : "success"}
+                  sx={{ mr: 1 }}
+                />
+              )}
               <Button 
-                variant="outlined" 
+                variant="outlined"
                 onClick={handleGoBack}
-                sx={{ mr: 2 }}
+                className="secondary-button"
               >
-                Back to Dashboard
+                Back to Trip
               </Button>
-              <Button 
-                variant="contained" 
-                startIcon={<RefreshIcon />}
-                onClick={handleRegenerateRecommendations}
-                disabled={generating}
+              <Button
+                variant="contained"
+                onClick={handleStartVote}
                 className="primary-button"
+                disabled={generating || recommendations.length < 2}
               >
-                {generating ? 'Generating...' : 'Regenerate'}
+                Start Vote
               </Button>
             </Box>
           </Box>
-          
-          {tripData && (
-            <Box className="filters-container" sx={{ mb: 4 }}>
-              {tripData.budget && (
-                <Chip 
-                  label={`💰 Budget ~$${tripData.budget.amount.toLocaleString()}`} 
-                  className="filter-tag"
-                  color="primary"
+  
+          {recommendations.length > 0 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button
                   variant="outlined"
-                />
-              )}
-              {tripData.dateRange && tripData.dateRange.start && (
-                <Chip 
-                  label={`📅 ${tripData.dateRange.start} to ${tripData.dateRange.end}`}
-                  className="filter-tag"
-                  color="primary"
-                  variant="outlined"
-                />
-              )}
-              {tripData.vibes && tripData.vibes.length > 0 && (
-                <Chip 
-                  label={`✨ ${tripData.vibes.slice(0, 3).join(', ')}${tripData.vibes.length > 3 ? '...' : ''}`}
-                  className="filter-tag"
-                  color="primary"
-                  variant="outlined"
-                />
-              )}
-              {tripData.participants && (
-                <Chip 
-                  label={`👥 Group: ${tripData.participants.length} people`}
-                  className="filter-tag"
-                  color="primary"
-                  variant="outlined"
-                />
-              )}
+                  startIcon={<RefreshIcon />}
+                  onClick={handleRegenerateRecommendations}
+                  disabled={generating || regenerationsRemaining <= 0}
+                  className="secondary-button"
+                >
+                  {selectedRecIds.length > 0 
+                    ? `Regenerate Selected (${selectedRecIds.length})` 
+                    : "Regenerate All"}
+                </Button>
+              </Box>
+  
+              <div className="recommendations-grid">
+                {recommendations.map((recommendation, index) => (
+                  <div 
+                    key={recommendation.id || index} 
+                    className={`recommendation-card ${selectedRecIds.includes(recommendation.id) ? 'selected' : ''}`}
+                    onClick={() => regenerationsRemaining > 0 && handleToggleRecommendationSelection(recommendation.id)}
+                    style={{ cursor: regenerationsRemaining > 0 ? 'pointer' : 'default' }}
+                  >
+                    <div className="recommendation-card-content">
+                      {regenerationsRemaining > 0 && (
+                        <div className="recommendation-selection">
+                          <Checkbox 
+                            checked={selectedRecIds.includes(recommendation.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleToggleRecommendationSelection(recommendation.id);
+                            }}
+                          />
+                        </div>
+                      )}
+                      
+                      <Box className={`card-image ${!imagesLoaded[index] ? 'loading' : ''}`} sx={{
+                        height: '180px',
+                        overflow: 'hidden'
+                      }}>
+                        <img 
+                          src={destinationImages[index] || getImageSync(recommendation)} 
+                          alt={recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}
+                          onLoad={() => handleImageLoaded(index)}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </Box>
+                      <Box className="card-content" sx={{ p: 2, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                        <Box className="destination-header">
+                          <Typography variant="h5" component="h3">{recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}</Typography>
+                          <Typography variant="body1" className="country">{recommendation.country || "Unknown Country"}</Typography>
+                        </Box>
+                        <Box className="destination-details" sx={{ my: 1 }}>
+                          <Box className="detail">
+                            <span>💰 {getBudgetTierText(recommendation.budget_tier)}</span>
+                          </Box>
+                          <Box className="detail">
+                            <span>🗓️ Best time: {recommendation.ideal_months ? recommendation.ideal_months.join(', ') : 'Any time'}</span>
+                          </Box>
+                          {recommendation.matching_vibes && recommendation.matching_vibes.length > 0 && (
+                            <Box className="detail">
+                              <span>✨ Vibes: {recommendation.matching_vibes.join(', ')}</span>
+                            </Box>
+                          )}
+                        </Box>
+                        
+                        <Typography variant="body2" sx={{ 
+                          my: 1.5,
+                          transition: 'all 0.3s ease',
+                          lineHeight: 1.6,
+                          ...(selectedRecIds.includes(recommendation.id) && {
+                            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                            p: 1.5,
+                            borderRadius: 1,
+                            borderLeft: '3px solid',
+                            borderColor: 'primary.light',
+                            mb: 2
+                          })
+                        }}>
+                          {selectedRecIds.includes(recommendation.id) 
+                            ? recommendation.description
+                            : recommendation.description && recommendation.description.length > 100
+                              ? `${recommendation.description.substring(0, 100)}...`
+                              : recommendation.description || "No description available"}
+                        </Typography>
+                        
+                        {recommendation.description && recommendation.description.length > 100 && (
+                          <Button 
+                            variant="text" 
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleRecommendationSelection(recommendation.id);
+                            }}
+                            sx={{ 
+                              alignSelf: 'flex-start',
+                              mb: 1.5,
+                              fontSize: '0.8rem',
+                              textTransform: 'none',
+                              p: 0,
+                              minWidth: 'auto',
+                              color: 'primary.main',
+                              fontWeight: 'medium'
+                            }}
+                          >
+                            {selectedRecIds.includes(recommendation.id) ? 'Show less' : 'Read more'}
+                          </Button>
+                        )}
+                        
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 0.8, 
+                          mb: 2,
+                          mt: 'auto'
+                        }}>
+                          {recommendation.displayActivities && recommendation.displayActivities.map((activity, i) => (
+                            <Chip 
+                              key={i} 
+                              label={activity} 
+                              size="small" 
+                              variant="outlined"
+                              color="primary"
+                              sx={{ borderRadius: '4px' }}
+                            />
+                          ))}
+                          {recommendation.extraActivitiesCount > 0 && (
+                            <Chip 
+                              label={`+${recommendation.extraActivitiesCount} more`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderRadius: '4px' }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </Box>
           )}
           
           {generating && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', my: 4 }}>
+            <Box sx={{ textAlign: 'center', mt: 4 }}>
               <CircularProgress size={40} />
-              <Typography variant="h6" sx={{ ml: 2 }}>
-                Generating new recommendations (this could take a few minutes)...
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                Generating recommendations based on your feedback...
               </Typography>
             </Box>
           )}
-          
-          <Box component="main" className="destinations-grid" sx={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: 3,
-            alignItems: 'start' // This ensures cards start from the top
-          }}>
-            {recommendations.map((recommendation, index) => {
-              if (!recommendation) return null; // Skip if recommendation is undefined
-              
-              // Get image URL from our destinationImages state
-              const imageUrl = destinationImages[index] || getImageSync(recommendation);
-              
-              const isExpanded = expandedCards[index] || false;
-              
-              return (
-                <Box key={index} className={`destination-card ${isExpanded ? 'expanded' : ''}`} sx={{
-                  transition: 'all 0.3s ease-in-out',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  height: '100%',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
-                }}>
-                  <Box className={`card-image ${!imagesLoaded[index] ? 'loading' : ''}`} sx={{
-                    height: '180px',
-                    overflow: 'hidden'
-                  }}>
-                    <img 
-                      src={imageUrl} 
-                      alt={recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}
-                      onLoad={() => handleImageLoaded(index)}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </Box>
-                  <Box className="card-content" sx={{ p: 2, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                    <Box className="destination-header">
-                      <Typography variant="h5" component="h3">{recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}</Typography>
-                      <Typography variant="body1" className="country">{recommendation.country || "Unknown Country"}</Typography>
-                    </Box>
-                    <Box className="destination-details" sx={{ my: 1 }}>
-                      <Box className="detail">
-                        <span>💰 {getBudgetTierText(recommendation.budget_tier)}</span>
-                      </Box>
-                      <Box className="detail">
-                        <span>🗓️ Best time: {recommendation.ideal_months ? recommendation.ideal_months.join(', ') : 'Any time'}</span>
-                      </Box>
-                      {recommendation.matching_vibes && recommendation.matching_vibes.length > 0 && (
-                        <Box className="detail">
-                          <span>✨ Vibes: {recommendation.matching_vibes.join(', ')}</span>
-                        </Box>
-                      )}
-                    </Box>
-                    
-                    <Typography variant="body2" sx={{ 
-                      my: 1.5,
-                      transition: 'all 0.3s ease',
-                      lineHeight: 1.6,
-                      ...(isExpanded && {
-                        backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                        p: 1.5,
-                        borderRadius: 1,
-                        borderLeft: '3px solid',
-                        borderColor: 'primary.light',
-                        mb: 2
-                      })
-                    }}>
-                      {isExpanded 
-                        ? recommendation.description
-                        : recommendation.description && recommendation.description.length > 100
-                          ? `${recommendation.description.substring(0, 100)}...`
-                          : recommendation.description || "No description available"}
-                    </Typography>
-                    
-                    {recommendation.description && recommendation.description.length > 100 && (
-                      <Button 
-                        variant="text" 
-                        size="small"
-                        onClick={() => toggleCardExpansion(index)}
-                        sx={{ 
-                          alignSelf: 'flex-start',
-                          mb: 1.5,
-                          fontSize: '0.8rem',
-                          textTransform: 'none',
-                          p: 0,
-                          minWidth: 'auto',
-                          color: 'primary.main',
-                          fontWeight: 'medium'
-                        }}
-                      >
-                        {isExpanded ? 'Show less' : 'Read more'}
-                      </Button>
-                    )}
-                    
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexWrap: 'wrap', 
-                      gap: 0.8, 
-                      mb: 2,
-                      mt: 'auto'
-                    }}>
-                      {recommendation.displayActivities && recommendation.displayActivities.map((activity, i) => (
-                        <Chip 
-                          key={i} 
-                          label={activity} 
-                          size="small" 
-                          variant="outlined"
-                          color="primary"
-                          sx={{ borderRadius: '4px' }}
-                        />
-                      ))}
-                      {recommendation.extraActivitiesCount > 0 && (
-                        <Chip 
-                          label={`+${recommendation.extraActivitiesCount} more`} 
-                          size="small"
-                          variant="outlined"
-                          sx={{ borderRadius: '4px' }}
-                        />
-                      )}
-                    </Box>
-                  </Box>
-                </Box>
-              );
-            })}
-          </Box>
 
-          <Box className="vote-section" sx={{ mt: 4, textAlign: 'center' }}>
-            <Button 
-              variant="contained" 
-              className="start-vote-button primary-button"
-              onClick={handleStartVote}
-              disabled={recommendations.length === 0}
-              size="large"
-            >
-              Start the Vote
-            </Button>
-          </Box>
+          {renderFeedbackDialog()}
+  
+          <Snackbar 
+            open={toast.open} 
+            autoHideDuration={6000} 
+            onClose={handleCloseToast}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert onClose={handleCloseToast} severity={toast.severity} sx={{ width: '100%' }}>
+              {toast.message}
+            </Alert>
+          </Snackbar>
         </Box>
       </Container>
-      
-      {/* Toast notification */}
-      <Snackbar
-        open={toast.open}
-        autoHideDuration={6000}
-        onClose={handleCloseToast}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleCloseToast}
-          severity={toast.severity}
-          sx={{ width: '100%' }}
-        >
-          {toast.message}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };
 
-export default AIRecommendationsPage; 
+export default AIRecommendationsPage;

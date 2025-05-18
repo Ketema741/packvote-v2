@@ -376,14 +376,22 @@ const AIRecommendationsPage = () => {
             newRecsMap[rec.id] = rec;
           });
           
-          const updatedRecs = recommendations.map(rec => {
-            if (selectedRecIds.includes(rec.id)) {
-              // Get a new recommendation to replace this one
-              const newRec = newRecommendations.recommendations.find(r => !Object.values(updatedRecs).includes(r));
-              return newRec || rec;
+          // Initialize updatedRecs as a copy of the current recommendations
+          const updatedRecs = [...recommendations];
+          
+          // Now map through and replace selected recommendations
+          for (let i = 0; i < updatedRecs.length; i++) {
+            if (selectedRecIds.includes(updatedRecs[i].id)) {
+              // Find a new recommendation to replace this one
+              const newRec = newRecommendations.recommendations.find(r => 
+                !updatedRecs.some(existingRec => existingRec.id === r.id)
+              );
+              
+              if (newRec) {
+                updatedRecs[i] = newRec;
+              }
             }
-            return rec;
-          });
+          }
           
           setRecommendations(processRecommendations(updatedRecs));
         } else {
@@ -413,16 +421,31 @@ const AIRecommendationsPage = () => {
     }
   };
 
-  const handleToggleRecommendationSelection = (recId) => {
-    setSelectedRecIds(prev => {
-      if (prev.includes(recId)) {
-        return prev.filter(id => id !== recId);
-      } else {
-        return [...prev, recId];
-      }
-    });
+  const handleImageLoaded = useCallback((id) => {
+    setImagesLoaded(prev => ({ ...prev, [id]: true }));
+  }, []);
+
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setToast(prev => ({ ...prev, open: false }));
   };
 
+  // Monitor selectedRecIds changes
+  useEffect(() => {
+    console.log("Selected recommendation IDs updated:", selectedRecIds);
+    // Validate that all IDs in selectedRecIds exist in recommendations
+    const recommendationIds = recommendations.map(rec => rec.id);
+    const invalidIds = selectedRecIds.filter(id => !recommendationIds.includes(id));
+    if (invalidIds.length > 0) {
+      console.warn("Found invalid IDs in selection:", invalidIds);
+      // Clean up invalid IDs
+      setSelectedRecIds(prev => prev.filter(id => recommendationIds.includes(id)));
+    }
+  }, [selectedRecIds, recommendations]);
+
+  // Added back the regenerate function
   const handleRegenerateRecommendations = async () => {
     if (selectedRecIds.length === 0) {
       // If no recommendations are selected, open the feedback dialog
@@ -448,17 +471,6 @@ const AIRecommendationsPage = () => {
     
     // Open the feedback dialog to get user input
     handleOpenFeedbackDialog();
-  };
-
-  const handleImageLoaded = useCallback((id) => {
-    setImagesLoaded(prev => ({ ...prev, [id]: true }));
-  }, []);
-
-  const handleCloseToast = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setToast(prev => ({ ...prev, open: false }));
   };
 
   useEffect(() => {
@@ -667,9 +679,18 @@ const AIRecommendationsPage = () => {
                   control={
                     <Checkbox 
                       checked={selectedRecIds.includes(rec.id)}
-                      onChange={(e) => {
+                      onClick={(e) => {
+                        // Using onClick instead of onChange and stopping propagation
                         e.stopPropagation();
-                        handleToggleRecommendationSelection(rec.id);
+                      }}
+                      onChange={(e) => {
+                        console.log("Checkbox direct toggle for:", rec.id, e.target.checked);
+                        // Direct selection based on the checkbox state
+                        if (e.target.checked) {
+                          setSelectedRecIds(prev => [...prev, rec.id]);
+                        } else {
+                          setSelectedRecIds(prev => prev.filter(id => id !== rec.id));
+                        }
                       }}
                     />
                   }
@@ -818,129 +839,163 @@ const AIRecommendationsPage = () => {
               </Box>
   
               <div className="recommendations-grid">
-                {recommendations.map((recommendation, index) => (
-                  <div 
-                    key={recommendation.id || index} 
-                    className={`recommendation-card ${selectedRecIds.includes(recommendation.id) ? 'selected' : ''}`}
-                    onClick={() => regenerationsRemaining > 0 && handleToggleRecommendationSelection(recommendation.id)}
-                    style={{ cursor: regenerationsRemaining > 0 ? 'pointer' : 'default' }}
-                  >
-                    <div className="recommendation-card-content">
-                      {regenerationsRemaining > 0 && (
-                        <div className="recommendation-selection">
-                          <Checkbox 
-                            checked={selectedRecIds.includes(recommendation.id)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleToggleRecommendationSelection(recommendation.id);
-                            }}
-                          />
-                        </div>
-                      )}
-                      
-                      <Box className={`card-image ${!imagesLoaded[index] ? 'loading' : ''}`} sx={{
-                        height: '180px',
-                        overflow: 'hidden'
-                      }}>
-                        <img 
-                          src={destinationImages[index] || getImageSync(recommendation)} 
-                          alt={recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}
-                          onLoad={() => handleImageLoaded(index)}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      </Box>
-                      <Box className="card-content" sx={{ p: 2, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                        <Box className="destination-header">
-                          <Typography variant="h5" component="h3">{recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}</Typography>
-                          <Typography variant="body1" className="country">{recommendation.country || "Unknown Country"}</Typography>
-                        </Box>
-                        <Box className="destination-details" sx={{ my: 1 }}>
-                          <Box className="detail">
-                            <span>💰 {getBudgetTierText(recommendation.budget_tier)}</span>
-                          </Box>
-                          <Box className="detail">
-                            <span>🗓️ Best time: {recommendation.ideal_months ? recommendation.ideal_months.join(', ') : 'Any time'}</span>
-                          </Box>
-                          {recommendation.matching_vibes && recommendation.matching_vibes.length > 0 && (
-                            <Box className="detail">
-                              <span>✨ Vibes: {recommendation.matching_vibes.join(', ')}</span>
-                            </Box>
-                          )}
-                        </Box>
-                        
-                        <Typography variant="body2" sx={{ 
-                          my: 1.5,
-                          transition: 'all 0.3s ease',
-                          lineHeight: 1.6,
-                          ...(selectedRecIds.includes(recommendation.id) && {
-                            backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                            p: 1.5,
-                            borderRadius: 1,
-                            borderLeft: '3px solid',
-                            borderColor: 'primary.light',
-                            mb: 2
-                          })
-                        }}>
-                          {selectedRecIds.includes(recommendation.id) 
-                            ? recommendation.description
-                            : recommendation.description && recommendation.description.length > 100
-                              ? `${recommendation.description.substring(0, 100)}...`
-                              : recommendation.description || "No description available"}
-                        </Typography>
-                        
-                        {recommendation.description && recommendation.description.length > 100 && (
-                          <Button 
-                            variant="text" 
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleRecommendationSelection(recommendation.id);
-                            }}
-                            sx={{ 
-                              alignSelf: 'flex-start',
-                              mb: 1.5,
-                              fontSize: '0.8rem',
-                              textTransform: 'none',
-                              p: 0,
-                              minWidth: 'auto',
-                              color: 'primary.main',
-                              fontWeight: 'medium'
-                            }}
-                          >
-                            {selectedRecIds.includes(recommendation.id) ? 'Show less' : 'Read more'}
-                          </Button>
+                {recommendations.map((recommendation, index) => {
+                  // Extract ID for clarity and debugging
+                  const recId = recommendation.id;
+                  console.log(`Rendering recommendation ${index}:`, recId);
+                  
+                  // Check if this recommendation is selected
+                  const isSelected = selectedRecIds.includes(recId);
+                  
+                  return (
+                    <div 
+                      key={recId || index} 
+                      className={`recommendation-card ${isSelected ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (regenerationsRemaining > 0) {
+                          console.log("Card clicked for:", recId);
+                          // Direct selection toggle
+                          setSelectedRecIds(prev => 
+                            prev.includes(recId) 
+                              ? prev.filter(id => id !== recId) 
+                              : [...prev, recId]
+                          );
+                        }
+                      }}
+                      style={{ cursor: regenerationsRemaining > 0 ? 'pointer' : 'default' }}
+                    >
+                      <div className="recommendation-card-content">
+                        {regenerationsRemaining > 0 && (
+                          <div className="recommendation-selection">
+                            <Checkbox 
+                              checked={isSelected}
+                              onClick={(e) => {
+                                // Prevent the card click from also firing
+                                e.stopPropagation();
+                              }}
+                              onChange={(e) => {
+                                console.log("Checkbox clicked for:", recId, e.target.checked);
+                                // Direct selection based on the checkbox state
+                                setSelectedRecIds(prev => 
+                                  e.target.checked
+                                    ? [...prev, recId]
+                                    : prev.filter(id => id !== recId)
+                                );
+                              }}
+                            />
+                          </div>
                         )}
-                        
-                        <Box sx={{ 
-                          display: 'flex', 
-                          flexWrap: 'wrap', 
-                          gap: 0.8, 
-                          mb: 2,
-                          mt: 'auto'
+                      
+                        <Box className={`card-image ${!imagesLoaded[index] ? 'loading' : ''}`} sx={{
+                          height: '180px',
+                          overflow: 'hidden'
                         }}>
-                          {recommendation.displayActivities && recommendation.displayActivities.map((activity, i) => (
-                            <Chip 
-                              key={i} 
-                              label={activity} 
-                              size="small" 
-                              variant="outlined"
-                              color="primary"
-                              sx={{ borderRadius: '4px' }}
-                            />
-                          ))}
-                          {recommendation.extraActivitiesCount > 0 && (
-                            <Chip 
-                              label={`+${recommendation.extraActivitiesCount} more`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderRadius: '4px' }}
-                            />
-                          )}
+                          <img 
+                            src={destinationImages[index] || getImageSync(recommendation)} 
+                            alt={recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}
+                            onLoad={() => handleImageLoaded(index)}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
                         </Box>
-                      </Box>
+                        <Box className="card-content" sx={{ p: 2, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                          <Box className="destination-header">
+                            <Typography variant="h5" component="h3">{recommendation.locationDisplayName || recommendation.city || recommendation.destination || "Unknown Location"}</Typography>
+                            <Typography variant="body1" className="country">{recommendation.country || "Unknown Country"}</Typography>
+                          </Box>
+                          <Box className="destination-details" sx={{ my: 1 }}>
+                            <Box className="detail">
+                              <span>💰 {getBudgetTierText(recommendation.budget_tier)}</span>
+                            </Box>
+                            <Box className="detail">
+                              <span>🗓️ Best time: {recommendation.ideal_months ? recommendation.ideal_months.join(', ') : 'Any time'}</span>
+                            </Box>
+                            {recommendation.matching_vibes && recommendation.matching_vibes.length > 0 && (
+                              <Box className="detail">
+                                <span>✨ Vibes: {recommendation.matching_vibes.join(', ')}</span>
+                              </Box>
+                            )}
+                          </Box>
+                          
+                          <Typography variant="body2" sx={{ 
+                            my: 1.5,
+                            transition: 'all 0.3s ease',
+                            lineHeight: 1.6,
+                            ...(selectedRecIds.includes(recommendation.id) && {
+                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              p: 1.5,
+                              borderRadius: 1,
+                              borderLeft: '3px solid',
+                              borderColor: 'primary.light',
+                              mb: 2
+                            })
+                          }}>
+                            {selectedRecIds.includes(recommendation.id) 
+                              ? recommendation.description
+                              : recommendation.description && recommendation.description.length > 100
+                                ? `${recommendation.description.substring(0, 100)}...`
+                                : recommendation.description || "No description available"}
+                          </Typography>
+                          
+                          {recommendation.description && recommendation.description.length > 100 && (
+                            <Button 
+                              variant="text" 
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log("Read more/less clicked for:", recId);
+                                // Toggle selection for expand/collapse
+                                setSelectedRecIds(prev => 
+                                  prev.includes(recId) 
+                                    ? prev.filter(id => id !== recId) 
+                                    : [...prev, recId]
+                                );
+                              }}
+                              sx={{ 
+                                alignSelf: 'flex-start',
+                                mb: 1.5,
+                                fontSize: '0.8rem',
+                                textTransform: 'none',
+                                p: 0,
+                                minWidth: 'auto',
+                                color: 'primary.main',
+                                fontWeight: 'medium'
+                              }}
+                            >
+                              {selectedRecIds.includes(recommendation.id) ? 'Show less' : 'Read more'}
+                            </Button>
+                          )}
+                          
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexWrap: 'wrap', 
+                            gap: 0.8, 
+                            mb: 2,
+                            mt: 'auto'
+                          }}>
+                            {recommendation.displayActivities && recommendation.displayActivities.map((activity, i) => (
+                              <Chip 
+                                key={i} 
+                                label={activity} 
+                                size="small" 
+                                variant="outlined"
+                                color="primary"
+                                sx={{ borderRadius: '4px' }}
+                              />
+                            ))}
+                            {recommendation.extraActivitiesCount > 0 && (
+                              <Chip 
+                                label={`+${recommendation.extraActivitiesCount} more`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ borderRadius: '4px' }}
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Box>
           )}

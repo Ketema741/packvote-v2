@@ -203,19 +203,18 @@ const DashboardPage = () => {
       setGeneratingRecommendations(true);
       setToast({
         open: true,
-        message: 'Generating destination recommendations (this could take a few minutes)...',
+        message: 'Loading destination recommendations...',
         severity: 'info'
       });
       
-      // Generate recommendations
-      await generateTravelRecommendations(tripId);
-      
-      // Navigate to AI recommendations page instead of directly to voting
-      navigate(`/recommendations/${tripId}`);
+      // Navigate to AI recommendations page where existing recommendations will be shown if available
+      navigate(`/recommendations/${tripId}`, { 
+        state: { tripId }
+      });
     } catch (error) {
       setToast({
         open: true,
-        message: `Failed to generate recommendations: ${error.message}`,
+        message: `Failed to load recommendations: ${error.message}`,
         severity: 'error'
       });
     } finally {
@@ -554,11 +553,11 @@ const DashboardPage = () => {
               sx={{ mb: 1 }}
               disabled={!canGenerateRecommendations || generatingRecommendations}
             >
-              {generatingRecommendations ? 'Generating...' : 'Get AI Destination Picks'}
+              {generatingRecommendations ? 'Loading...' : 'View AI Destination Picks'}
             </Button>
             <Typography variant="body2" color="text.secondary">
               {canGenerateRecommendations ? 
-                'Ready to generate recommendations!' : 
+                'Ready to view AI destination recommendations!' : 
                 'Enabled when at least 2/3 of participants have responded'}
             </Typography>
           </Grid>

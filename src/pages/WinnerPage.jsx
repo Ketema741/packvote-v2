@@ -463,12 +463,46 @@ const WinnerPage = () => {
   // Render loading state
   if (loading) {
     return (
-      <Container maxWidth="md" sx={{ pt: 12, pb: 8, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading your trip details...
-        </Typography>
-      </Container>
+      <div className="landing-page winner-page">
+        <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper', zIndex: 1100 }}>
+          <Toolbar sx={{ justifyContent: 'space-between' }}>
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                color: 'primary.main', 
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              onClick={() => navigate('/')}
+            >
+              PackVote
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+                Docs
+              </Link>
+              <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+                Donate
+              </Link>
+              <Button 
+                variant="contained" 
+                onClick={() => navigate('/create-trip')}
+                className="primary-button"
+              >
+                Start a Trip
+              </Button>
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        <Container maxWidth="md" sx={{ pt: 12, pb: 8, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+          <CircularProgress color="primary" />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Loading your trip details...
+          </Typography>
+        </Container>
+      </div>
     );
   }
 

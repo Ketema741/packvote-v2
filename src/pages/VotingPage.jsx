@@ -17,7 +17,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -27,6 +28,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import { getTravelRecommendations, submitVotes, getTripDetails } from '../utils/api';
 import { getDestinationImage, getImageSync } from '../utils/imageService';
+import { safeLog } from '../utils/loggingSanitizer';
 import '../styles/LandingPage.css';
 import '../styles/VotingPage.css';
 
@@ -49,11 +51,12 @@ const VotingPage = () => {
   const [participants, setParticipants] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [destinationImages, setDestinationImages] = useState({});
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   // Log tripId for debugging
   useEffect(() => {
-    console.log('VotingPage - Current tripId:', tripId);
-    console.log('VotingPage - Location state:', location.state);
+    safeLog.info('VotingPage - Current tripId:', tripId);
+    safeLog.info('VotingPage - Location state:', location.state);
     
     if (!tripId) {
       setError('No trip ID provided. Please go back and try again.');
@@ -74,11 +77,11 @@ const VotingPage = () => {
       // Ensure ID is present - throw an error if missing instead of generating a temp ID
       if (!processed.id) {
         const errorMsg = `Recommendation missing ID for ${processed.city || processed.destination || "unknown destination"}`;
-        console.error(errorMsg, processed);
+        safeLog.error(errorMsg, processed);
         throw new Error(errorMsg);
       } else {
         // Log the existing ID for debugging
-        console.log(`Using recommendation ID: ${processed.id} for ${processed.city || processed.destination}`);
+        safeLog.info(`Using recommendation ID: ${processed.id} for ${processed.city || processed.destination}`);
       }
       
       // Determine location name from available fields
@@ -162,7 +165,7 @@ const VotingPage = () => {
           setTimeRemaining(Math.max(0, msRemaining));
         }
       } catch (err) {
-        console.error('Error fetching trip details:', err);
+        safeLog.error('Error fetching trip details:', err);
       }
     };
     
@@ -178,12 +181,12 @@ const VotingPage = () => {
           const result = await getTravelRecommendations(tripId);
           if (result.recommendations && result.recommendations.length > 0) {
             // Log the raw recommendations to debug
-            console.log('Raw recommendations from API:', result.recommendations);
+            safeLog.info('Raw recommendations from API:', result.recommendations);
             
             // Verify that each recommendation has a valid ID
             const missingIds = result.recommendations.filter(rec => !rec.id);
             if (missingIds.length > 0) {
-              console.error('Recommendations with missing IDs:', missingIds);
+              safeLog.error('Recommendations with missing IDs:', missingIds);
               setError(`Error: ${missingIds.length} destinations are missing IDs. Please contact support.`);
               setLoading(false);
               return;
@@ -221,33 +224,57 @@ const VotingPage = () => {
               
               if (timestamps.length > 0) {
                 const mostRecentTimestamp = timestamps[0];
-                console.log(`Using most recent recommendation set from: ${mostRecentTimestamp}`);
+                safeLog.info(`Using most recent recommendation set from: ${mostRecentTimestamp}`);
                 const mostRecentSet = recommendationSets[mostRecentTimestamp];
+                
+                // Verify all recommendations in set have valid IDs
+                const validRecs = mostRecentSet.filter(rec => rec.id);
+                if (validRecs.length < mostRecentSet.length) {
+                  safeLog.warn(`Filtered out ${mostRecentSet.length - validRecs.length} recommendations with missing IDs`);
+                }
+                
+                // Check if we have enough valid recommendations for voting
+                if (validRecs.length < 2) {
+                  setError('Not enough valid recommendations found. Please contact support.');
+                  setLoading(false);
+                  return;
+                }
+                
                 try {
-                  const processed = processRecommendations(mostRecentSet);
-                  console.log('Processed recommendations:', processed);
+                  const processed = processRecommendations(validRecs);
+                  safeLog.info('Processed recommendations:', processed);
                   setDestinations(processed);
                 } catch (processError) {
-                  console.error('Error processing recommendations:', processError);
+                  safeLog.error('Error processing recommendations:', processError);
                   setError(`Error processing destinations: ${processError.message}`);
                 }
               } else {
+                // No timestamps found, use the top results after filtering by valid IDs
+                const validRecs = sortedRecommendations.filter(rec => rec.id).slice(0, 3);
+                
+                // Check if we have enough valid recommendations for voting
+                if (validRecs.length < 2) {
+                  setError('Not enough valid recommendations found. Please contact support.');
+                  setLoading(false);
+                  return;
+                }
+                
                 try {
-                  const processed = processRecommendations(sortedRecommendations);
-                  console.log('Processed recommendations:', processed);
+                  const processed = processRecommendations(validRecs);
+                  safeLog.info('Processed recommendations:', processed);
                   setDestinations(processed);
                 } catch (processError) {
-                  console.error('Error processing recommendations:', processError);
+                  safeLog.error('Error processing recommendations:', processError);
                   setError(`Error processing destinations: ${processError.message}`);
                 }
               }
             } else {
               try {
                 const processed = processRecommendations(sortedRecommendations);
-                console.log('Processed recommendations:', processed);
+                safeLog.info('Processed recommendations:', processed);
                 setDestinations(processed);
               } catch (processError) {
-                console.error('Error processing recommendations:', processError);
+                safeLog.error('Error processing recommendations:', processError);
                 setError(`Error processing destinations: ${processError.message}`);
               }
             }
@@ -264,13 +291,28 @@ const VotingPage = () => {
       fetchRecommendations();
     } else if (location.state?.recommendations) {
       // Log recommendations from location state
-      console.log('Recommendations from location state:', location.state.recommendations);
+      safeLog.info('Recommendations from location state:', location.state.recommendations);
+      
+      // Verify all recommendations have valid IDs
+      const recommendations = location.state.recommendations || [];
+      const validRecs = recommendations.filter(rec => rec && rec.id);
+      
+      if (validRecs.length < recommendations.length) {
+        safeLog.warn(`Filtered out ${recommendations.length - validRecs.length} recommendations with missing IDs from location state`);
+      }
+      
+      // Check if we have enough valid recommendations for voting
+      if (validRecs.length < 2) {
+        setError('Not enough valid recommendations found in navigation state. Please try again from the dashboard.');
+        return;
+      }
+      
       try {
-        const processed = processRecommendations(location.state.recommendations);
-        console.log('Processed recommendations from state:', processed);
+        const processed = processRecommendations(validRecs);
+        safeLog.info('Processed recommendations from state:', processed);
         setDestinations(processed);
       } catch (processError) {
-        console.error('Error processing recommendations from state:', processError);
+        safeLog.error('Error processing recommendations from state:', processError);
         setError(`Error processing destinations: ${processError.message}`);
       }
     }
@@ -314,7 +356,7 @@ const VotingPage = () => {
       // Check if all destinations have valid IDs
       const missingIds = destinations.filter(dest => !dest.id);
       if (missingIds.length > 0) {
-        console.error('Destinations missing IDs:', missingIds);
+        safeLog.error('Destinations missing IDs:', missingIds);
         setError(`${missingIds.length} destinations are missing IDs. Cannot submit vote.`);
         return;
       }
@@ -322,7 +364,7 @@ const VotingPage = () => {
       // Check for temporary IDs that should not be submitted
       const tempIds = destinations.filter(dest => dest.id && dest.id.startsWith('temp-'));
       if (tempIds.length > 0) {
-        console.error('Found destinations with temporary IDs:', tempIds);
+        safeLog.error('Found destinations with temporary IDs:', tempIds);
         setError(`Error: ${tempIds.length} destinations have temporary IDs. Please reload the page or contact support.`);
         return;
       }
@@ -340,7 +382,7 @@ const VotingPage = () => {
         .map(([id]) => id);
       
       if (duplicateIds.length > 0) {
-        console.error('Duplicate recommendation IDs found:', duplicateIds);
+        safeLog.error('Duplicate recommendation IDs found:', duplicateIds);
         setError(`Found ${duplicateIds.length} duplicate recommendation IDs. Please reload the page and try again.`);
         return;
       }
@@ -350,7 +392,7 @@ const VotingPage = () => {
         trip_id: tripId,
         user_id: selectedUserId,
         rankings: destinations.map((destination, index) => {
-          console.log(`Destination ${index+1}:`, destination.destination || destination.city, 'ID:', destination.id);
+          safeLog.info(`Destination ${index+1}:`, destination.destination || destination.city, 'ID:', destination.id);
           return {
             recommendation_id: destination.id,
             rank_position: index + 1
@@ -358,39 +400,33 @@ const VotingPage = () => {
         })
       };
       
-      console.log('Submitting vote data:', JSON.stringify(voteData));
-      
-      // Add detailed debugging
-      console.log('Vote payload details:');
-      console.log('- trip_id:', voteData.trip_id, 'type:', typeof voteData.trip_id);
-      console.log('- user_id:', voteData.user_id, 'type:', typeof voteData.user_id);
-      console.log('- Rankings:');
-      voteData.rankings.forEach((ranking, idx) => {
-        console.log(`  ${idx+1}. recommendation_id: ${ranking.recommendation_id} (${typeof ranking.recommendation_id}), rank_position: ${ranking.rank_position} (${typeof ranking.rank_position})`);
-      });
+      safeLog.info('Submitting vote data:', voteData);
       
       try {
         // Submit to backend
         const response = await submitVotes(voteData);
-        console.log('Vote submission response:', response);
+        safeLog.info('Vote submission response:', response);
         
-        // Navigate to the trip-specific winner page
-        navigate(`/winner/${tripId}`);
+        // Show success message
+        setToast({
+          open: true,
+          message: 'Your vote has been submitted successfully!',
+          severity: 'success'
+        });
+        
+        // Navigate back to dashboard
+        setTimeout(() => {
+          navigate(`/dashboard/${tripId}`);
+        }, 2000);
       } catch (submitError) {
-        console.error('Error during submission:', submitError);
+        safeLog.error('Error during submission:', submitError);
         const errorMessage = submitError.message || 'Unknown error during vote submission';
         setError(`Failed to submit votes: ${errorMessage}`);
-        
-        // Try to get more details if available
-        if (submitError.response) {
-          console.error('Response data:', submitError.response.data);
-          console.error('Response status:', submitError.response.status);
-        }
       }
     } catch (err) {
       const errorMessage = err.message || 'Unknown error preparing vote data';
       setError(`Failed to submit votes: ${errorMessage}`);
-      console.error('Vote submission error:', err);
+      safeLog.error('Vote submission error:', err);
     } finally {
       setSubmitting(false);
     }
@@ -408,7 +444,7 @@ const VotingPage = () => {
       // Check for destinations with temporary IDs
       const tempIds = destinations.filter(dest => dest.id && dest.id.startsWith('temp-'));
       if (tempIds.length > 0) {
-        console.error('Found destinations with temporary IDs:', tempIds);
+        safeLog.error('Found destinations with temporary IDs:', tempIds);
         setError(`Error: ${tempIds.length} destinations have temporary IDs. Please reload the page or contact support.`);
         setSubmitting(false);
         return;
@@ -419,7 +455,7 @@ const VotingPage = () => {
         trip_id: tripId,
         user_id: userId,
         rankings: destinations.map((destination, index) => {
-          console.log(`Destination ${index+1}:`, destination.destination || destination.city, 'ID:', destination.id);
+          safeLog.info(`Destination ${index+1}:`, destination.destination || destination.city, 'ID:', destination.id);
           return {
             recommendation_id: destination.id,
             rank_position: index + 1
@@ -427,23 +463,31 @@ const VotingPage = () => {
         })
       };
       
-      console.log('Submitting vote data:', JSON.stringify(voteData));
-      console.log('Trip ID:', tripId);
+      safeLog.info('Submitting vote data:', voteData);
       
       // Submit to backend
       submitVotes(voteData)
         .then(() => {
-          // Navigate to the trip-specific winner page
-          navigate(`/winner/${tripId}`);
+          // Show success message
+          setToast({
+            open: true,
+            message: 'Your vote has been submitted successfully!',
+            severity: 'success'
+          });
+          
+          // Navigate back to dashboard
+          setTimeout(() => {
+            navigate(`/dashboard/${tripId}`);
+          }, 2000);
         })
         .catch(err => {
           setError(`Failed to submit votes: ${err.message}`);
-          console.error('Vote submission error:', err);
+          safeLog.error('Vote submission error:', err);
           setSubmitting(false);
         });
     } catch (err) {
       setError(`Failed to prepare vote data: ${err.message}`);
-      console.error('Vote preparation error:', err);
+      safeLog.error('Vote preparation error:', err);
       setSubmitting(false);
       setUserDialogOpen(false);
     }
@@ -474,7 +518,7 @@ const VotingPage = () => {
           const imageUrl = await getDestinationImage(destination);
           return { index, imageUrl };
         } catch (err) {
-          console.error('Error loading image for', destination.locationDisplayName, err);
+          safeLog.error('Error loading image for', destination.locationDisplayName, err);
           return { index, imageUrl: getImageSync(destination) };
         }
       });
@@ -495,6 +539,14 @@ const VotingPage = () => {
     loadImages();
   }, [destinations]);
 
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setToast(prev => ({ ...prev, open: false }));
+  };
+
+  // Render loading state
   if (loading) {
     return (
       <div className="landing-page">
@@ -581,7 +633,19 @@ const VotingPage = () => {
         <Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
           <Button 
             startIcon={<ArrowBackIcon />} 
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              // When going back, preserve the regenerationsRemaining count if available
+              if (location.state?.regenerationsRemaining !== undefined) {
+                navigate(`/recommendations/${tripId}`, {
+                  state: {
+                    tripId: tripId,
+                    regenerationsRemaining: location.state.regenerationsRemaining
+                  }
+                });
+              } else {
+                navigate(-1);
+              }
+            }}
             sx={{ color: 'text.secondary' }}
           >
             Back
@@ -795,6 +859,22 @@ const VotingPage = () => {
           </div>
         </Container>
       </footer>
+
+      {/* Toast notification */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={6000}
+        onClose={handleCloseToast}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseToast}
+          severity={toast.severity}
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

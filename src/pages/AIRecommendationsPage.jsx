@@ -122,9 +122,9 @@ const AIRecommendationsPage = () => {
         console.log('Setting regenerations remaining to:', tripDetails.regenerations_remaining);
         setRegenerationsRemaining(parseInt(tripDetails.regenerations_remaining, 10));
       } else {
-        // Default to 0 if not specified
-        console.log('No regenerations_remaining found in trip details, defaulting to 0');
-        setRegenerationsRemaining(0);
+        // Default to 3 if not specified (schema default is 3)
+        console.log('No regenerations_remaining found in trip details, defaulting to 3');
+        setRegenerationsRemaining(3);
       }
       
       // First, try to get existing recommendations from the database
@@ -223,6 +223,8 @@ const AIRecommendationsPage = () => {
               message: 'All generated recommendations are missing IDs. Please try again later.',
               severity: 'error'
             });
+            setGenerating(false);
+            setLoading(false);
             return;
           }
           
@@ -316,6 +318,7 @@ const AIRecommendationsPage = () => {
     } catch (err) {
       setError(`Failed to fetch recommendations: ${err.message}`);
       console.error('Error in fetchRecommendations:', err);
+      setGenerating(false);
     } finally {
       setLoading(false);
     }
@@ -372,6 +375,10 @@ const AIRecommendationsPage = () => {
       console.log('Regenerating recommendations with feedback:', feedbackText);
       console.log('Recommendations to regenerate:', recIdsToRegenerate);
       
+      // Track current regenerations count before API call
+      const previousRegenerationsCount = regenerationsRemaining;
+      console.log('Previous regenerations count:', previousRegenerationsCount);
+      
       const newRecommendations = await generateTravelRecommendations(effectiveTripId, {
         temperature: 0.9,
         feedback: feedbackText,
@@ -379,12 +386,15 @@ const AIRecommendationsPage = () => {
       });
       
       // Update regenerations remaining from the API response if available
+      let updatedRegenerationsCount;
       if (newRecommendations.regenerations_remaining !== undefined) {
         console.log('Setting regenerations remaining from API response:', newRecommendations.regenerations_remaining);
-        setRegenerationsRemaining(newRecommendations.regenerations_remaining);
+        updatedRegenerationsCount = newRecommendations.regenerations_remaining;
+        setRegenerationsRemaining(updatedRegenerationsCount);
       } else {
         // Fallback to decrementing if API doesn't provide the updated count
-        setRegenerationsRemaining(prev => Math.max(0, prev - 1));
+        updatedRegenerationsCount = Math.max(0, previousRegenerationsCount - 1);
+        setRegenerationsRemaining(updatedRegenerationsCount);
       }
       
       // Process and set new recommendations
@@ -468,7 +478,7 @@ const AIRecommendationsPage = () => {
         
         setToast({
           open: true,
-          message: `New recommendations generated! (${regenerationsRemaining} regenerations remaining)`,
+          message: `New recommendations generated! (${updatedRegenerationsCount} regeneration${updatedRegenerationsCount === 1 ? '' : 's'} remaining)`,
           severity: 'success'
         });
       }
@@ -577,14 +587,41 @@ const AIRecommendationsPage = () => {
 
   // Force refetch trip details and regeneration count when navigating back
   useEffect(() => {
+    const fetchTripDetailsOnly = async () => {
+      if (!effectiveTripId) return;
+      
+      try {
+        console.log('Fetching trip details without setting generating state...');
+        
+        // Get latest trip details to update regeneration count
+        const tripDetails = await getTripDetails(effectiveTripId);
+        console.log('Fetched trip details:', tripDetails);
+        
+        // Update regenerations remaining from server data
+        if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
+          const serverCount = parseInt(tripDetails.regenerations_remaining, 10);
+          console.log('Server says regenerations remaining:', serverCount);
+          setRegenerationsRemaining(serverCount);
+        }
+      } catch (err) {
+        console.error('Error fetching trip details:', err);
+      }
+    };
+    
     const refreshTripDetails = async () => {
       if (!effectiveTripId) return;
       
       try {
         console.log('Refreshing trip details from server...');
-        // Set temporary loading state to prevent user actions during refresh
+        // Store the original generating state
         const wasGenerating = generating;
-        if (!wasGenerating) setGenerating(true);
+        console.log('Current generating state before refresh:', generating);
+        
+        // Only set generating to true if it wasn't already and we're not in initial load
+        if (!wasGenerating) {
+          console.log('Setting generating to true for trip details refresh');
+          setGenerating(true);
+        }
         
         // Get latest trip details to update regeneration count
         const tripDetails = await getTripDetails(effectiveTripId);
@@ -611,11 +648,14 @@ const AIRecommendationsPage = () => {
           }
         }
         
-        // Restore previous loading state
-        if (!wasGenerating) setGenerating(false);
+        // Always reset generating state to ensure it doesn't get stuck
+        setGenerating(false);
+        console.log('Reset generating state to false after trip details refresh');
       } catch (err) {
         console.error('Error refreshing trip details:', err);
+        // Always reset the generating state if we set it
         setGenerating(false);
+        console.log('Reset generating state to false after error in trip details refresh');
       }
     };
     
@@ -625,8 +665,9 @@ const AIRecommendationsPage = () => {
       refreshTripDetails();
     };
     
-    // Initial fetch
-    refreshTripDetails();
+    // Initial fetch - don't set generating state 
+    console.log('Running initial trip details fetch...');
+    fetchTripDetailsOnly();
     
     // Add event listener
     window.addEventListener('focus', handleFocus);
@@ -635,7 +676,22 @@ const AIRecommendationsPage = () => {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [effectiveTripId, generating, regenerationsRemaining]);
+  }, [effectiveTripId, regenerationsRemaining, generating]);
+  
+  // Manual check to ensure generating state isn't stuck
+  useEffect(() => {
+    console.log('Generating state changed to:', generating);
+    
+    // If generating is true, set a safety timeout to reset it after 30 seconds
+    if (generating) {
+      const safetyTimer = setTimeout(() => {
+        console.log('Safety timeout reached - resetting generating state');
+        setGenerating(false);
+      }, 30000); // 30 second safety timeout
+      
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [generating]);
 
   useEffect(() => {
     fetchRecommendations();
@@ -1169,6 +1225,14 @@ const AIRecommendationsPage = () => {
               <Typography variant="body1" sx={{ mt: 2 }}>
                 Generating recommendations based on your feedback...
               </Typography>
+              <Button 
+                variant="text" 
+                size="small" 
+                onClick={() => setGenerating(false)}
+                sx={{ mt: 2 }}
+              >
+                Cancel Loading
+              </Button>
             </Box>
           )}
 

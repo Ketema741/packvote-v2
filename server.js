@@ -6,6 +6,22 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Simple server-side logging function that sanitizes sensitive data
+const serverLog = {
+  info: (message) => {
+    // In a production environment, this could be replaced with a proper logging library
+    console.info(`[INFO] ${message}`);
+  },
+  error: (message, error) => {
+    // Sanitize error details to avoid leaking sensitive information
+    const sanitizedError = error ? {
+      message: error.message,
+      name: error.name
+    } : null;
+    console.error(`[ERROR] ${message}`, sanitizedError);
+  }
+};
+
 // Enable CORS
 app.use(cors());
 
@@ -76,6 +92,6 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Metrics available at http://localhost:${PORT}/metrics`);
+  serverLog.info(`Server running on port ${PORT}`);
+  serverLog.info(`Metrics available at http://localhost:${PORT}/metrics`);
 }); 

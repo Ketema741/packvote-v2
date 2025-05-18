@@ -25,6 +25,7 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { getTravelRecommendations, generateTravelRecommendations, getTripDetails } from '../utils/api';
 import { getDestinationImage, getImageSync } from '../utils/imageService';
+import { safeLog } from '../utils/loggingSanitizer';
 import '../styles/AIRecommendationsPage.css';
 import '../styles/LandingPage.css';
 
@@ -60,30 +61,22 @@ const AIRecommendationsPage = () => {
     severity: 'success'
   });
 
-  // Log state received from navigation for debugging
+  // Set regenerations remaining from location state if available
   useEffect(() => {
-    if (location.state) {
-      console.log('Navigation state received:', location.state);
-      if (location.state.regenerationsRemaining !== undefined) {
-        console.log('Setting regenerationsRemaining from navigation state:', location.state.regenerationsRemaining);
-        setRegenerationsRemaining(location.state.regenerationsRemaining);
-      }
+    if (location.state && location.state.regenerationsRemaining !== undefined) {
+      setRegenerationsRemaining(location.state.regenerationsRemaining);
     }
   }, [location.state]);
 
   const processRecommendations = useCallback((recs) => {
     if (!recs || recs.length === 0) {
-      console.log('No recommendations to process');
       return [];
     }
-    
-    console.log(`Processing ${recs.length} recommendations`);
     
     // Process recommendations to limit activities and ensure proper structures
     const processedRecs = recs.map((rec, index) => {
       // Skip invalid recommendations
       if (!rec) {
-        console.log(`Recommendation at index ${index} is null or undefined`);
         return null;
       }
       
@@ -92,14 +85,10 @@ const AIRecommendationsPage = () => {
       
       // Ensure ID is present - create a temporary one if missing
       if (!processed.id) {
-        console.warn(`Recommendation missing ID for ${processed.city || processed.destination || "unknown destination"} - generating temporary ID`);
         // Generate a temporary ID for display purposes
         processed.id = `temp-${Date.now()}-${index}`;
         processed.has_temp_id = true; // Mark this so we know it's not a real DB ID
       }
-      
-      // Log the recommendation ID for debugging
-      console.log(`Processing recommendation with ID: ${processed.id} for ${processed.city || processed.destination || "unknown"}`);
       
       // Determine location name from available fields
       processed.locationDisplayName = processed.city || processed.destination || "Unknown Location";
@@ -116,8 +105,6 @@ const AIRecommendationsPage = () => {
       return processed;
     }).filter(Boolean); // Filter out any null entries
     
-    console.log(`After processing: ${processedRecs.length} valid recommendations remain`);
-    
     return processedRecs;
   }, []);
 
@@ -133,37 +120,29 @@ const AIRecommendationsPage = () => {
       
       // Get trip details to check if recommendations exist
       const tripDetails = await getTripDetails(effectiveTripId);
-      console.log('Loaded trip details:', tripDetails);
-      console.log('has_recommendations flag:', tripDetails.has_recommendations);
       
       // Store regenerations_remaining from trip details
       // This will be used if we can't get it from recommendation endpoints
       const tripRegenerationsRemaining = tripDetails.regenerations_remaining !== undefined
         ? parseInt(tripDetails.regenerations_remaining, 10)
         : 3;
-      console.log('Trip details regenerations_remaining:', tripRegenerationsRemaining);
       
       // PRIORITY 1: Always try to get existing recommendations from the database first
       let existingRecommendationsFound = false;
       
-      console.log('Checking for existing recommendations...');
       try {
         // Only try to get recommendations if the flag indicates they exist
         if (tripDetails.has_recommendations === true) {
-          console.log('Trip has existing recommendations according to flag, fetching them...');
           const result = await getTravelRecommendations(effectiveTripId);
           
           if (result && result.recommendations && result.recommendations.length > 0) {
-            console.log('Found existing recommendations:', result.recommendations.length);
             existingRecommendationsFound = true;
             
             // Update regenerations_remaining from API response if available
             if (result.regenerations_remaining !== undefined) {
-              console.log('Setting regenerations_remaining from recommendations API:', result.regenerations_remaining);
               setRegenerationsRemaining(parseInt(result.regenerations_remaining, 10));
             } else {
               // Fallback to trip details value
-              console.log('No regenerations_remaining in recommendations API, using trip details value:', tripRegenerationsRemaining);
               setRegenerationsRemaining(tripRegenerationsRemaining);
             }
             
@@ -176,16 +155,13 @@ const AIRecommendationsPage = () => {
                 const dateB = new Date(b.created_at || 0);
                 return dateB - dateA;
               });
-              console.log('Sorted recommendations by timestamp, newest first');
             }
             
             // Take only the most recent 3 recommendations
             const mostRecentRecs = sortedRecommendations.slice(0, 3);
-            console.log(`Using the ${mostRecentRecs.length} most recent recommendations`);
             
             // Process the recommendations
             const processed = processRecommendations(mostRecentRecs);
-            console.log(`Processed ${processed.length} recommendations`);
             
             if (processed.length > 0) {
               // Set the recommendations and finish
@@ -193,40 +169,33 @@ const AIRecommendationsPage = () => {
               setLoading(false);
               return;
             } else {
-              console.warn('No valid recommendations after processing, will generate new ones');
               existingRecommendationsFound = false;
             }
-          } else {
-            console.log('No recommendations found in API response despite has_recommendations flag');
           }
-        } else {
-          console.log('Trip has no existing recommendations according to flag');
-          // Use regenerations_remaining from trip details
-          setRegenerationsRemaining(tripRegenerationsRemaining);
         }
       } catch (fetchErr) {
         // Log the error and continue to generate new recommendations
-        console.log('Error fetching existing recommendations:', fetchErr.message);
+        safeLog.error('Error fetching existing recommendations:', fetchErr.message);
         // Fallback to trip details value for regenerations_remaining
         setRegenerationsRemaining(tripRegenerationsRemaining);
       }
       
       // PRIORITY 2: Only generate new recommendations if none exist or there was an error
       if (!existingRecommendationsFound) {
-        console.log('Need to generate new recommendations');
+        safeLog.info('Need to generate new recommendations');
         setGenerating(true);
         try {
-          console.log('Calling generateTravelRecommendations API...');
+          safeLog.info('Calling generateTravelRecommendations API...');
           const newRecommendations = await generateTravelRecommendations(effectiveTripId);
-          console.log('Successfully generated new recommendations:', newRecommendations.recommendations.length);
+          safeLog.info('Successfully generated new recommendations:', newRecommendations.recommendations.length);
           
           // Update regenerations_remaining from API response if available
           if (newRecommendations.regenerations_remaining !== undefined) {
-            console.log('Setting regenerations_remaining from generate API:', newRecommendations.regenerations_remaining);
+            safeLog.info('Setting regenerations_remaining from generate API:', newRecommendations.regenerations_remaining);
             setRegenerationsRemaining(parseInt(newRecommendations.regenerations_remaining, 10));
           } else {
             // Fallback to trip details value
-            console.log('No regenerations_remaining in generate API, using trip details value:', tripRegenerationsRemaining);
+            safeLog.info('No regenerations_remaining in generate API, using trip details value:', tripRegenerationsRemaining);
             setRegenerationsRemaining(tripRegenerationsRemaining);
           }
           
@@ -261,7 +230,7 @@ const AIRecommendationsPage = () => {
           
           setRecommendations(processed);
         } catch (genErr) {
-          console.error('Failed to generate recommendations:', genErr);
+          safeLog.error('Failed to generate recommendations:', genErr);
           setError(`Failed to generate recommendations: ${genErr.message}`);
           // Use regenerations_remaining from trip details as fallback
           setRegenerationsRemaining(tripRegenerationsRemaining);
@@ -271,7 +240,7 @@ const AIRecommendationsPage = () => {
       }
     } catch (err) {
       setError(`Failed to fetch recommendations: ${err.message}`);
-      console.error('Error in fetchRecommendations:', err);
+      safeLog.error('Error in fetchRecommendations:', err);
       setGenerating(false);
     } finally {
       setLoading(false);
@@ -326,9 +295,6 @@ const AIRecommendationsPage = () => {
       // Get IDs of selected recommendations to regenerate
       const recIdsToRegenerate = selectedRecIds.length > 0 ? selectedRecIds : recommendations.map(rec => rec.id);
       
-      console.log('Regenerating recommendations with feedback:', feedbackText);
-      console.log('Recommendations to regenerate:', recIdsToRegenerate);
-      
       const newRecommendations = await generateTravelRecommendations(effectiveTripId, {
         temperature: 0.9,
         feedback: feedbackText,
@@ -337,7 +303,6 @@ const AIRecommendationsPage = () => {
       
       // Always update regenerations_remaining from the API response if available
       if (newRecommendations.regenerations_remaining !== undefined) {
-        console.log('Updating regenerations_remaining from API response:', newRecommendations.regenerations_remaining);
         const updatedRegenerationsCount = parseInt(newRecommendations.regenerations_remaining, 10);
         setRegenerationsRemaining(updatedRegenerationsCount);
       } else {
@@ -346,27 +311,22 @@ const AIRecommendationsPage = () => {
           const tripDetails = await getTripDetails(effectiveTripId);
           if (tripDetails.regenerations_remaining !== undefined) {
             const fallbackCount = parseInt(tripDetails.regenerations_remaining, 10);
-            console.log('Fallback: Updated regenerations_remaining from trip details:', fallbackCount);
             setRegenerationsRemaining(fallbackCount);
           } else {
             // Last resort - decrement current count
             const decrementedCount = Math.max(0, regenerationsRemaining - 1);
-            console.log('Fallback: Manually decremented regenerations_remaining:', decrementedCount);
             setRegenerationsRemaining(decrementedCount);
           }
         } catch (refreshErr) {
-          console.error('Error refreshing regenerations count from trip details:', refreshErr);
+          safeLog.error('Error refreshing regenerations count from trip details:', refreshErr);
           // Last resort - decrement current count
           const decrementedCount = Math.max(0, regenerationsRemaining - 1);
-          console.log('Fallback: Manually decremented regenerations_remaining after error:', decrementedCount);
           setRegenerationsRemaining(decrementedCount);
         }
       }
       
       // Process and set new recommendations
       if (newRecommendations && newRecommendations.recommendations) {
-        console.log('Generated new recommendations:', newRecommendations.recommendations.length);
-        
         // Replace only the selected recommendations
         if (selectedRecIds.length > 0 && selectedRecIds.length < recommendations.length) {
           const newRecsMap = {};
@@ -381,8 +341,6 @@ const AIRecommendationsPage = () => {
           const existingDestinations = updatedRecs.map(rec => 
             rec.city?.toLowerCase() || rec.destination?.toLowerCase() || ''
           );
-          
-          console.log("Existing destinations:", existingDestinations);
           
           // Track which selected recommendations have been successfully replaced
           const replacedIds = [];
@@ -418,11 +376,8 @@ const AIRecommendationsPage = () => {
               });
               
               if (newRec) {
-                console.log(`Replacing recommendation ${updatedRecs[i].city || updatedRecs[i].destination} with ${newRec.city || newRec.destination}`);
                 updatedRecs[i] = newRec;
                 replacedIds.push(newRec.id);
-              } else {
-                console.warn(`Could not find a suitable replacement for ${updatedRecs[i].city || updatedRecs[i].destination}`);
               }
             }
           }
@@ -459,11 +414,11 @@ const AIRecommendationsPage = () => {
       setExpandedRecIds([]);
       setFeedbackText('');
     } catch (err) {
-      console.error('Error regenerating recommendations:', err);
+      safeLog.error('Error regenerating recommendations:', err);
       
       // Check for specific error about no regenerations remaining
       if (err.message && err.message.includes('No regenerations remaining')) {
-        console.log('Server indicates no regenerations remaining, updating UI state');
+        safeLog.info('Server indicates no regenerations remaining, updating UI state');
         // Force update the UI state to match server
         setRegenerationsRemaining(0);
       }
@@ -473,10 +428,10 @@ const AIRecommendationsPage = () => {
         const tripDetails = await getTripDetails(effectiveTripId);
         if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
           const serverCount = parseInt(tripDetails.regenerations_remaining, 10);
-          console.log('Server says regenerations remaining:', serverCount);
+          safeLog.info('Server says regenerations remaining:', serverCount);
           
           // Always use server value
-          console.log(`Updating regenerations from ${regenerationsRemaining} to ${serverCount}`);
+          safeLog.info(`Updating regenerations from ${regenerationsRemaining} to ${serverCount}`);
           setRegenerationsRemaining(serverCount);
           
           if (serverCount === 0) {
@@ -488,7 +443,7 @@ const AIRecommendationsPage = () => {
           }
         }
       } catch (refreshErr) {
-        console.error('Failed to refresh trip details after error:', refreshErr);
+        safeLog.error('Failed to refresh trip details after error:', refreshErr);
       }
       
       setToast({
@@ -514,12 +469,12 @@ const AIRecommendationsPage = () => {
 
   // Monitor selectedRecIds changes
   useEffect(() => {
-    console.log("Selected recommendation IDs updated:", selectedRecIds);
+    safeLog.info("Selected recommendation IDs updated:", selectedRecIds);
     // Validate that all IDs in selectedRecIds exist in recommendations
     const recommendationIds = recommendations.map(rec => rec.id);
     const invalidIds = selectedRecIds.filter(id => !recommendationIds.includes(id));
     if (invalidIds.length > 0) {
-      console.warn("Found invalid IDs in selection:", invalidIds);
+      safeLog.warn("Found invalid IDs in selection:", invalidIds);
       // Clean up invalid IDs
       setSelectedRecIds(prev => prev.filter(id => recommendationIds.includes(id)));
     }
@@ -559,20 +514,20 @@ const AIRecommendationsPage = () => {
       if (!effectiveTripId) return;
       
       try {
-        console.log('Fetching trip details without setting generating state...');
+        safeLog.info('Fetching trip details without setting generating state...');
         
         // Get latest trip details to update regeneration count
         const tripDetails = await getTripDetails(effectiveTripId);
-        console.log('Fetched trip details:', tripDetails);
+        safeLog.info('Fetched trip details:', tripDetails);
         
         // Update regenerations remaining from server data
         if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
           const serverCount = parseInt(tripDetails.regenerations_remaining, 10);
-          console.log('Server says regenerations remaining:', serverCount);
+          safeLog.info('Server says regenerations remaining:', serverCount);
           setRegenerationsRemaining(serverCount);
         }
       } catch (err) {
-        console.error('Error fetching trip details:', err);
+        safeLog.error('Error fetching trip details:', err);
       }
     };
     
@@ -580,29 +535,29 @@ const AIRecommendationsPage = () => {
       if (!effectiveTripId) return;
       
       try {
-        console.log('Refreshing trip details from server...');
+        safeLog.info('Refreshing trip details from server...');
         // Store the original generating state
         const wasGenerating = generating;
-        console.log('Current generating state before refresh:', generating);
+        safeLog.info('Current generating state before refresh:', generating);
         
         // Only set generating to true if it wasn't already and we're not in initial load
         if (!wasGenerating) {
-          console.log('Setting generating to true for trip details refresh');
+          safeLog.info('Setting generating to true for trip details refresh');
           setGenerating(true);
         }
         
         // Get latest trip details to update regeneration count
         const tripDetails = await getTripDetails(effectiveTripId);
-        console.log('Refreshed trip details:', tripDetails);
+        safeLog.info('Refreshed trip details:', tripDetails);
         
         // Update regenerations remaining from server data
         if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
           const serverCount = parseInt(tripDetails.regenerations_remaining, 10);
-          console.log('Server says regenerations remaining:', serverCount);
+          safeLog.info('Server says regenerations remaining:', serverCount);
           
           // If there's a discrepancy between UI and server, always use server value
           if (serverCount !== regenerationsRemaining) {
-            console.log(`Updating regenerations from ${regenerationsRemaining} to ${serverCount}`);
+            safeLog.info(`Updating regenerations from ${regenerationsRemaining} to ${serverCount}`);
             setRegenerationsRemaining(serverCount);
             
             // If server says zero but UI shows more, show a message to user
@@ -618,23 +573,23 @@ const AIRecommendationsPage = () => {
         
         // Always reset generating state to ensure it doesn't get stuck
         setGenerating(false);
-        console.log('Reset generating state to false after trip details refresh');
+        safeLog.info('Reset generating state to false after trip details refresh');
       } catch (err) {
-        console.error('Error refreshing trip details:', err);
+        safeLog.error('Error refreshing trip details:', err);
         // Always reset the generating state if we set it
         setGenerating(false);
-        console.log('Reset generating state to false after error in trip details refresh');
+        safeLog.info('Reset generating state to false after error in trip details refresh');
       }
     };
     
     // Listen for the 'focus' event on the window (when user navigates back to this page)
     const handleFocus = () => {
-      console.log('Window focused, refreshing trip details');
+      safeLog.info('Window focused, refreshing trip details');
       refreshTripDetails();
     };
     
     // Initial fetch - don't set generating state 
-    console.log('Running initial trip details fetch...');
+    safeLog.info('Running initial trip details fetch...');
     fetchTripDetailsOnly();
     
     // Add event listener
@@ -648,12 +603,12 @@ const AIRecommendationsPage = () => {
   
   // Manual check to ensure generating state isn't stuck
   useEffect(() => {
-    console.log('Generating state changed to:', generating);
+    safeLog.info('Generating state changed to:', generating);
     
     // If generating is true, set a safety timeout to reset it after 30 seconds
     if (generating) {
       const safetyTimer = setTimeout(() => {
-        console.log('Safety timeout reached - resetting generating state');
+        safeLog.info('Safety timeout reached - resetting generating state');
         setGenerating(false);
       }, 30000); // 30 second safety timeout
       
@@ -686,7 +641,7 @@ const AIRecommendationsPage = () => {
           const imageUrl = await getDestinationImage(recommendation);
           return { index, imageUrl };
         } catch (err) {
-          console.error('Error loading image for', recommendation.locationDisplayName, err);
+          safeLog.error('Error loading image for', recommendation.locationDisplayName, err);
           return { index, imageUrl: getImageSync(recommendation) };
         }
       });
@@ -726,8 +681,8 @@ const AIRecommendationsPage = () => {
 
   const handleStartVote = () => {
     // Ensure we have a valid tripId and make it explicit in the state
-    console.log('AIRecommendationsPage - Starting vote with tripId:', effectiveTripId);
-    console.log('AIRecommendationsPage - Current regenerations remaining:', regenerationsRemaining);
+    safeLog.info('AIRecommendationsPage - Starting vote with tripId:', effectiveTripId);
+    safeLog.info('AIRecommendationsPage - Current regenerations remaining:', regenerationsRemaining);
     
     if (!effectiveTripId) {
       setToast({
@@ -751,7 +706,7 @@ const AIRecommendationsPage = () => {
     // Double-check for recommendations without IDs
     const missingIds = recommendations.filter(rec => !rec || !rec.id);
     if (missingIds.length > 0) {
-      console.error('Recommendations missing IDs:', missingIds);
+      safeLog.error('Recommendations missing IDs:', missingIds);
       
       // Count the number of recommendations that DO have IDs
       const validRecs = recommendations.filter(rec => rec && rec.id);
@@ -880,7 +835,7 @@ const AIRecommendationsPage = () => {
                         e.stopPropagation();
                       }}
                       onChange={(e) => {
-                        console.log("Checkbox direct toggle for:", rec.id, e.target.checked);
+                        safeLog.info("Checkbox direct toggle for:", rec.id, e.target.checked);
                         // Direct selection based on the checkbox state
                         if (e.target.checked) {
                           setSelectedRecIds(prev => [...prev, rec.id]);
@@ -1037,7 +992,7 @@ const AIRecommendationsPage = () => {
                 {recommendations.map((recommendation, index) => {
                   // Extract ID for clarity and debugging
                   const recId = recommendation.id;
-                  console.log(`Rendering recommendation ${index}:`, recId);
+                  safeLog.info(`Rendering recommendation ${index}:`, recId);
                   
                   // Check if this recommendation is selected
                   const isSelected = selectedRecIds.includes(recId);
@@ -1048,7 +1003,7 @@ const AIRecommendationsPage = () => {
                       className={`recommendation-card ${isSelected ? 'selected' : ''}`}
                       onClick={() => {
                         if (regenerationsRemaining > 0) {
-                          console.log("Card clicked for:", recId);
+                          safeLog.info("Card clicked for:", recId);
                           // Direct selection toggle for regeneration
                           setSelectedRecIds(prev => 
                             prev.includes(recId) 
@@ -1069,7 +1024,7 @@ const AIRecommendationsPage = () => {
                                 e.stopPropagation();
                               }}
                               onChange={(e) => {
-                                console.log("Checkbox clicked for:", recId, e.target.checked);
+                                safeLog.info("Checkbox clicked for:", recId, e.target.checked);
                                 // Direct selection based on the checkbox state
                                 setSelectedRecIds(prev => 
                                   e.target.checked
@@ -1137,7 +1092,7 @@ const AIRecommendationsPage = () => {
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log("Read more/less clicked for:", recId);
+                                safeLog.info("Read more/less clicked for:", recId);
                                 // Toggle expansion for this recommendation
                                 setExpandedRecIds(prev => 
                                   prev.includes(recId) 

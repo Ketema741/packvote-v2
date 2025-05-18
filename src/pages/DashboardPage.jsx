@@ -32,6 +32,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import { getTripDetails, sendSMS, calculateSurveyStats, generateTravelRecommendations, getVotes, getTravelRecommendations } from '../utils/api';
+import { safeLog } from '../utils/loggingSanitizer';
 import '../styles/DashboardPage.css';
 import '../styles/LandingPage.css';
 
@@ -82,21 +83,16 @@ const DashboardPage = () => {
   // Check for votes if not found in the initial response
   const checkForVotes = useCallback(async (tripId) => {
     try {
-      console.log('Manually checking for votes...');
       const votesData = await getVotes(tripId);
-      
-      console.log('Manual votes check result:', votesData);
       
       // Check if we have votes
       const hasVotes = votesData && votesData.votes && votesData.votes.length > 0;
-      console.log('Manual check - Has votes:', hasVotes);
       
       if (hasVotes) {
         setVotingStarted(true);
         
         // Process who has voted and who hasn't
         const votedUserIds = new Set(votesData.votes.map(vote => vote.user_id));
-        console.log('Voted user IDs:', Array.from(votedUserIds));
         
         // Only access the current tripData through the currentTripData parameter
         return { hasVotes, votedUserIds };
@@ -104,7 +100,7 @@ const DashboardPage = () => {
       
       return { hasVotes: false, votedUserIds: new Set() };
     } catch (error) {
-      console.error('Error checking for votes:', error);
+      safeLog.error('Error checking for votes:', error);
       return { hasVotes: false, votedUserIds: new Set() };
     }
   }, []); // No dependencies needed now
@@ -120,17 +116,12 @@ const DashboardPage = () => {
       
       try {
         setLoading(true);
-        console.log('Loading trip data and votes for tripId:', tripId);
         
         // Get trip details
         const data = await getTripDetails(tripId);
         
-        console.log('Full trip details response:', data);
-        console.log('Votes data in response:', data.votes);
-        
         // Calculate statistics from survey responses
         const stats = calculateSurveyStats(data.survey_responses || []);
-        console.log('Calculated stats:', stats);
         
         // Process the data for display in the dashboard
         const processedData = {
@@ -210,7 +201,6 @@ const DashboardPage = () => {
           votedUserIds = new Set(data.votes.map(vote => vote.user_id));
         } else {
           // If no votes in trip details, try separate API call
-          console.log('No votes found in trip details, checking separately...');
           const voteResult = await checkForVotes(tripId);
           hasVotes = voteResult.hasVotes;
           votedUserIds = voteResult.votedUserIds;
@@ -218,11 +208,8 @@ const DashboardPage = () => {
         
         // Set voting status based on results
         setVotingStarted(hasVotes);
-        console.log('Setting votingStarted to:', hasVotes);
         
         if (hasVotes) {
-          console.log('Voting has started. Processing vote data...');
-          
           // Record voting deadline if present
           if (data.voting_deadline) {
             const deadline = new Date(data.voting_deadline);
@@ -260,19 +247,15 @@ const DashboardPage = () => {
             const voted = eligibleVoters.filter(p => votedUserIds.has(p.id));
             const pending = eligibleVoters.filter(p => !votedUserIds.has(p.id));
             
-            console.log('Voted participants:', voted.length, voted);
-            console.log('Pending voters:', pending.length, pending);
-            
             setVotedParticipants(voted);
             setPendingVoters(pending);
           } else {
-            console.log('No eligible voters found in respondedParticipants');
             setVotedParticipants([]);
             setPendingVoters([]);
           }
         }
       } catch (error) {
-        console.error('Error loading trip data:', error);
+        safeLog.error('Error loading trip data:', error);
         setError('Failed to load trip data: ' + error.message);
       } finally {
         setLoading(false);
@@ -320,17 +303,8 @@ const DashboardPage = () => {
       
       // Get trip data to check if it needs regeneration
       const tripDetails = await getTripDetails(tripId);
-      console.log('Trip details for recommendations check:', tripDetails);
-      console.log('has_recommendations flag value:', tripDetails.has_recommendations);
-      console.log('has_recommendations type:', typeof tripDetails.has_recommendations);
       
       const hasRecentRecommendations = tripDetails.has_recommendations === true;
-      console.log('hasRecentRecommendations evaluation result:', hasRecentRecommendations);
-      
-      // Check directly if the flag exists
-      if (!tripDetails.hasOwnProperty('has_recommendations')) {
-        console.log('has_recommendations flag is missing from API response');
-      }
       
       // Get regenerations count directly from the API response
       // This ensures we're always using the most up-to-date value
@@ -338,11 +312,8 @@ const DashboardPage = () => {
         ? parseInt(tripDetails.regenerations_remaining, 10) 
         : 3; // Default to 3 if not specified
       
-      console.log('Regenerations remaining from API:', regenerationsRemaining);
-      
       if (!hasRecentRecommendations) {
         // Only generate if needed
-        console.log('No recent recommendations found, generating new ones');
         setToast({
           open: true,
           message: 'Generating new destination recommendations (this could take a few minutes)...',
@@ -351,13 +322,6 @@ const DashboardPage = () => {
         
         // Generate recommendations
         const generatedRecs = await generateTravelRecommendations(tripId);
-        
-        // Update regenerations remaining from the generate API response if available
-        const updatedRegenerationsRemaining = generatedRecs.regenerations_remaining !== undefined
-          ? parseInt(generatedRecs.regenerations_remaining, 10)
-          : regenerationsRemaining;
-        
-        console.log('Updated regenerations remaining after generation:', updatedRegenerationsRemaining);
         
         // Navigate to AI recommendations page where existing recommendations will be shown if available
         navigate(`/recommendations/${tripId}`, { 
@@ -368,7 +332,6 @@ const DashboardPage = () => {
           }
         });
       } else {
-        console.log('Recent recommendations found, loading existing data');
         setToast({
           open: true,
           message: 'Loading destination recommendations...',
@@ -385,7 +348,7 @@ const DashboardPage = () => {
         });
       }
     } catch (error) {
-      console.error('Error in handleGetAIDestinations:', error);
+      safeLog.error('Error in handleGetAIDestinations:', error);
       setToast({
         open: true,
         message: `Failed to load recommendations: ${error.message}`,

@@ -2,6 +2,7 @@
  * API service for interacting with the backend
  */
 import { startApiRequest, trackApiRequest, captureError } from './monitoring';
+import { safeLog, sanitizeForLogging } from './loggingSanitizer';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -69,7 +70,7 @@ export const createTrip = async (tripData) => {
 
     return await response.json();
   } catch (error) {
-    console.error('Error creating trip:', error);
+    safeLog.error('Error creating trip:', error);
     // If the error wasn't already captured (e.g., network error)
     if (!error.message.includes('A trip with this name') && !error.message.includes('HTTP error')) {
       captureError(error, { 
@@ -114,7 +115,7 @@ export const sendSMS = async (participantId) => {
 
     return await response.json();
   } catch (error) {
-    console.error('Error sending SMS:', error);
+    safeLog.error('Error sending SMS:', error);
     if (!error.message.includes('HTTP error')) {
       captureError(error, { 
         endpoint: url, 
@@ -147,7 +148,7 @@ export const sendAllSMS = async (tripId) => {
 
     return await response.json();
   } catch (error) {
-    console.error('Error sending all SMS:', error);
+    safeLog.error('Error sending all SMS:', error);
     throw error;
   }
 };
@@ -191,7 +192,8 @@ export const saveSurveyResponse = async (participantId, responseData) => {
       priorities: ensureArray(responseData.priorities)
     };
 
-    console.log('Sending survey response:', backendData);
+    // Log sanitized data
+    safeLog.info('Sending survey response:', sanitizeForLogging(backendData));
 
     // Use proper JSON stringification with replacer to handle non-serializable values
     const stringified = JSON.stringify(backendData, (key, value) => {
@@ -201,7 +203,9 @@ export const saveSurveyResponse = async (participantId, responseData) => {
       }
       return value;
     });
-    console.log('JSON stringified data:', stringified);
+    
+    // For debugging, log only the length, not the content
+    safeLog.info(`JSON stringified data length: ${stringified.length} chars`);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -215,8 +219,7 @@ export const saveSurveyResponse = async (participantId, responseData) => {
     trackApiRequest(url, 'POST', startTime, response.status);
 
     if (!response.ok) {
-      const errorData = await response.json();
-      const error = new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+      const error = new Error(`HTTP error! Status: ${response.status}`);
       captureError(error, { 
         endpoint: url, 
         status: response.status,
@@ -227,7 +230,7 @@ export const saveSurveyResponse = async (participantId, responseData) => {
 
     return await response.json();
   } catch (error) {
-    console.error('Error saving survey response:', error);
+    safeLog.error('Error saving survey response:', error);
     if (!error.message.includes('HTTP error')) {
       captureError(error, { 
         endpoint: url, 
@@ -278,9 +281,7 @@ export const calculateSurveyStats = (responses) => {
     };
   }
 
-  console.log('Calculating survey stats from', responses.length, 'responses');
-  // Log raw data for debugging
-  console.log('Raw survey responses:', JSON.stringify(responses, null, 2));
+  safeLog.info(`Calculating survey stats from ${responses.length} responses`);
   
   // Calculate median budget
   const budgets = responses
@@ -338,29 +339,22 @@ export const calculateSurveyStats = (responses) => {
       return new Date(parseInt(usMatch[3]), parseInt(usMatch[1]) - 1, parseInt(usMatch[2]), 12, 0, 0);
     }
     
-    console.log(`Failed to parse date: ${dateStr}`);
+    safeLog.info(`Failed to parse date: ${dateStr}`);
     return null;
   };
 
   // Parse all preferred date ranges
   const preferredDateRanges = responses.flatMap((r, index) => {
-    console.log(`Processing preferred dates for user ${index + 1}:`, r.preferred_dates);
-    
-    // Handle preferred dates as either array or semicolon-separated string
-    let dateRanges = [];
-    if (Array.isArray(r.preferred_dates)) {
-      dateRanges = r.preferred_dates;
-    } else {
-      const dateRangesStr = String(r.preferred_dates || "");
-      dateRanges = dateRangesStr ? dateRangesStr.split(';') : [];
-    }
+    // Don't log user's date preferences - potential PII
+    const dateRanges = Array.isArray(r.preferred_dates) 
+      ? r.preferred_dates 
+      : (String(r.preferred_dates || "").split(';'));
     
     return dateRanges.map(range => {
       // Handle various formats of date ranges
       let start, end;
       
       if (typeof range === 'string') {
-        console.log(`Parsing string date range: ${range}`);
         // Try both "to" and "-" separators
         if (range.includes(" to ")) {
           const parts = range.split(" to ");
@@ -371,56 +365,37 @@ export const calculateSurveyStats = (responses) => {
           start = parseDate(parts[0].trim());
           end = parseDate(parts[1].trim());
         } else {
-          console.log(`Unrecognized date range format: ${range}`);
+          // Don't log unrecognized data
           return { start: null, end: null };
         }
       } else if (range && typeof range === 'object') {
-        console.log(`Parsing object date range:`, range);
         // Object with start/end properties
         start = parseDate(range.start);
         end = parseDate(range.end);
       } else {
-        console.log(`Invalid date range: ${JSON.stringify(range)}`);
+        // Don't log invalid data
         return { start: null, end: null };
-      }
-      
-      if (start && end) {
-        console.log(`Successfully parsed date range: ${start.toISOString()} to ${end.toISOString()}`);
-      } else {
-        console.log(`Failed to parse one or both dates in range`);
       }
       
       return { start, end };
     }).filter(d => d.start && d.end && !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
   });
 
-  console.log('All parsed preferred date ranges:', preferredDateRanges.map(d => 
-    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-  ));
+  // Only log count, not actual date ranges
+  safeLog.info(`Found ${preferredDateRanges.length} valid preferred date ranges`);
 
   // Parse all blackout date ranges
   const blackoutDateRanges = responses.flatMap((r, index) => {
-    console.log(`Processing blackout dates for user ${index + 1}:`, r.blackout_dates);
-    
-    // Handle blackout dates as either array or semicolon-separated string
-    let dateRanges = [];
-    if (Array.isArray(r.blackout_dates)) {
-      dateRanges = r.blackout_dates;
-    } else {
-      const dateRangesStr = String(r.blackout_dates || "");
-      dateRanges = dateRangesStr ? dateRangesStr.split(';') : [];
-    }
-    
-    if (dateRanges.length === 0) {
-      console.log(`No blackout dates for user ${index + 1}`);
-    }
+    // Don't log user's blackout dates - potential PII
+    const dateRanges = Array.isArray(r.blackout_dates) 
+      ? r.blackout_dates 
+      : (String(r.blackout_dates || "").split(';'));
     
     return dateRanges.map(range => {
       // Handle various formats of date ranges
       let start, end;
       
       if (typeof range === 'string') {
-        console.log(`Parsing string blackout range: ${range}`);
         // Try both "to" and "-" separators
         if (range.includes(" to ")) {
           const parts = range.split(" to ");
@@ -431,45 +406,31 @@ export const calculateSurveyStats = (responses) => {
           start = parseDate(parts[0].trim());
           end = parseDate(parts[1].trim());
         } else {
-          console.log(`Unrecognized blackout range format: ${range}`);
+          // Don't log unrecognized data
           return { start: null, end: null };
         }
       } else if (range && typeof range === 'object') {
-        console.log(`Parsing object blackout range:`, range);
         // Object with start/end properties
         start = parseDate(range.start);
         end = parseDate(range.end);
       } else {
-        console.log(`Invalid blackout range: ${JSON.stringify(range)}`);
+        // Don't log invalid data
         return { start: null, end: null };
-      }
-      
-      if (start && end) {
-        console.log(`Successfully parsed blackout range: ${start.toISOString()} to ${end.toISOString()}`);
-      } else {
-        console.log(`Failed to parse one or both dates in blackout range`);
       }
       
       return { start, end };
     }).filter(d => d.start && d.end && !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
   });
 
-  console.log('All parsed blackout date ranges:', blackoutDateRanges.map(d => 
-    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-  ));
+  // Only log count, not actual blackout ranges
+  safeLog.info(`Found ${blackoutDateRanges.length} valid blackout date ranges`);
 
   // Group preferred date ranges by user for overlap calculation
   const preferredDatesByUser = responses.map((r, index) => {
-    console.log(`Grouping preferred dates for user ${index + 1}`);
-    
-    // Handle preferred dates as either array or semicolon-separated string
-    let dateRanges = [];
-    if (Array.isArray(r.preferred_dates)) {
-      dateRanges = r.preferred_dates;
-    } else {
-      const dateRangesStr = String(r.preferred_dates || "");
-      dateRanges = dateRangesStr ? dateRangesStr.split(';') : [];
-    }
+    // Don't log individual user data
+    const dateRanges = Array.isArray(r.preferred_dates) 
+      ? r.preferred_dates 
+      : (String(r.preferred_dates || "").split(';'));
     
     const parsedRanges = dateRanges.map(range => {
       // Handle various formats of date ranges
@@ -499,29 +460,20 @@ export const calculateSurveyStats = (responses) => {
       return { start, end };
     }).filter(d => d.start && d.end && !isNaN(d.start.getTime()) && !isNaN(d.end.getTime()));
     
-    console.log(`User ${index + 1} has ${parsedRanges.length} valid preferred date ranges`);
     return parsedRanges;
   }).filter(ranges => ranges.length > 0);
 
-  console.log(`Have ${preferredDatesByUser.length} users with valid preferred dates`);
-  preferredDatesByUser.forEach((ranges, i) => {
-    console.log(`User ${i+1} preferred dates: ${ranges.map(d => 
-      `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-    ).join(', ')}`);
-  });
+  safeLog.info(`Found date preferences from ${preferredDatesByUser.length} users`);
 
   // Function to check if two date ranges overlap
   const checkOverlap = (range1, range2) => {
     // Make sure we have valid dates
     if (!range1.start || !range1.end || !range2.start || !range2.end) {
-      console.log("Invalid date range passed to checkOverlap");
       return false;
     }
     
     // Two ranges overlap if one starts before the other ends
-    const result = range1.start <= range2.end && range2.start <= range1.end;
-    console.log(`Checking overlap: ${range1.start.toLocaleDateString()} - ${range1.end.toLocaleDateString()} with ${range2.start.toLocaleDateString()} - ${range2.end.toLocaleDateString()}: ${result}`);
-    return result;
+    return range1.start <= range2.end && range2.start <= range1.end;
   };
 
   // Function to get the overlap between two date ranges
@@ -535,7 +487,6 @@ export const calculateSurveyStats = (responses) => {
   const overlapsWithBlackout = (range) => {
     // If we have no blackout dates, nothing can overlap
     if (blackoutDateRanges.length === 0) {
-      console.log("No blackout dates to check against");
       return false;
     }
     
@@ -545,11 +496,9 @@ export const calculateSurveyStats = (responses) => {
       const hasOverlap = range.start <= blackout.end && blackout.start <= range.end;
       
       if (hasOverlap) {
-        console.log(`Range ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()} conflicts with blackout ${blackout.start.toLocaleDateString()} - ${blackout.end.toLocaleDateString()}`);
         return true;
       }
     }
-    console.log(`Range ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()} does not conflict with any blackout dates`);
     return false;
   };
 
@@ -559,73 +508,45 @@ export const calculateSurveyStats = (responses) => {
   if (preferredDatesByUser.length > 0) {
     // Start with the first user's preferred dates
     overlappingRanges = [...preferredDatesByUser[0]];
-    console.log('Starting with first user ranges:', overlappingRanges.map(d => 
-      `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-    ));
     
     // For each subsequent user, find overlaps with current overlapping ranges
     for (let i = 1; i < preferredDatesByUser.length; i++) {
       const userRanges = preferredDatesByUser[i];
       const newOverlaps = [];
       
-      console.log(`Finding overlaps with user ${i+1}'s preferred dates`);
-      
       // Check each current overlap against each of this user's ranges
       for (const currentOverlap of overlappingRanges) {
         for (const userRange of userRanges) {
           if (checkOverlap(currentOverlap, userRange)) {
             const overlap = getOverlap(currentOverlap, userRange);
-            console.log(`Found overlap: ${overlap.start.toLocaleDateString()} - ${overlap.end.toLocaleDateString()}`);
             newOverlaps.push(overlap);
           }
         }
       }
       
       overlappingRanges = newOverlaps;
-      console.log(`After processing user ${i+1}, found ${overlappingRanges.length} overlapping range(s):`, 
-        overlappingRanges.length ? 
-          overlappingRanges.map(d => `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`).join(', ') : 
-          'None'
-      );
       
       // If we have no more overlaps, break early
       if (overlappingRanges.length === 0) break;
     }
   }
 
-  console.log(`Found ${overlappingRanges.length} total overlapping ranges between users`);
-
-  // Create a copy of the blackout dates for debugging
-  console.log(`Checking against ${blackoutDateRanges.length} blackout periods:`, 
-    blackoutDateRanges.length ? 
-      blackoutDateRanges.map(d => `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`).join(', ') : 
-      'None'
-  );
+  safeLog.info(`Found ${overlappingRanges.length} total overlapping ranges between users`);
 
   // Remove any overlapping ranges that conflict with blackout dates
-  let validOverlaps = overlappingRanges.filter(range => {
-    const isValid = !overlapsWithBlackout(range);
-    console.log(`Range ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()} is ${isValid ? 'valid' : 'invalid'}`);
-    return isValid;
-  });
+  let validOverlaps = overlappingRanges.filter(range => !overlapsWithBlackout(range));
 
-  console.log(`Found ${validOverlaps.length} valid overlapping ranges after removing blackout conflicts`);
+  safeLog.info(`Found ${validOverlaps.length} valid overlapping ranges after removing blackout conflicts`);
 
   // If for some reason we found no valid overlaps but have overlapping ranges, 
   // we might have an issue with the blackout date filtering
   if (validOverlaps.length === 0 && overlappingRanges.length > 0) {
-    console.log("WARNING: Found overlapping ranges but none are valid after blackout filtering.");
-    console.log("This might indicate an issue with blackout date handling.");
+    safeLog.info("WARNING: Found overlapping ranges but none are valid after blackout filtering.");
     
     // As a fallback, let's use the overlapping ranges even if they conflict with blackout dates
     // This ensures we show something to the user rather than nothing
-    console.log("Using overlapping ranges as fallback since no valid overlaps found after blackout filtering");
+    safeLog.info("Using overlapping ranges as fallback since no valid overlaps found after blackout filtering");
     validOverlaps = overlappingRanges;
-    
-    // Double-check overlapping dates
-    for (const range of overlappingRanges) {
-      console.log(`Fallback range: ${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()}`);
-    }
   }
 
   // Sort valid overlaps by start date
@@ -646,18 +567,15 @@ export const calculateSurveyStats = (responses) => {
         window: null
       };
 
-  console.log('Final date range:', dateRange.start ? 
-    `${dateRange.start.toLocaleDateString()} - ${dateRange.end.toLocaleDateString()} (${dateRange.window} days)` : 
-    'No valid dates found'
-  );
+  // Log formatted date range for debugging - safe to log as it's just calculated dates, not user input
+  if (dateRange.start) {
+    safeLog.info(`Final date range: ${dateRange.start.toLocaleDateString()} to ${dateRange.end.toLocaleDateString()} (${dateRange.window} days)`);
+  } else {
+    safeLog.info('No valid dates found');
+  }
 
   // Calculate most common vibes
-  const allVibes = responses.flatMap(r => {
-    console.log(`Vibe choices for a response:`, r.vibe_choices);
-    return r.vibe_choices || [];
-  });
-  
-  console.log('All collected vibes:', allVibes);
+  const allVibes = responses.flatMap(r => r.vibe_choices || []);
   
   const vibeCounts = allVibes.reduce((acc, vibe) => {
     if (vibe) {
@@ -666,22 +584,12 @@ export const calculateSurveyStats = (responses) => {
     return acc;
   }, {});
   
-  console.log('Vibe counts:', vibeCounts);
-  
   const commonVibes = Object.entries(vibeCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([vibe]) => vibe);
   
-  console.log('Final common vibes:', commonVibes);
-
-  // Add more detailed logging for debugging
-  console.log('FINAL CALCULATION SUMMARY:');
-  console.log('- Total overlapping ranges found:', overlappingRanges.length);
-  console.log('- Valid overlaps after blackout filtering:', validOverlaps.length);
-  console.log('- Detailed overlaps:', validOverlaps.map(d => 
-    `${d.start.toLocaleDateString()} - ${d.end.toLocaleDateString()}`
-  ).join(', '));
+  safeLog.info(`Found ${commonVibes.length} common vibes`);
 
   return {
     medianBudget,
@@ -708,7 +616,7 @@ export const generateTravelRecommendations = async (tripId, options = {}) => {
       previousRecommendations = null
     } = options;
     
-    console.log('Generating travel recommendations for trip:', tripId);
+    safeLog.info('Generating travel recommendations for trip:', tripId);
      
     const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
       method: 'POST',
@@ -748,7 +656,7 @@ export const generateTravelRecommendations = async (tripId, options = {}) => {
     
     return data;
   } catch (error) {
-    console.error('Error generating travel recommendations:', error);
+    safeLog.error('Error generating travel recommendations:', error);
     throw error;
   }
 };
@@ -779,7 +687,7 @@ export const submitRecommendationFeedback = async (recommendationId, feedback) =
 
     return await response.json();
   } catch (error) {
-    console.error('Error submitting recommendation feedback:', error);
+    safeLog.error('Error submitting recommendation feedback:', error);
     throw error;
   }
 };
@@ -791,7 +699,7 @@ export const submitRecommendationFeedback = async (recommendationId, feedback) =
  */
 export const getTravelRecommendations = async (tripId) => {
   try {
-    console.log('Getting travel recommendations for trip:', tripId);
+    safeLog.info('Getting travel recommendations for trip:', tripId);
     
     const response = await fetch(`${API_BASE_URL}/recommendations/${tripId}`, {
       method: 'GET',
@@ -811,19 +719,19 @@ export const getTravelRecommendations = async (tripId) => {
     }
 
     const data = await response.json();
-    console.log('Raw recommendation data from API:', data);
+    safeLog.info('Raw recommendation data from API:', data);
     
     // Process the recommendations to handle field mapping and filter invalid ones
     if (data && data.recommendations) {
       const missingIds = data.recommendations.filter(rec => !rec.id);
       if (missingIds.length > 0) {
-        console.error('Error: Recommendations missing IDs:', missingIds);
+        safeLog.error('Error: Recommendations missing IDs:', missingIds);
         throw new Error(`${missingIds.length} recommendations are missing IDs. Unable to proceed with voting.`);
       }
       
       const tempIds = data.recommendations.filter(rec => rec.id && rec.id.startsWith('temp-'));
       if (tempIds.length > 0) {
-        console.error('Error: Recommendations with temporary IDs:', tempIds);
+        safeLog.error('Error: Recommendations with temporary IDs:', tempIds);
         throw new Error(`${tempIds.length} recommendations have temporary IDs. Unable to proceed with voting.`);
       }
       
@@ -839,12 +747,12 @@ export const getTravelRecommendations = async (tripId) => {
           return rec;
         });
       
-      console.log('Processed recommendations:', data.recommendations);
+      safeLog.info('Processed recommendations:', data.recommendations);
     }
     
     return data;
   } catch (error) {
-    console.error('Error getting travel recommendations:', error);
+    safeLog.error('Error getting travel recommendations:', error);
     throw error;
   }
 };
@@ -856,7 +764,7 @@ export const getTravelRecommendations = async (tripId) => {
  */
 export const submitVotes = async (voteData) => {
   try {
-    console.log('submitVotes called with data:', JSON.stringify(voteData));
+    safeLog.info('submitVotes called with data:', voteData);
     
     // Validate data before sending
     if (!voteData.trip_id) {
@@ -884,13 +792,13 @@ export const submitVotes = async (voteData) => {
     
     for (const ranking of voteData.rankings) {
       if (!ranking.recommendation_id) {
-        console.error('Ranking missing recommendation_id:', ranking);
+        safeLog.error('Ranking missing recommendation_id:', ranking);
         invalidIds.push('missing');
       } else if (ranking.recommendation_id.startsWith('temp-')) {
-        console.error('Temporary ID detected:', ranking.recommendation_id);
+        safeLog.error('Temporary ID detected:', ranking.recommendation_id);
         tempIds.push(ranking.recommendation_id);
       } else if (!isValidUUID(ranking.recommendation_id)) {
-        console.error('Invalid recommendation_id format:', ranking.recommendation_id);
+        safeLog.error('Invalid recommendation_id format:', ranking.recommendation_id);
         invalidIds.push(ranking.recommendation_id);
       }
     }
@@ -904,8 +812,8 @@ export const submitVotes = async (voteData) => {
       throw new Error(`Cannot submit votes with invalid IDs. Found ${invalidIds.length} invalid recommendation IDs.`);
     }
     
-    console.log('Sending vote request to API:', `${API_BASE_URL}/recommendations/vote`);
-    console.log('Final vote data:', JSON.stringify(voteData));
+    safeLog.info('Sending vote request to API:', `${API_BASE_URL}/recommendations/vote`);
+    safeLog.info('Final vote data:', voteData);
     
     const response = await fetch(`${API_BASE_URL}/recommendations/vote`, {
       method: 'POST',
@@ -925,7 +833,7 @@ export const submitVotes = async (voteData) => {
     }
 
     if (!response.ok) {
-      console.error('Error response from vote API:', responseData);
+      safeLog.error('Error response from vote API:', responseData);
       
       // Format a more helpful error message
       const statusError = `Status: ${response.status}`;
@@ -937,19 +845,19 @@ export const submitVotes = async (voteData) => {
       ].filter(Boolean).join(' - '));
     }
 
-    console.log('Vote submission successful:', responseData);
+    safeLog.info('Vote submission successful:', responseData);
     
     // Verify that votes were actually saved by calling the getVotes function
     try {
-      console.log('Verifying votes were saved...');
+      safeLog.info('Verifying votes were saved...');
       const verifyResult = await getVotes(voteData.trip_id, voteData.user_id);
       
       if (verifyResult.count === 0) {
-        console.error('Votes were not saved to the database!');
+        safeLog.error('Votes were not saved to the database!');
         throw new Error('Votes were submitted successfully but were not found in the database');
       }
       
-      console.log(`Verified ${verifyResult.count} votes were saved to the database`);
+      safeLog.info(`Verified ${verifyResult.count} votes were saved to the database`);
       
       // Add verification result to the response
       responseData.verification = {
@@ -957,13 +865,13 @@ export const submitVotes = async (voteData) => {
         votes: verifyResult.votes
       };
     } catch (verifyError) {
-      console.error('Error verifying votes:', verifyError);
+      safeLog.error('Error verifying votes:', verifyError);
       // Don't throw here, just log the error
     }
     
     return responseData;
   } catch (error) {
-    console.error('Error submitting votes:', error);
+    safeLog.error('Error submitting votes:', error);
     throw error;
   }
 };
@@ -976,7 +884,7 @@ export const submitVotes = async (voteData) => {
  */
 export const getVotes = async (tripId, userId = null) => {
   try {
-    console.log(`Getting votes for trip ${tripId}${userId ? ` and user ${userId}` : ''}`);
+    safeLog.info(`Getting votes for trip ${tripId}${userId ? ` and user ${userId}` : ''}`);
     
     let url = `${API_BASE_URL}/recommendations/votes/${tripId}`;
     if (userId) {
@@ -1006,10 +914,10 @@ export const getVotes = async (tripId, userId = null) => {
     }
 
     const data = await response.json();
-    console.log('Received vote data:', data);
+    safeLog.info('Received vote data:', data);
     return data;
   } catch (error) {
-    console.error('Error getting votes:', error);
+    safeLog.error('Error getting votes:', error);
     throw error;
   }
 };
@@ -1021,7 +929,7 @@ export const getVotes = async (tripId, userId = null) => {
  */
 export const calculateWinner = async (tripId) => {
   try {
-    console.log(`Calculating winner for trip ${tripId}`);
+    safeLog.info(`Calculating winner for trip ${tripId}`);
     
     const response = await fetch(`${API_BASE_URL}/recommendations/calculate-winner/${tripId}`, {
       method: 'POST',
@@ -1046,10 +954,10 @@ export const calculateWinner = async (tripId) => {
     }
 
     const data = await response.json();
-    console.log('Winner calculation result:', data);
+    safeLog.info('Winner calculation result:', data);
     return data;
   } catch (error) {
-    console.error('Error calculating winner:', error);
+    safeLog.error('Error calculating winner:', error);
     throw error;
   }
 };
@@ -1061,7 +969,7 @@ export const calculateWinner = async (tripId) => {
  */
 export const getTripWinner = async (tripId) => {
   try {
-    console.log(`Getting winner for trip ${tripId}`);
+    safeLog.info(`Getting winner for trip ${tripId}`);
     
     const response = await fetch(`${API_BASE_URL}/recommendations/winner/${tripId}`, {
       method: 'GET',
@@ -1086,10 +994,10 @@ export const getTripWinner = async (tripId) => {
     }
 
     const data = await response.json();
-    console.log('Winner data:', data);
+    safeLog.info('Winner data:', data);
     return data;
   } catch (error) {
-    console.error('Error getting trip winner:', error);
+    safeLog.error('Error getting trip winner:', error);
     throw error;
   }
 }; 

@@ -33,6 +33,9 @@ const AIRecommendationsPage = () => {
   const location = useLocation();
   const { tripId } = useParams();
   
+  // Get trip ID from params or from location state
+  const effectiveTripId = tripId || (location.state && location.state.tripId);
+  
   const [recommendations, setRecommendations] = useState([]);
   const [selectedRecIds, setSelectedRecIds] = useState([]);
   const [expandedRecIds, setExpandedRecIds] = useState([]);
@@ -41,7 +44,14 @@ const AIRecommendationsPage = () => {
   const [error, setError] = useState(null);
   const [imagesLoaded, setImagesLoaded] = useState({});
   const [destinationImages, setDestinationImages] = useState({});
-  const [regenerationsRemaining, setRegenerationsRemaining] = useState(3);
+  
+  // Initialize regenerationsRemaining from location state if available
+  const [regenerationsRemaining, setRegenerationsRemaining] = useState(
+    location.state?.regenerationsRemaining !== undefined 
+      ? location.state.regenerationsRemaining 
+      : 3
+  );
+  
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [toast, setToast] = useState({
@@ -50,8 +60,13 @@ const AIRecommendationsPage = () => {
     severity: 'success'
   });
 
-  // Get trip ID from params or from location state
-  const effectiveTripId = tripId || (location.state && location.state.tripId);
+  // Check for regenerationsRemaining in location state when component initializes
+  useEffect(() => {
+    if (location.state?.regenerationsRemaining !== undefined) {
+      console.log('Found regenerationsRemaining in location state:', location.state.regenerationsRemaining);
+      setRegenerationsRemaining(location.state.regenerationsRemaining);
+    }
+  }, [location.state]);
 
   const processRecommendations = useCallback((recs) => {
     if (!recs || recs.length === 0) {
@@ -117,14 +132,17 @@ const AIRecommendationsPage = () => {
       const tripDetails = await getTripDetails(effectiveTripId);
       console.log('Loaded trip details:', tripDetails);
       
-      // Set regenerations remaining from trip data
-      if (tripDetails && tripDetails.regenerations_remaining !== undefined) {
+      // Set regenerations remaining from trip data only if not already set via location state
+      if (tripDetails && tripDetails.regenerations_remaining !== undefined && 
+          !(location.state && location.state.regenerationsRemaining !== undefined)) {
         console.log('Setting regenerations remaining to:', tripDetails.regenerations_remaining);
         setRegenerationsRemaining(parseInt(tripDetails.regenerations_remaining, 10));
-      } else {
-        // Default to 3 if not specified (schema default is 3)
-        console.log('No regenerations_remaining found in trip details, defaulting to 3');
+      } else if (!(location.state && location.state.regenerationsRemaining !== undefined)) {
+        // Default to 3 if not specified (schema default is 3) and not in location state
+        console.log('No regenerations_remaining found in trip details or location state, defaulting to 3');
         setRegenerationsRemaining(3);
+      } else {
+        console.log('Using regenerations count from location state:', location.state.regenerationsRemaining);
       }
       
       // First, try to get existing recommendations from the database
@@ -322,7 +340,7 @@ const AIRecommendationsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [effectiveTripId, processRecommendations]);
+  }, [effectiveTripId, processRecommendations, location.state]);
 
   const handleOpenFeedbackDialog = () => {
     // Only proceed if regenerations remain
@@ -759,6 +777,7 @@ const AIRecommendationsPage = () => {
   const handleStartVote = () => {
     // Ensure we have a valid tripId and make it explicit in the state
     console.log('AIRecommendationsPage - Starting vote with tripId:', effectiveTripId);
+    console.log('AIRecommendationsPage - Current regenerations remaining:', regenerationsRemaining);
     
     if (!effectiveTripId) {
       setToast({
@@ -799,7 +818,8 @@ const AIRecommendationsPage = () => {
         navigate(`/voting/${effectiveTripId}`, { 
           state: { 
             tripId: effectiveTripId, 
-            recommendations: validRecs 
+            recommendations: validRecs,
+            regenerationsRemaining: regenerationsRemaining
           }
         });
         return;
@@ -818,7 +838,8 @@ const AIRecommendationsPage = () => {
     navigate(`/voting/${effectiveTripId}`, { 
       state: { 
         tripId: effectiveTripId, 
-        recommendations 
+        recommendations,
+        regenerationsRemaining: regenerationsRemaining
       }
     });
   };

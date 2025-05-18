@@ -581,7 +581,19 @@ const VotingPage = () => {
         <Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
           <Button 
             startIcon={<ArrowBackIcon />} 
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              // When going back, preserve the regenerationsRemaining count if available
+              if (location.state?.regenerationsRemaining !== undefined) {
+                navigate(`/recommendations/${tripId}`, {
+                  state: {
+                    tripId: tripId,
+                    regenerationsRemaining: location.state.regenerationsRemaining
+                  }
+                });
+              } else {
+                navigate(-1);
+              }
+            }}
             sx={{ color: 'text.secondary' }}
           >
             Back

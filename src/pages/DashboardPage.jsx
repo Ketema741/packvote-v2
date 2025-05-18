@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container,
@@ -16,12 +16,22 @@ import {
   Snackbar,
   Alert,
   Chip,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Divider,
+  Tooltip,
 } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import MessageIcon from '@mui/icons-material/Message';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import WarningIcon from '@mui/icons-material/Warning';
-import { getTripDetails, sendSMS, calculateSurveyStats, generateTravelRecommendations } from '../utils/api';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import { getTripDetails, sendSMS, calculateSurveyStats, generateTravelRecommendations, getVotes } from '../utils/api';
 import '../styles/DashboardPage.css';
 import '../styles/LandingPage.css';
 
@@ -61,10 +71,47 @@ const DashboardPage = () => {
     severity: 'success'
   });
   const [generatingRecommendations, setGeneratingRecommendations] = useState(false);
+  
+  // Added state for vote tracking
+  const [votingStarted, setVotingStarted] = useState(false);
+  const [votedParticipants, setVotedParticipants] = useState([]);
+  const [pendingVoters, setPendingVoters] = useState([]);
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [votingDeadline, setVotingDeadline] = useState(null);
+
+  // Check for votes if not found in the initial response
+  const checkForVotes = useCallback(async (tripId) => {
+    try {
+      console.log('Manually checking for votes...');
+      const votesData = await getVotes(tripId);
+      
+      console.log('Manual votes check result:', votesData);
+      
+      // Check if we have votes
+      const hasVotes = votesData && votesData.votes && votesData.votes.length > 0;
+      console.log('Manual check - Has votes:', hasVotes);
+      
+      if (hasVotes) {
+        setVotingStarted(true);
+        
+        // Process who has voted and who hasn't
+        const votedUserIds = new Set(votesData.votes.map(vote => vote.user_id));
+        console.log('Voted user IDs:', Array.from(votedUserIds));
+        
+        // Only access the current tripData through the currentTripData parameter
+        return { hasVotes, votedUserIds };
+      }
+      
+      return { hasVotes: false, votedUserIds: new Set() };
+    } catch (error) {
+      console.error('Error checking for votes:', error);
+      return { hasVotes: false, votedUserIds: new Set() };
+    }
+  }, []); // No dependencies needed now
 
   useEffect(() => {
-    // Fetch trip data when component mounts
-    const fetchTripData = async () => {
+    // Define a single function that fetches everything
+    const loadTripDataAndVotes = async () => {
       if (!tripId) {
         setError('No trip ID provided');
         setLoading(false);
@@ -72,15 +119,14 @@ const DashboardPage = () => {
       }
       
       try {
+        setLoading(true);
+        console.log('Loading trip data and votes for tripId:', tripId);
+        
+        // Get trip details
         const data = await getTripDetails(tripId);
         
-        // Check if we have survey responses
-        if (!data.survey_responses || data.survey_responses.length === 0) {
-          console.log('No survey responses found for trip:', tripId);
-        } else {
-          console.log(`Found ${data.survey_responses.length} survey responses for trip:`, tripId);
-          console.log('Raw survey responses:', data.survey_responses);
-        }
+        console.log('Full trip details response:', data);
+        console.log('Votes data in response:', data.votes);
         
         // Calculate statistics from survey responses
         const stats = calculateSurveyStats(data.survey_responses || []);
@@ -100,7 +146,6 @@ const DashboardPage = () => {
             .map(p => {
               // Find this participant's survey response
               const response = data.survey_responses?.find(r => r.user_id === p.id);
-              console.log(`Processing participant ${p.name}, found response:`, response);
               
               // Add preferred dates to participant data if available
               if (response) {
@@ -119,8 +164,6 @@ const DashboardPage = () => {
                 } else if (typeof response.vibe_choices === 'string' && response.vibe_choices) {
                   vibeChoices = response.vibe_choices.split(';');
                 }
-                
-                console.log(`Participant ${p.name} has vibes:`, vibeChoices);
                 
                 return {
                   ...p,
@@ -157,20 +200,93 @@ const DashboardPage = () => {
           totalResponses: stats.totalResponses
         };
         
-        // Debug overlapping ranges
-        console.log('Stats overlapping ranges:', stats.overlappingRanges);
-        console.log('Processed overlapping ranges:', processedData.overlappingRanges);
-        
         setTripData(processedData);
+        
+        // Get and process voting data 
+        let hasVotes = data.votes && data.votes.length > 0;
+        let votedUserIds = new Set();
+        
+        if (hasVotes) {
+          votedUserIds = new Set(data.votes.map(vote => vote.user_id));
+        } else {
+          // If no votes in trip details, try separate API call
+          console.log('No votes found in trip details, checking separately...');
+          const voteResult = await checkForVotes(tripId);
+          hasVotes = voteResult.hasVotes;
+          votedUserIds = voteResult.votedUserIds;
+        }
+        
+        // Set voting status based on results
+        setVotingStarted(hasVotes);
+        console.log('Setting votingStarted to:', hasVotes);
+        
+        if (hasVotes) {
+          console.log('Voting has started. Processing vote data...');
+          
+          // Record voting deadline if present
+          if (data.voting_deadline) {
+            const deadline = new Date(data.voting_deadline);
+            setVotingDeadline(deadline);
+            
+            // Calculate time remaining for voting
+            const now = new Date();
+            const remaining = deadline - now;
+            if (remaining > 0) {
+              setTimeRemaining(remaining);
+              
+              // Set up timer to update remaining time
+              const timer = setInterval(() => {
+                setTimeRemaining(prev => {
+                  if (prev <= 1000) {
+                    clearInterval(timer);
+                    return 0;
+                  }
+                  return prev - 1000;
+                });
+              }, 1000);
+              
+              // Clean up timer on unmount
+              return () => clearInterval(timer);
+            } else {
+              setTimeRemaining(0);
+            }
+          }
+          
+          // Get participants who have completed the survey and are eligible to vote
+          const eligibleVoters = processedData.respondedParticipants || [];
+          
+          if (eligibleVoters.length > 0) {
+            // Filter out who has voted and who hasn't
+            const voted = eligibleVoters.filter(p => votedUserIds.has(p.id));
+            const pending = eligibleVoters.filter(p => !votedUserIds.has(p.id));
+            
+            console.log('Voted participants:', voted.length, voted);
+            console.log('Pending voters:', pending.length, pending);
+            
+            setVotedParticipants(voted);
+            setPendingVoters(pending);
+          } else {
+            console.log('No eligible voters found in respondedParticipants');
+            setVotedParticipants([]);
+            setPendingVoters([]);
+          }
+        }
       } catch (error) {
+        console.error('Error loading trip data:', error);
         setError('Failed to load trip data: ' + error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTripData();
-  }, [tripId]);
+    // Execute once when component mounts
+    loadTripDataAndVotes();
+    
+    // Clean up function to handle any timers
+    return () => {
+      // Any cleanup needed
+    };
+  }, [tripId, checkForVotes]); // Only depend on tripId and the stable checkForVotes function
 
   const handleResendSMS = async (participantId) => {
     setSendingState(prev => ({ ...prev, [participantId]: true }));
@@ -201,11 +317,28 @@ const DashboardPage = () => {
   const handleGetAIDestinations = async () => {
     try {
       setGeneratingRecommendations(true);
-      setToast({
-        open: true,
-        message: 'Loading destination recommendations...',
-        severity: 'info'
-      });
+      
+      // Get trip data to check if it needs regeneration
+      const tripDetails = await getTripDetails(tripId);
+      const hasRecentRecommendations = tripDetails.has_recommendations === true;
+      
+      if (!hasRecentRecommendations) {
+        // Only generate if needed
+        setToast({
+          open: true,
+          message: 'Generating new destination recommendations (this could take a few minutes)...',
+          severity: 'info'
+        });
+        
+        // Generate recommendations
+        await generateTravelRecommendations(tripId);
+      } else {
+        setToast({
+          open: true,
+          message: 'Loading destination recommendations...',
+          severity: 'info'
+        });
+      }
       
       // Navigate to AI recommendations page where existing recommendations will be shown if available
       navigate(`/recommendations/${tripId}`, { 
@@ -227,6 +360,26 @@ const DashboardPage = () => {
       return;
     }
     setToast(prev => ({ ...prev, open: false }));
+  };
+
+  // Format time remaining as readable string
+  const formatTimeRemaining = (milliseconds) => {
+    if (!milliseconds || milliseconds <= 0) return 'Voting ended';
+    
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      return `${days}d ${hours % 24}h remaining`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes % 60}m remaining`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s remaining`;
+    } else {
+      return `${seconds}s remaining`;
+    }
   };
 
   // Calculate progress percentage
@@ -480,6 +633,146 @@ const DashboardPage = () => {
             </Paper>
           </Grid>
 
+          {/* Voting Status Section - Only shown if voting has started */}
+          {votingStarted && (
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6" component="h2" gutterBottom sx={{ mb: 0 }}>
+                    <HowToVoteIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                    Voting Status
+                  </Typography>
+                  
+                  {votingDeadline && (
+                    <Tooltip title={`Voting deadline: ${votingDeadline.toLocaleString()}`}>
+                      <Chip
+                        icon={<AccessTimeIcon />}
+                        label={timeRemaining !== null ? formatTimeRemaining(timeRemaining) : "Voting in progress"}
+                        color={timeRemaining && timeRemaining <= 3600000 ? "warning" : "primary"}  // Show warning color if less than 1 hour
+                        sx={{ fontWeight: 'medium' }}
+                      />
+                    </Tooltip>
+                  )}
+                  
+                  {!votingDeadline && timeRemaining !== null && (
+                    <Chip
+                      icon={<AccessTimeIcon />}
+                      label={formatTimeRemaining(timeRemaining)}
+                      color={timeRemaining <= 3600000 ? "warning" : "primary"}  // Show warning color if less than 1 hour
+                      sx={{ fontWeight: 'medium' }}
+                    />
+                  )}
+                </Box>
+                
+                <Divider sx={{ mb: 2 }} />
+                
+                <Grid container spacing={3}>
+                  {/* Voted Participants */}
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium', color: 'success.main', display: 'flex', alignItems: 'center' }}>
+                      <CheckCircleIcon sx={{ mr: 0.5 }} fontSize="small" />
+                      Votes Submitted ({votedParticipants ? votedParticipants.length : 0})
+                    </Typography>
+                    
+                    <List dense sx={{ bgcolor: 'background.paper' }}>
+                      {votedParticipants && votedParticipants.length > 0 ? (
+                        votedParticipants.map((participant) => (
+                          <ListItem key={participant.id}>
+                            <ListItemAvatar>
+                              <Avatar 
+                                sx={{ 
+                                  bgcolor: `hsl(${(participant.id.charCodeAt(0) * 10) % 360}, 70%, 80%)`,
+                                  color: `hsl(${(participant.id.charCodeAt(0) * 10) % 360}, 80%, 30%)`
+                                }}
+                              >
+                                {(() => {
+                                  const travelIcons = ["✈️", "🚗", "🚂", "🚢", "🚁", "🏝️", "🗺️", "🧳", "🚘", "🚠", "🛩️", "🏔️", "🚲"];
+                                  const iconIndex = Math.abs(participant.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % travelIcons.length;
+                                  return travelIcons[iconIndex];
+                                })()}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText 
+                              primary={participant.name} 
+                              secondary="Vote submitted"
+                            />
+                          </ListItem>
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+                          No votes submitted yet
+                        </Typography>
+                      )}
+                    </List>
+                  </Grid>
+                  
+                  {/* Pending Voters */}
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'medium', color: 'warning.main', display: 'flex', alignItems: 'center' }}>
+                      <AccessTimeIcon sx={{ mr: 0.5 }} fontSize="small" />
+                      Waiting on Votes ({pendingVoters ? pendingVoters.length : 0})
+                    </Typography>
+                    
+                    <List dense sx={{ bgcolor: 'background.paper' }}>
+                      {pendingVoters && pendingVoters.length > 0 ? (
+                        pendingVoters.map((participant) => (
+                          <ListItem key={participant.id}>
+                            <ListItemAvatar>
+                              <Avatar 
+                                sx={{ 
+                                  bgcolor: `hsl(${(participant.id.charCodeAt(0) * 10) % 360}, 70%, 80%)`,
+                                  color: `hsl(${(participant.id.charCodeAt(0) * 10) % 360}, 80%, 30%)`
+                                }}
+                              >
+                                {(() => {
+                                  const travelIcons = ["✈️", "🚗", "🚂", "🚢", "🚁", "🏝️", "🗺️", "🧳", "🚘", "🚠", "🛩️", "🏔️", "🚲"];
+                                  const iconIndex = Math.abs(participant.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % travelIcons.length;
+                                  return travelIcons[iconIndex];
+                                })()}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText 
+                              primary={participant.name} 
+                              secondary="Vote pending"
+                            />
+                          </ListItem>
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+                          Everyone has voted!
+                        </Typography>
+                      )}
+                    </List>
+                  </Grid>
+                </Grid>
+                
+                {pendingVoters.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', mt: 2 }}>
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      onClick={() => navigate(`/winner/${tripId}`)}
+                      startIcon={<CelebrationIcon />}
+                    >
+                      View Final Results
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', mt: 2 }}>
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      onClick={() => navigate(`/voting/${tripId}`)}
+                      startIcon={<HowToVoteIcon />}
+                    >
+                      Go to Voting Page
+                    </Button>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+          )}
+
           {tripData.participants.length > 0 ? (
             <Grid item xs={12}>
               <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4 }}>
@@ -531,35 +824,42 @@ const DashboardPage = () => {
               </Paper>
             </Grid>
           ) : (
-            <Grid item xs={12}>
-              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4, textAlign: 'center' }}>
-                <Typography variant="h6" component="h2" gutterBottom>
-                  All participants have responded!
-                </Typography>
-                <Typography color="text.secondary">
-                  Everyone has completed their survey. You're ready to proceed with trip planning.
-                </Typography>
-              </Paper>
-            </Grid>
+            // Only show "All participants have responded!" if voting hasn't started yet
+            !votingStarted && (
+              <Grid item xs={12}>
+                <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4, textAlign: 'center' }}>
+                  <Typography variant="h6" component="h2" gutterBottom>
+                    All participants have responded!
+                  </Typography>
+                  <Typography color="text.secondary">
+                    Everyone has completed their survey. You're ready to proceed with trip planning.
+                  </Typography>
+                </Paper>
+              </Grid>
+            )
           )}
 
           <Grid item xs={12} sx={{ textAlign: 'center' }}>
-            <Button 
-              variant="contained"
-              startIcon={<AutoAwesomeIcon />}
-              onClick={handleGetAIDestinations}
-              className="primary-button"
-              size="large"
-              sx={{ mb: 1 }}
-              disabled={!canGenerateRecommendations || generatingRecommendations}
-            >
-              {generatingRecommendations ? 'Loading...' : 'View AI Destination Picks'}
-            </Button>
-            <Typography variant="body2" color="text.secondary">
-              {canGenerateRecommendations ? 
-                'Ready to view AI destination recommendations!' : 
-                'Enabled when at least 2/3 of participants have responded'}
-            </Typography>
+            {!votingStarted && (
+              <>
+                <Button 
+                  variant="contained"
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={handleGetAIDestinations}
+                  className="primary-button"
+                  size="large"
+                  sx={{ mb: 1 }}
+                  disabled={!canGenerateRecommendations || generatingRecommendations}
+                >
+                  {generatingRecommendations ? 'Loading...' : 'View AI Destination Picks'}
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  {canGenerateRecommendations ? 
+                    'Ready to view AI destination recommendations!' : 
+                    'Enabled when at least 2/3 of participants have responded'}
+                </Typography>
+              </>
+            )}
           </Grid>
         </Grid>
       </Container>

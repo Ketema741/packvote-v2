@@ -17,7 +17,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -49,6 +50,7 @@ const VotingPage = () => {
   const [participants, setParticipants] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [destinationImages, setDestinationImages] = useState({});
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   // Log tripId for debugging
   useEffect(() => {
@@ -374,8 +376,17 @@ const VotingPage = () => {
         const response = await submitVotes(voteData);
         console.log('Vote submission response:', response);
         
-        // Navigate to the trip-specific winner page
-        navigate(`/winner/${tripId}`);
+        // Show success message
+        setToast({
+          open: true,
+          message: 'Your vote has been submitted successfully!',
+          severity: 'success'
+        });
+        
+        // Navigate back to dashboard
+        setTimeout(() => {
+          navigate(`/dashboard/${tripId}`);
+        }, 2000);
       } catch (submitError) {
         console.error('Error during submission:', submitError);
         const errorMessage = submitError.message || 'Unknown error during vote submission';
@@ -433,8 +444,17 @@ const VotingPage = () => {
       // Submit to backend
       submitVotes(voteData)
         .then(() => {
-          // Navigate to the trip-specific winner page
-          navigate(`/winner/${tripId}`);
+          // Show success message
+          setToast({
+            open: true,
+            message: 'Your vote has been submitted successfully!',
+            severity: 'success'
+          });
+          
+          // Navigate back to dashboard
+          setTimeout(() => {
+            navigate(`/dashboard/${tripId}`);
+          }, 2000);
         })
         .catch(err => {
           setError(`Failed to submit votes: ${err.message}`);
@@ -495,6 +515,14 @@ const VotingPage = () => {
     loadImages();
   }, [destinations]);
 
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setToast(prev => ({ ...prev, open: false }));
+  };
+
+  // Render loading state
   if (loading) {
     return (
       <div className="landing-page">
@@ -807,6 +835,22 @@ const VotingPage = () => {
           </div>
         </Container>
       </footer>
+
+      {/* Toast notification */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={6000}
+        onClose={handleCloseToast}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseToast}
+          severity={toast.severity}
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

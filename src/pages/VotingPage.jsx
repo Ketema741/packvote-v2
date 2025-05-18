@@ -225,8 +225,22 @@ const VotingPage = () => {
                 const mostRecentTimestamp = timestamps[0];
                 console.log(`Using most recent recommendation set from: ${mostRecentTimestamp}`);
                 const mostRecentSet = recommendationSets[mostRecentTimestamp];
+                
+                // Verify all recommendations in set have valid IDs
+                const validRecs = mostRecentSet.filter(rec => rec.id);
+                if (validRecs.length < mostRecentSet.length) {
+                  console.warn(`Filtered out ${mostRecentSet.length - validRecs.length} recommendations with missing IDs`);
+                }
+                
+                // Check if we have enough valid recommendations for voting
+                if (validRecs.length < 2) {
+                  setError('Not enough valid recommendations found. Please contact support.');
+                  setLoading(false);
+                  return;
+                }
+                
                 try {
-                  const processed = processRecommendations(mostRecentSet);
+                  const processed = processRecommendations(validRecs);
                   console.log('Processed recommendations:', processed);
                   setDestinations(processed);
                 } catch (processError) {
@@ -234,8 +248,18 @@ const VotingPage = () => {
                   setError(`Error processing destinations: ${processError.message}`);
                 }
               } else {
+                // No timestamps found, use the top results after filtering by valid IDs
+                const validRecs = sortedRecommendations.filter(rec => rec.id).slice(0, 3);
+                
+                // Check if we have enough valid recommendations for voting
+                if (validRecs.length < 2) {
+                  setError('Not enough valid recommendations found. Please contact support.');
+                  setLoading(false);
+                  return;
+                }
+                
                 try {
-                  const processed = processRecommendations(sortedRecommendations);
+                  const processed = processRecommendations(validRecs);
                   console.log('Processed recommendations:', processed);
                   setDestinations(processed);
                 } catch (processError) {
@@ -267,8 +291,23 @@ const VotingPage = () => {
     } else if (location.state?.recommendations) {
       // Log recommendations from location state
       console.log('Recommendations from location state:', location.state.recommendations);
+      
+      // Verify all recommendations have valid IDs
+      const recommendations = location.state.recommendations || [];
+      const validRecs = recommendations.filter(rec => rec && rec.id);
+      
+      if (validRecs.length < recommendations.length) {
+        console.warn(`Filtered out ${recommendations.length - validRecs.length} recommendations with missing IDs from location state`);
+      }
+      
+      // Check if we have enough valid recommendations for voting
+      if (validRecs.length < 2) {
+        setError('Not enough valid recommendations found in navigation state. Please try again from the dashboard.');
+        return;
+      }
+      
       try {
-        const processed = processRecommendations(location.state.recommendations);
+        const processed = processRecommendations(validRecs);
         console.log('Processed recommendations from state:', processed);
         setDestinations(processed);
       } catch (processError) {

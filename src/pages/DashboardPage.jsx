@@ -31,7 +31,7 @@ import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CelebrationIcon from '@mui/icons-material/Celebration';
-import { getTripDetails, sendSMS, calculateSurveyStats, generateTravelRecommendations, getVotes } from '../utils/api';
+import { getTripDetails, sendSMS, calculateSurveyStats, generateTravelRecommendations, getVotes, getTravelRecommendations } from '../utils/api';
 import '../styles/DashboardPage.css';
 import '../styles/LandingPage.css';
 
@@ -803,7 +803,75 @@ const DashboardPage = () => {
                     <Button 
                       variant="contained" 
                       color="primary"
-                      onClick={() => navigate(`/voting/${tripId}`)}
+                      onClick={async () => {
+                        try {
+                          setToast({
+                            open: true,
+                            message: 'Loading voting page...',
+                            severity: 'info'
+                          });
+                          
+                          // Fetch recommendations
+                          const result = await getTravelRecommendations(tripId);
+                          console.log('Recommendations for voting:', result);
+                          
+                          if (result && result.recommendations && result.recommendations.length > 0) {
+                            // Sort recommendations by timestamp (newest first)
+                            const sortedRecommendations = [...result.recommendations];
+                            
+                            if (sortedRecommendations[0] && sortedRecommendations[0].created_at) {
+                              sortedRecommendations.sort((a, b) => {
+                                const dateA = new Date(a.created_at || 0);
+                                const dateB = new Date(b.created_at || 0);
+                                return dateB - dateA;
+                              });
+                              console.log('Sorted recommendations by timestamp, newest first');
+                            }
+                            
+                            // Take the 3 most recent recommendations - exactly like AIRecommendationsPage does
+                            const mostRecentRecs = sortedRecommendations.slice(0, 3);
+                            console.log(`Using the ${mostRecentRecs.length} most recent recommendations`);
+                            
+                            // Filter out recommendations without IDs
+                            const validRecs = mostRecentRecs.filter(rec => rec && rec.id);
+                            
+                            if (validRecs.length < mostRecentRecs.length) {
+                              console.warn(`Filtered out ${mostRecentRecs.length - validRecs.length} recommendations with missing IDs`);
+                            }
+                            
+                            // Log what we're sending
+                            console.log(`Selected ${validRecs.length} recommendations for voting`);
+                            validRecs.forEach((rec, index) => {
+                              console.log(`Recommendation ${index + 1}: ${rec.city || rec.destination || 'Unknown'} (ID: ${rec.id})`);
+                            });
+                            
+                            // Make sure we have at least 2 recommendations (minimum required for voting)
+                            if (validRecs.length < 2) {
+                              setToast({
+                                open: true,
+                                message: `Not enough valid recommendations found. Only ${validRecs.length} available.`,
+                                severity: 'error'
+                              });
+                              return;
+                            }
+                            
+                            // Navigate with our valid recommendations
+                            navigate(`/voting/${tripId}`, {
+                              state: {
+                                tripId: tripId,
+                                recommendations: validRecs
+                              }
+                            });
+                          } else {
+                            // No recommendations found, navigate without state
+                            navigate(`/voting/${tripId}`);
+                          }
+                        } catch (error) {
+                          console.error('Error preparing for voting:', error);
+                          // Navigate anyway as fallback
+                          navigate(`/voting/${tripId}`);
+                        }
+                      }}
                       startIcon={<HowToVoteIcon />}
                     >
                       Go to Voting Page

@@ -342,6 +342,9 @@ const AIRecommendationsPage = () => {
             rec.city?.toLowerCase() || rec.destination?.toLowerCase() || ''
           );
           
+          // Debug the list of destinations to avoid duplicates
+          safeLog.info('Existing destinations:', existingDestinations);
+          
           // Track which selected recommendations have been successfully replaced
           const replacedIds = [];
           

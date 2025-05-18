@@ -323,11 +323,23 @@ const DashboardPage = () => {
         // Generate recommendations
         const generatedRecs = await generateTravelRecommendations(tripId);
         
+        // Verify we got valid recommendations back
+        if (!generatedRecs || !generatedRecs.recommendations) {
+          setToast({
+            open: true,
+            message: 'Failed to generate recommendations. Please try again.',
+            severity: 'error'
+          });
+          setGeneratingRecommendations(false);
+          return;
+        }
+        
         // Navigate to AI recommendations page where existing recommendations will be shown if available
         navigate(`/recommendations/${tripId}`, { 
           state: { 
             tripId,
             fromDashboard: true,
+            regenerationsRemaining,
             timestamp: Date.now() // Add a timestamp to force refresh
           }
         });
@@ -343,6 +355,7 @@ const DashboardPage = () => {
           state: { 
             tripId,
             fromDashboard: true,
+            regenerationsRemaining,
             timestamp: Date.now() // Add a timestamp to force refresh
           }
         });

@@ -8,11 +8,11 @@ const Navbar = () => {
   return (
     <AppBar position="fixed" color="transparent" elevation={0} sx={{ bgcolor: 'white' }}>
       <Toolbar sx={{ justifyContent: 'space-between' }}>
-        <Typography 
-          variant="h6" 
-          component="div" 
-          sx={{ 
-            color: '#6366F1', 
+        <Typography
+          variant="h6"
+          component="div"
+          sx={{
+            color: '#6366F1',
             fontWeight: 600,
             cursor: 'pointer'
           }}
@@ -23,10 +23,10 @@ const Navbar = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <Link href="/docs" color="inherit" underline="none">Docs</Link>
           <Link href="/donate" color="inherit" underline="none">Donate</Link>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={() => navigate('/create-trip')}
-            sx={{ 
+            sx={{
               bgcolor: '#6366F1',
               '&:hover': { bgcolor: '#5558DD' }
             }}
@@ -39,4 +39,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

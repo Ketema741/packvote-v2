@@ -101,7 +101,7 @@ const CreateTrip = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Form validation
     if (!tripName.trim()) {
       setToast({
@@ -192,21 +192,21 @@ const CreateTrip = () => {
       });
 
       // Navigate to the trip links page with the result data
-      navigate('/trip-links', { 
-        state: { 
+      navigate('/trip-links', {
+        state: {
           tripData: {
             tripId: result.trip_id,
             organizer: result.organizer,
             participants: result.participants
-          } 
-        } 
+          }
+        }
       });
     } catch (err) {
       console.error('Failed to create trip:', err);
-      
+
       // Display a user-friendly error message
-      let errorMessage = err.message || 'Something went wrong. Please try again.';
-      
+      const errorMessage = err.message || 'Something went wrong. Please try again.';
+
       // Check if this is a duplicate trip error
       if (errorMessage.includes('A trip with this name and participants already exists')) {
         // This is a duplicate trip error
@@ -235,11 +235,11 @@ const CreateTrip = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -254,8 +254,8 @@ const CreateTrip = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -270,7 +270,7 @@ const CreateTrip = () => {
           <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 2 }}>
             Set up your trip
           </Typography>
-          
+
           <Alert severity="info" sx={{ mb: 4 }}>
             As the trip organizer, you'll set up the trip and invite others to participate in the planning.
           </Alert>
@@ -424,7 +424,7 @@ const CreateTrip = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -446,4 +446,4 @@ const CreateTrip = () => {
   );
 };
 
-export default CreateTrip; 
+export default CreateTrip;

@@ -28,7 +28,7 @@ const App = () => {
 
   // Determine if we're in development environment
   const isDevelopment = process.env.NODE_ENV === 'development';
-  
+
   return (
     <>
       <Navbar />
@@ -52,7 +52,7 @@ const App = () => {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/next-step" element={<NextStepPage />} />
-        
+
         {/* Development-only routes */}
         {isDevelopment && (
           <>
@@ -61,7 +61,7 @@ const App = () => {
           </>
         )}
       </Routes>
-      
+
       {/* Show a small dev settings button in development mode */}
       {isDevelopment && (
         <Box
@@ -69,7 +69,7 @@ const App = () => {
             position: 'fixed',
             bottom: 16,
             right: 16,
-            zIndex: 9999,
+            zIndex: 9999
           }}
         >
           <Button
@@ -87,4 +87,4 @@ const App = () => {
   );
 };
 
-export default App; 
+export default App;

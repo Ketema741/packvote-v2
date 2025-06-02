@@ -7,7 +7,7 @@ jest.mock('@sentry/react', () => ({
   captureException: jest.fn(),
   addBreadcrumb: jest.fn(),
   setUser: jest.fn(),
-  withProfiler: jest.fn(component => component),
+  withProfiler: jest.fn(component => component)
 }));
 
 describe('Monitoring utilities', () => {
@@ -23,18 +23,18 @@ describe('Monitoring utilities', () => {
       ...originalEnv,
       REACT_APP_SENTRY_DSN: 'https://test-dsn@sentry.io/123456',
       REACT_APP_ENVIRONMENT: 'test',
-      REACT_APP_VERSION: '1.0.0',
+      REACT_APP_VERSION: '1.0.0'
     };
 
     // Call the setup function
     setupMonitoring();
-    
+
     // Check if Sentry.init was called with the correct config
     expect(Sentry.init).toHaveBeenCalledWith(
       expect.objectContaining({
         dsn: 'https://test-dsn@sentry.io/123456',
         environment: 'test',
-        release: '1.0.0',
+        release: '1.0.0'
       })
     );
 
@@ -45,22 +45,22 @@ describe('Monitoring utilities', () => {
   it('handles missing environment variables gracefully', () => {
     // Save original env vars
     const originalEnv = process.env;
-    
+
     // Remove the environment variables
     process.env = {
       ...originalEnv,
       REACT_APP_SENTRY_DSN: undefined,
       REACT_APP_ENVIRONMENT: undefined,
-      REACT_APP_VERSION: undefined,
+      REACT_APP_VERSION: undefined
     };
 
     // Call the setup function
     setupMonitoring();
-    
+
     // Check if Sentry.init was called with defaults
     expect(Sentry.init).toHaveBeenCalledWith(expect.objectContaining({
       environment: 'development',
-      release: expect.any(String),
+      release: expect.any(String)
     }));
 
     // Restore environment variables
@@ -70,10 +70,10 @@ describe('Monitoring utilities', () => {
   it('captures errors correctly', () => {
     const testError = new Error('Test error');
     const context = { component: 'TestComponent', action: 'submit' };
-    
+
     captureError(testError, context);
-    
-    expect(Sentry.captureException).toHaveBeenCalledWith(testError, { 
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(testError, {
       tags: context
     });
   });
@@ -85,9 +85,9 @@ describe('Monitoring utilities', () => {
       level: 'info',
       data: { buttonId: 'submit-button' }
     };
-    
+
     addBreadcrumb(breadcrumb);
-    
+
     expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(breadcrumb);
   });
 
@@ -97,15 +97,15 @@ describe('Monitoring utilities', () => {
       email: 'test@example.com',
       username: 'testuser'
     };
-    
+
     setUserContext(user);
-    
+
     expect(Sentry.setUser).toHaveBeenCalledWith(user);
   });
 
   it('clears user context when no user is provided', () => {
     setUserContext(null);
-    
+
     expect(Sentry.setUser).toHaveBeenCalledWith(null);
   });
-}); 
+});

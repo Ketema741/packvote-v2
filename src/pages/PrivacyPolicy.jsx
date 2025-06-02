@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  Container, 
-  Typography, 
-  Box, 
+import {
+  Container,
+  Typography,
+  Box,
   Paper,
   AppBar,
   Toolbar,
@@ -21,11 +21,11 @@ const PrivacyPolicy = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -34,14 +34,24 @@ const PrivacyPolicy = () => {
             PackVote
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <Link href="/docs" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+            <Link
+              href="/docs"
+              color="text.secondary"
+              underline="none"
+              sx={{ '&:hover': { color: 'text.primary' } }}
+            >
               Docs
             </Link>
-            <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
+            <Link
+              href="/donate"
+              color="text.secondary"
+              underline="none"
+              sx={{ '&:hover': { color: 'text.primary' } }}
+            >
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -56,12 +66,13 @@ const PrivacyPolicy = () => {
           <Typography variant="h3" component="h1" gutterBottom>
             Privacy Policy
           </Typography>
-          
+
           <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
             1. Information We Collect
           </Typography>
           <Typography paragraph>
-            We collect information that you provide directly to us when using the AI Travel App, including:
+            We collect and use your data to provide the PackVote service,
+            including creating and managing your trip preferences and recommendations.
           </Typography>
           <Box component="ul" sx={{ pl: 4 }}>
             <Typography component="li">Personal information (name, email address)</Typography>
@@ -105,7 +116,9 @@ const PrivacyPolicy = () => {
             4. Data Security
           </Typography>
           <Typography paragraph>
-            We implement appropriate security measures to protect your personal information from unauthorized access, alteration, or disclosure. However, no internet transmission is completely secure, and we cannot guarantee absolute security.
+            We implement appropriate security measures to protect your personal information
+            from unauthorized access, alteration, or disclosure. However, no internet
+            transmission is completely secure, and we cannot guarantee absolute security.
           </Typography>
 
           <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
@@ -126,21 +139,24 @@ const PrivacyPolicy = () => {
             6. Cookies and Tracking
           </Typography>
           <Typography paragraph>
-            We use cookies and similar technologies to enhance your experience and collect usage data. You can control cookie settings through your browser preferences.
+            We use cookies and similar technologies to enhance your experience
+            and collect usage data. You can control cookie settings through
+            your browser preferences.
           </Typography>
 
           <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
             7. Changes to Privacy Policy
           </Typography>
           <Typography paragraph>
-            We may update this privacy policy periodically. We will notify you of any material changes through our platform or via email.
+            Changes to this privacy policy will be posted on this page.
           </Typography>
 
           <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
             8. Contact Us
           </Typography>
           <Typography paragraph>
-            If you have questions about this privacy policy or your personal data, please contact us at <Link href="mailto:packvote@gmail.com" color="primary">packvote@gmail.com</Link>.
+            If you have any questions about this Privacy Policy,
+            please contact us using the information below.
           </Typography>
 
           <Typography variant="body2" sx={{ mt: 4, color: 'text.secondary', fontStyle: 'italic' }}>
@@ -158,7 +174,7 @@ const PrivacyPolicy = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -180,4 +196,4 @@ const PrivacyPolicy = () => {
   );
 };
 
-export default PrivacyPolicy; 
+export default PrivacyPolicy;

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Button, 
-  TextField, 
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  TextField,
   Paper,
   IconButton,
   AppBar,
@@ -49,13 +49,13 @@ const SocialSharePage = () => {
         // Store the original winnerDestination object to use with image service
         winnerDestination: location.state.winnerDestination
       });
-      
+
       // Also set the destination image directly if it was passed
       if (location.state.imageUrl) {
         setDestinationImage(location.state.imageUrl);
         setLoading(false);
       }
-      
+
       // Set a default caption
       const destName = destination.city || destination.destination || 'our trip';
       setCaption(`I'm excited to announce we're going to ${destName}${destination.country ? `, ${destination.country}` : ''}!`);
@@ -75,20 +75,20 @@ const SocialSharePage = () => {
 
   // Load destination image - using same approach as WinnerPage
   useEffect(() => {
-    if (!tripData) return;
-    
+    if (!tripData) {return;}
+
     // Skip if we already have an image from the location state
     if (location.state && location.state.imageUrl) {
       setDestinationImage(location.state.imageUrl);
       setLoading(false);
       return;
     }
-    
+
     // Initialize with a fallback image
     if (tripData.winnerDestination) {
       setDestinationImage(getImageSync(tripData.winnerDestination));
     }
-    
+
     // Then load from API
     const loadImage = async () => {
       try {
@@ -98,7 +98,7 @@ const SocialSharePage = () => {
         if (imageUrl) {
           // Preload the image to ensure it's fully loaded before rendering
           const img = new Image();
-          img.crossOrigin = "anonymous";
+          img.crossOrigin = 'anonymous';
           img.onload = () => {
             setDestinationImage(imageUrl);
             setLoading(false);
@@ -117,7 +117,7 @@ const SocialSharePage = () => {
         setLoading(false);
       }
     };
-    
+
     if (tripData.winnerDestination) {
       loadImage();
     } else {
@@ -126,11 +126,11 @@ const SocialSharePage = () => {
   }, [tripData, location.state]);
 
   const handleDownload = async () => {
-    if (!shareCardRef.current) return;
+    if (!shareCardRef.current) {return;}
 
     try {
       setLoading(true);
-      
+
       // Create a canvas from the share card
       const canvas = await html2canvas(shareCardRef.current, {
         scale: 3, // Increased scale for better quality
@@ -141,7 +141,7 @@ const SocialSharePage = () => {
         imageTimeout: 15000, // Longer timeout for images
         removeContainer: false // Helps with rendering
       });
-      
+
       // Convert to data URL and download
       const image = canvas.toDataURL('image/png', 1.0);
       const downloadLink = document.createElement('a');
@@ -150,7 +150,7 @@ const SocialSharePage = () => {
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
-      
+
       setSnackbar({
         open: true,
         message: 'Image downloaded successfully!',
@@ -177,11 +177,11 @@ const SocialSharePage = () => {
       });
       return;
     }
-    
+
     // Create a share link to the winner page for this trip
     const baseUrl = window.location.origin;
     const shareLink = `${baseUrl}/winner/${tripData.tripId}`;
-    
+
     // Copy to clipboard
     navigator.clipboard.writeText(shareLink)
       .then(() => {
@@ -208,12 +208,12 @@ const SocialSharePage = () => {
   // Get the appropriate illustration based on destination
   const getDestinationEmojis = () => {
     const destination = tripData?.destination?.toLowerCase() || '';
-    
+
     // Match destination to appropriate emojis
-    if (destination.includes('beach') || destination.includes('island') || destination.includes('coast') || 
+    if (destination.includes('beach') || destination.includes('island') || destination.includes('coast') ||
         destination.includes('bali') || destination.includes('hawaii') || destination.includes('caribbean')) {
       return { scene: '🏝️', elements: ['🌴', '🏖️', '🌊'] };
-    } else if (destination.includes('mountain') || destination.includes('alps') || 
+    } else if (destination.includes('mountain') || destination.includes('alps') ||
               destination.includes('hiking') || destination.includes('trek')) {
       return { scene: '🏔️', elements: ['⛰️', '🥾', '🌲'] };
     } else if (destination.includes('paris') || destination.includes('france')) {
@@ -251,11 +251,11 @@ const SocialSharePage = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -270,8 +270,8 @@ const SocialSharePage = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -282,37 +282,37 @@ const SocialSharePage = () => {
       </AppBar>
 
       <Container maxWidth="md" sx={{ pt: 12, pb: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 200px)' }}>
-        <Paper elevation={3} sx={{ 
-          p: 4, 
-          borderRadius: 3, 
-          width: '100%', 
+        <Paper elevation={3} sx={{
+          p: 4,
+          borderRadius: 3,
+          width: '100%',
           maxWidth: '700px',
           position: 'relative'
         }}>
-          <IconButton 
-            aria-label="close" 
+          <IconButton
+            aria-label="close"
             onClick={() => navigate(-1)}
-            sx={{ 
-              position: 'absolute', 
-              right: 8, 
+            sx={{
+              position: 'absolute',
+              right: 8,
               top: 8,
               color: 'text.secondary'
             }}
           >
             <CloseIcon />
           </IconButton>
-          
+
           <Box sx={{ pt: 2 }}>
             <Typography variant="h4" component="h1" gutterBottom align="center">
               Share Your Trip
             </Typography>
-          
-            <Box 
+
+            <Box
               ref={shareCardRef}
               id="social-share-card"
-              className="share-preview" 
-              sx={{ 
-                my: 4, 
+              className="share-preview"
+              sx={{
+                my: 4,
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 2,
@@ -345,10 +345,10 @@ const SocialSharePage = () => {
                   Plan your perfect trip together ♡
                 </Typography>
               </Box>
-              
-              <Box 
-                className="preview-illustration" 
-                sx={{ 
+
+              <Box
+                className="preview-illustration"
+                sx={{
                   height: '40%', // 40% of the card height
                   position: 'relative',
                   flexShrink: 0,
@@ -371,10 +371,10 @@ const SocialSharePage = () => {
                     imageRendering: 'auto' // Let browser optimize image rendering
                   }}
                 />
-                
+
                 {/* Loading indicator */}
                 {loading && (
-                  <Box 
+                  <Box
                     sx={{
                       position: 'absolute',
                       top: 0,
@@ -391,9 +391,9 @@ const SocialSharePage = () => {
                     <CircularProgress size={40} />
                   </Box>
                 )}
-                
+
                 {/* Image overlay */}
-                <Box 
+                <Box
                   sx={{
                     position: 'absolute',
                     top: 0,
@@ -406,8 +406,8 @@ const SocialSharePage = () => {
                   }}
                 />
               </Box>
-              <Box className="preview-text" sx={{ 
-                bgcolor: 'white', 
+              <Box className="preview-text" sx={{
+                bgcolor: 'white',
                 p: 3,
                 pt: 5, // Even more top padding for better separation
                 mt: 1, // Small margin at top
@@ -423,11 +423,11 @@ const SocialSharePage = () => {
                 <Typography variant="body1" sx={{ fontSize: '1.1rem', color: 'text.secondary' }}>
                   We're going to
                 </Typography>
-                <Typography 
-                  variant="h3" 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    color: 'primary.main', 
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 'bold',
+                    color: 'primary.main',
                     mb: 1,
                     fontSize: '2.2rem',
                     lineHeight: 1.2,
@@ -438,10 +438,10 @@ const SocialSharePage = () => {
                   {tripData?.destination}
                 </Typography>
                 {tripData?.country && (
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      color: 'text.secondary', 
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      color: 'text.secondary',
                       mb: 2,
                       fontWeight: 'medium'
                     }}
@@ -449,23 +449,23 @@ const SocialSharePage = () => {
                     {tripData.country}
                   </Typography>
                 )}
-                
+
                 {/* Emoji elements to make it more visually appealing */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: 2, 
+                <Box sx={{
+                  display: 'flex',
+                  gap: 2,
                   fontSize: '2rem',
                   my: 3,
-                  justifyContent: 'center' 
+                  justifyContent: 'center'
                 }}>
                   {destinationEmojis.scene}
                   {destinationEmojis.elements.map((emoji, index) => (
                     <span key={index}>{emoji}</span>
                   ))}
                 </Box>
-                
-                <Box sx={{ 
-                  display: 'flex', 
+
+                <Box sx={{
+                  display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: 1,
@@ -483,7 +483,7 @@ const SocialSharePage = () => {
                   )}
                 </Box>
               </Box>
-              
+
               {/* PackVote Watermark */}
               <Box sx={{
                 bgcolor: 'primary.light',
@@ -516,22 +516,22 @@ const SocialSharePage = () => {
                 />
               </Box>
 
-              <Box className="share-actions" sx={{ 
-                display: 'flex', 
+              <Box className="share-actions" sx={{
+                display: 'flex',
                 gap: 2,
                 justifyContent: 'center',
                 flexWrap: 'wrap'
               }}>
-                <Button 
-                  variant="outlined" 
+                <Button
+                  variant="outlined"
                   startIcon={<DownloadIcon />}
                   onClick={handleDownload}
                   sx={{ minWidth: '180px' }}
                 >
                   Download PNG
                 </Button>
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   startIcon={<LinkIcon />}
                   onClick={handleCopyLink}
                   className="primary-button"
@@ -553,8 +553,8 @@ const SocialSharePage = () => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
+        <Alert
+          onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >
@@ -571,7 +571,7 @@ const SocialSharePage = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -593,4 +593,4 @@ const SocialSharePage = () => {
   );
 };
 
-export default SocialSharePage; 
+export default SocialSharePage;

@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Button, 
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
   Paper,
   AppBar,
   Toolbar,
@@ -24,11 +24,11 @@ const NextStepPage = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -43,8 +43,8 @@ const NextStepPage = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -56,11 +56,11 @@ const NextStepPage = () => {
 
       <Container maxWidth="lg">
         <Box sx={{ pt: 12, pb: 8 }}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 6, 
-              borderRadius: 3, 
+          <Paper
+            elevation={3}
+            sx={{
+              p: 6,
+              borderRadius: 3,
               textAlign: 'center',
               display: 'flex',
               flexDirection: 'column',
@@ -88,14 +88,14 @@ const NextStepPage = () => {
               }}
             />
 
-            <Typography 
-              variant="h3" 
-              component="h1" 
+            <Typography
+              variant="h3"
+              component="h1"
               gutterBottom
-              sx={{ 
-                color: 'primary.main', 
-                fontWeight: 700, 
-                mb: 3, 
+              sx={{
+                color: 'primary.main',
+                fontWeight: 700,
+                mb: 3,
                 position: 'relative',
                 textShadow: '0 2px 4px rgba(0,0,0,0.1)'
               }}
@@ -104,9 +104,9 @@ const NextStepPage = () => {
             </Typography>
 
             <Box sx={{ maxWidth: 600, mx: 'auto', position: 'relative', mb: 5 }}>
-              <Typography 
-                variant="h6" 
-                color="text.secondary" 
+              <Typography
+                variant="h6"
+                color="text.secondary"
                 gutterBottom
                 sx={{ mb: 4, fontWeight: 400, lineHeight: 1.6 }}
               >
@@ -115,12 +115,12 @@ const NextStepPage = () => {
               </Typography>
 
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <img 
-                  src="https://images.unsplash.com/photo-1488085061387-422e29b40080?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80" 
-                  alt="Travel adventure" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    borderRadius: 16, 
+                <img
+                  src="https://images.unsplash.com/photo-1488085061387-422e29b40080?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
+                  alt="Travel adventure"
+                  style={{
+                    maxWidth: '100%',
+                    borderRadius: 16,
                     boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                     maxHeight: '300px',
                     objectFit: 'cover'
@@ -129,15 +129,15 @@ const NextStepPage = () => {
               </Box>
             </Box>
 
-            <Button 
-              variant="contained" 
-              size="large" 
+            <Button
+              variant="contained"
+              size="large"
               endIcon={<ArrowForwardIcon />}
               onClick={() => navigate(tripId ? `/dashboard/${tripId}` : '/dashboard')}
-              sx={{ 
-                mt: 4, 
-                py: 1.5, 
-                px: 4, 
+              sx={{
+                mt: 4,
+                py: 1.5,
+                px: 4,
                 borderRadius: 2,
                 boxShadow: '0 4px 14px rgba(66, 99, 235, 0.4)',
                 fontWeight: 600
@@ -158,7 +158,7 @@ const NextStepPage = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -180,4 +180,4 @@ const NextStepPage = () => {
   );
 };
 
-export default NextStepPage; 
+export default NextStepPage;

@@ -1,13 +1,13 @@
 import React from 'react';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Paper, 
-  Divider, 
-  List, 
-  ListItem, 
-  ListItemText, 
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
   ListItemIcon,
   AppBar,
   Toolbar,
@@ -32,11 +32,11 @@ const DocsPage = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -51,8 +51,8 @@ const DocsPage = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -74,35 +74,35 @@ const DocsPage = () => {
               Getting Started
             </Typography>
             <Typography paragraph>
-              PackVote helps you and your friends decide on the perfect travel destination. 
+              PackVote helps you and your friends decide on the perfect travel destination.
               Here's how to get started in 4 simple steps:
             </Typography>
             <List>
               <ListItem>
                 <ListItemIcon><GroupIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="1. Create a Trip Link" 
+                <ListItemText
+                  primary="1. Create a Trip Link"
                   secondary="Click 'Start a Trip' and share the generated link with your group"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><QuestionAnswerIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="2. Complete the Survey" 
+                <ListItemText
+                  primary="2. Complete the Survey"
                   secondary="Each group member fills out a quick questionnaire about their preferences"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><TipsAndUpdatesIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="3. Review AI Recommendations" 
+                <ListItemText
+                  primary="3. Review AI Recommendations"
                   secondary="Our AI analyzes everyone's input and suggests 3 perfect destinations"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><HowToVoteIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="4. Vote and Decide" 
+                <ListItemText
+                  primary="4. Vote and Decide"
                   secondary="Group members vote on their favorite option"
                 />
               </ListItem>
@@ -117,25 +117,25 @@ const DocsPage = () => {
               Survey Questions Explained
             </Typography>
             <Typography paragraph>
-              Our questionnaire is designed to capture essential preferences while being quick to complete. 
+              Our questionnaire is designed to capture essential preferences while being quick to complete.
               Key areas covered include:
             </Typography>
             <List>
               <ListItem>
-                <ListItemText 
-                  primary="Budget Range" 
+                <ListItemText
+                  primary="Budget Range"
                   secondary="Your comfortable spending range for the entire trip"
                 />
               </ListItem>
               <ListItem>
-                <ListItemText 
-                  primary="Travel Dates" 
+                <ListItemText
+                  primary="Travel Dates"
                   secondary="Preferred travel timeframe and duration"
                 />
               </ListItem>
               <ListItem>
-                <ListItemText 
-                  primary="Activity Preferences" 
+                <ListItemText
+                  primary="Activity Preferences"
                   secondary="Types of activities you enjoy (adventure, culture, relaxation, etc.)"
                 />
               </ListItem>
@@ -152,15 +152,15 @@ const DocsPage = () => {
             <List>
               <ListItem>
                 <ListItemIcon><SecurityIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="Data Protection" 
+                <ListItemText
+                  primary="Data Protection"
                   secondary="We use industry-standard encryption to protect your personal information"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><GroupIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="Group Privacy" 
+                <ListItemText
+                  primary="Group Privacy"
                   secondary="Trip details are only visible to invited group members"
                 />
               </ListItem>
@@ -177,15 +177,15 @@ const DocsPage = () => {
             <List>
               <ListItem>
                 <ListItemIcon><PaymentIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="Free to Use" 
+                <ListItemText
+                  primary="Free to Use"
                   secondary="The basic service is completely free for all users"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><TipsAndUpdatesIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="Support Development" 
+                <ListItemText
+                  primary="Support Development"
                   secondary="Donations help keep our AI service running and improving"
                 />
               </ListItem>
@@ -202,15 +202,15 @@ const DocsPage = () => {
             <List>
               <ListItem>
                 <ListItemIcon><QuestionAnswerIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="Be Honest in Surveys" 
+                <ListItemText
+                  primary="Be Honest in Surveys"
                   secondary="The more accurate your preferences, the better the AI recommendations"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><HowToVoteIcon color="primary" /></ListItemIcon>
-                <ListItemText 
-                  primary="Vote Promptly" 
+                <ListItemText
+                  primary="Vote Promptly"
                   secondary="Complete the voting process quickly to maintain group momentum"
                 />
               </ListItem>
@@ -228,7 +228,7 @@ const DocsPage = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -250,4 +250,4 @@ const DocsPage = () => {
   );
 };
 
-export default DocsPage; 
+export default DocsPage;

@@ -2,11 +2,11 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Button, 
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
   AppBar,
   Toolbar,
   Link,
@@ -40,10 +40,10 @@ const WinnerPage = () => {
   const location = useLocation();
   const { tripId: urlTripId } = useParams();
   const tripCardRef = useRef(null);
-  
+
   // Get tripId from URL params, with location state as fallback
   const tripId = urlTripId || (location.state && location.state.tripId);
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tripData, setTripData] = useState(null);
@@ -63,13 +63,13 @@ const WinnerPage = () => {
 
   // Format time remaining as string
   const formatTimeRemaining = (milliseconds) => {
-    if (!milliseconds || milliseconds <= 0) return 'Voting ended';
-    
+    if (!milliseconds || milliseconds <= 0) {return 'Voting ended';}
+
     const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) {
       return `${days}d ${hours % 24}h remaining`;
     } else if (hours > 0) {
@@ -84,31 +84,31 @@ const WinnerPage = () => {
   // Fetch all required data
   const fetchData = useCallback(async () => {
     if (!tripId) {
-      setError("No trip ID provided");
+      setError('No trip ID provided');
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       // Get trip details which includes participants and survey responses
       const tripDetails = await getTripDetails(tripId);
-      
+
       if (tripDetails && tripDetails.participants) {
         setTripData(tripDetails);
-        
+
         // Calculate remaining voters if voting isn't complete
         const votedParticipants = new Set(tripDetails.votes ? tripDetails.votes.map(vote => vote.user_id) : []);
         const pendingParticipants = tripDetails.participants.filter(p => !votedParticipants.has(p.id));
         setPendingVoters(pendingParticipants);
-        
+
         // Calculate voting deadline if provided
         if (tripDetails.voting_deadline) {
           const deadline = new Date(tripDetails.voting_deadline).getTime();
           const now = new Date().getTime();
           const remaining = deadline - now;
-          
+
           if (remaining > 0) {
             setTimeRemaining(remaining);
           } else {
@@ -116,17 +116,17 @@ const WinnerPage = () => {
             setTimeRemaining(0);
           }
         }
-        
+
         // Extract trip lengths from survey responses if available
         const tripLengths = tripDetails.survey_responses
           .map(response => response.trip_length)
           .filter(length => !!length);
-          
+
         // Calculate average trip length if available
         if (tripLengths.length > 0) {
           const totalDays = tripLengths.reduce((sum, length) => sum + parseInt(length, 10), 0);
           const avgLength = Math.round(totalDays / tripLengths.length);
-          
+
           // Set trip data with preferred length
           setTripData(prevData => ({
             ...prevData,
@@ -140,7 +140,7 @@ const WinnerPage = () => {
         // Calculate overlapping date ranges from survey responses
         if (tripDetails.survey_responses && tripDetails.survey_responses.length > 0) {
           const stats = calculateSurveyStats(tripDetails.survey_responses);
-          
+
           // Format overlapping date ranges for display
           if (stats.overlappingRanges && stats.overlappingRanges.length > 0) {
             const formattedRanges = stats.overlappingRanges.map(range => {
@@ -151,18 +151,18 @@ const WinnerPage = () => {
                 days: days
               };
             });
-            
+
             // Sort by longest duration first
             formattedRanges.sort((a, b) => b.days - a.days);
-            
+
             setOptimalDateRanges(formattedRanges);
           }
         }
       }
-      
+
       // Get winner information which also checks voting status
       const winnerData = await getTripWinner(tripId);
-      
+
       if (winnerData.status === 'success') {
         // We have a winner
         setVotingComplete(true);
@@ -176,20 +176,20 @@ const WinnerPage = () => {
       }
     } catch (error) {
       safeLog.error('Error fetching trip data:', error);
-      setError(error.message || "Failed to load trip data");
+      setError(error.message || 'Failed to load trip data');
     } finally {
       setLoading(false);
     }
   }, [tripId]);
-  
+
   // Function to calculate winner when deadline reaches
   const handleCalculateWinner = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Call API to calculate winner
       const result = await calculateWinner(tripId);
-      
+
       if (result && result.status === 'success') {
         // Refresh data to show the winner
         fetchData();
@@ -231,17 +231,17 @@ const WinnerPage = () => {
             destination: winnerDetails.location,
             country: winnerDetails.country
           }));
-          
+
           // Then try to load a better image asynchronously
           const imageUrl = await getDestinationImage({
             destination: winnerDetails.location,
             country: winnerDetails.country
           });
-          
+
           setDestinationImage(imageUrl);
         } catch (err) {
           safeLog.error('Error loading winner destination image:', err);
-          
+
           // On error, ensure we at least have the fallback image
           setDestinationImage(getImageSync({
             destination: winnerDetails.location,
@@ -249,17 +249,17 @@ const WinnerPage = () => {
           }));
         }
       };
-      
+
       loadImage();
     }
   }, [winnerDetails]);
 
   const handleShare = () => {
-    if (!winnerDetails || !tripData) return;
-    
+    if (!winnerDetails || !tripData) {return;}
+
     // Create share URL
     const shareUrl = `${window.location.origin}/share-trip/${tripId}`;
-    
+
     // Use Web Share API if available
     if (navigator.share) {
       navigator.share({
@@ -275,10 +275,10 @@ const WinnerPage = () => {
       copyToClipboard(shareUrl);
     }
   };
-  
+
   const handleDownload = async () => {
-    if (!tripCardRef.current) return;
-    
+    if (!tripCardRef.current) {return;}
+
     try {
       const canvas = await html2canvas(tripCardRef.current, {
         scale: 2,
@@ -286,17 +286,17 @@ const WinnerPage = () => {
         useCORS: true,
         allowTaint: true
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
-      
+
       const imgWidth = 210; // A4 width in mm
       const imgHeight = canvas.height * imgWidth / canvas.width;
-      
+
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       pdf.save(`PackVote-Trip-${tripData.trip_name.replace(/\s+/g, '-')}.pdf`);
     } catch (error) {
@@ -304,7 +304,7 @@ const WinnerPage = () => {
       setError('Failed to generate PDF. Please try again later.');
     }
   };
-  
+
   const copyToClipboard = (text) => {
     // Check if clipboard API is available (not available in test environment)
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -329,26 +329,26 @@ const WinnerPage = () => {
       alert('Link copied to clipboard!');
     }
   };
-  
+
   const handleBuyCoffee = () => {
     window.open('https://www.buymeacoffee.com/packvote', '_blank');
   };
-  
+
   const getTripDetailsObject = () => {
-    if (!winnerDetails || !tripData) return null;
-    
+    if (!winnerDetails || !tripData) {return null;}
+
     return {
       location: winnerDetails.location,
       country: winnerDetails.country,
-      dates: optimalDateRanges.length > 0 
+      dates: optimalDateRanges.length > 0
         ? `${optimalDateRanges[0].start} - ${optimalDateRanges[0].end}`
-        : "Dates to be determined",
-      duration: tripData.preferredTripLength 
-        ? `${tripData.preferredTripLength.average} days` 
-        : "Duration to be determined",
-      travelers: tripData.participants ? `${tripData.participants.length} travelers` : "Unknown number of travelers",
-      organizer: tripData.organizer_name || "Unknown organizer",
-      description: winnerDetails.description || "No description available"
+        : 'Dates to be determined',
+      duration: tripData.preferredTripLength
+        ? `${tripData.preferredTripLength.average} days`
+        : 'Duration to be determined',
+      travelers: tripData.participants ? `${tripData.participants.length} travelers` : 'Unknown number of travelers',
+      organizer: tripData.organizer_name || 'Unknown organizer',
+      description: winnerDetails.description || 'No description available'
     };
   };
 
@@ -358,11 +358,11 @@ const WinnerPage = () => {
       <div className="landing-page winner-page">
         <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper', zIndex: 1100 }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                color: 'primary.main', 
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                color: 'primary.main',
                 fontWeight: 600,
                 cursor: 'pointer'
               }}
@@ -377,8 +377,8 @@ const WinnerPage = () => {
               <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
                 Donate
               </Link>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={() => navigate('/create-trip')}
                 className="primary-button"
               >
@@ -418,11 +418,11 @@ const WinnerPage = () => {
       <div className="landing-page">
         <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper', zIndex: 1100 }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                color: 'primary.main', 
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                color: 'primary.main',
                 fontWeight: 600,
                 cursor: 'pointer'
               }}
@@ -437,8 +437,8 @@ const WinnerPage = () => {
               <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
                 Donate
               </Link>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={() => navigate('/create-trip')}
                 className="primary-button"
               >
@@ -453,17 +453,17 @@ const WinnerPage = () => {
             <Typography variant="h4" align="center" gutterBottom>
               Voting in Progress
             </Typography>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, mt: 2 }}>
               <Chip
                 icon={<AccessTimeIcon />}
-                label={timeRemaining !== null ? formatTimeRemaining(timeRemaining) : "Calculating time..."}
+                label={timeRemaining !== null ? formatTimeRemaining(timeRemaining) : 'Calculating time...'}
                 color="primary"
                 variant="outlined"
                 sx={{ fontSize: '1rem', py: 1 }}
               />
             </Box>
-            
+
             {pendingVoters.length > 0 && (
               <Box sx={{ mt: 3, mb: 4 }}>
                 <Typography variant="h6" gutterBottom>
@@ -472,8 +472,8 @@ const WinnerPage = () => {
                 <List dense>
                   {pendingVoters.map(voter => (
                     <ListItem key={voter.id}>
-                      <ListItemText 
-                        primary={voter.name} 
+                      <ListItemText
+                        primary={voter.name}
                         secondary={`${voter.email || ''} ${voter.phone || ''}`}
                       />
                     </ListItem>
@@ -481,21 +481,21 @@ const WinnerPage = () => {
                 </List>
               </Box>
             )}
-            
+
             <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 3 }}>
               The final destination will be revealed when all votes are in or when the voting period ends.
             </Typography>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-              <Button 
-                variant="outlined" 
-                onClick={() => navigate(-1)} 
+              <Button
+                variant="outlined"
+                onClick={() => navigate(-1)}
               >
                 Go Back
               </Button>
-              
-              <Button 
-                variant="contained" 
+
+              <Button
+                variant="contained"
                 onClick={handleCalculateWinner}
                 className="primary-button"
                 disabled={loading || pendingVoters.length === 0}
@@ -515,7 +515,7 @@ const WinnerPage = () => {
   return (
     <div className="landing-page winner-page">
       {/* Confetti animation container - positioned fixed to appear behind content */}
-      <div className="confetti-container" style={{ 
+      <div className="confetti-container" style={{
         position: 'fixed',
         top: 0,
         left: 0,
@@ -530,11 +530,11 @@ const WinnerPage = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper', zIndex: 1100 }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -549,8 +549,8 @@ const WinnerPage = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -566,21 +566,21 @@ const WinnerPage = () => {
             icon={<CelebrationIcon />}
             label="Trip Confirmed!"
             color="primary"
-            sx={{ 
-              fontSize: '1.1rem', 
-              py: 2.5, 
+            sx={{
+              fontSize: '1.1rem',
+              py: 2.5,
               px: 2,
-              "& .MuiChip-icon": { fontSize: '1.5rem' }
+              '& .MuiChip-icon': { fontSize: '1.5rem' }
             }}
           />
         </Box>
 
         {/* Trip card */}
-        <Card 
-          ref={tripCardRef} 
+        <Card
+          ref={tripCardRef}
           elevation={3}
-          sx={{ 
-            borderRadius: 3, 
+          sx={{
+            borderRadius: 3,
             overflow: 'hidden',
             mb: 5,
             maxWidth: '700px',
@@ -609,20 +609,20 @@ const WinnerPage = () => {
                 backdropFilter: 'blur(3px)'
               }}
             >
-              <Typography 
-                variant="h3" 
-                component="h1" 
-                gutterBottom 
-                sx={{ 
+              <Typography
+                variant="h3"
+                component="h1"
+                gutterBottom
+                sx={{
                   color: 'white',
                   textShadow: '1px 1px 3px rgba(0,0,0,0.7)'
                 }}
               >
                 {tripDetails.destination}
               </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
+              <Box sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
                 gap: 1.5,
                 '& .MuiTypography-root': {
                   fontWeight: 500,
@@ -646,11 +646,11 @@ const WinnerPage = () => {
 
         {/* Additional Date Options */}
         {optimalDateRanges && optimalDateRanges.length > 1 && (
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 4, 
-              borderRadius: 3, 
+          <Paper
+            elevation={3}
+            sx={{
+              p: 4,
+              borderRadius: 3,
               maxWidth: '700px',
               mx: 'auto',
               mb: 4,
@@ -658,40 +658,40 @@ const WinnerPage = () => {
               zIndex: 1
             }}
           >
-            <Typography 
-              variant="h5" 
-              component="h2" 
-              gutterBottom 
+            <Typography
+              variant="h5"
+              component="h2"
+              gutterBottom
               align="center"
               sx={{ mb: 3 }}
             >
               Date Options
             </Typography>
-            
+
             {/* Add preferred trip length info */}
             {tripData?.preferredTripLength?.average && (
               <Box sx={{ mb: 3, textAlign: 'center' }}>
                 <Typography variant="body1" color="text.secondary" gutterBottom>
                   Based on everyone's preferences, the ideal trip length is:
                 </Typography>
-                <Chip 
+                <Chip
                   label={`${tripData.preferredTripLength.average} days`}
                   color="primary"
                   sx={{ fontWeight: 'bold', px: 2, py: 1, fontSize: '1rem' }}
                 />
               </Box>
             )}
-            
+
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
               These dates work for everyone based on your survey responses:
             </Typography>
-            
+
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {optimalDateRanges.map((range, index) => (
-                <Box 
+                <Box
                   key={index}
-                  sx={{ 
-                    p: 2, 
+                  sx={{
+                    p: 2,
                     border: '1px solid',
                     borderColor: 'divider',
                     borderRadius: 2,
@@ -705,24 +705,24 @@ const WinnerPage = () => {
                     {range.start} to {range.end.split(',')[0]}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip 
-                      label={`${range.days} days`} 
-                      size="small" 
-                      color="primary" 
-                      variant={index === 0 ? "filled" : "outlined"}
+                    <Chip
+                      label={`${range.days} days`}
+                      size="small"
+                      color="primary"
+                      variant={index === 0 ? 'filled' : 'outlined'}
                       sx={{ fontWeight: index === 0 ? 'bold' : 'regular' }}
                     />
                     {tripData?.preferredTripLength?.average && (
                       <Tooltip title={
-                        Math.abs(range.days - tripData.preferredTripLength.average) <= 1 
-                          ? "Perfect match with preferred trip length!" 
+                        Math.abs(range.days - tripData.preferredTripLength.average) <= 1
+                          ? 'Perfect match with preferred trip length!'
                           : `${Math.abs(range.days - tripData.preferredTripLength.average)} days ${range.days > tripData.preferredTripLength.average ? 'longer' : 'shorter'} than preferred length`
                       }>
                         <Chip
-                          icon={Math.abs(range.days - tripData.preferredTripLength.average) <= 1 ? <CheckCircleIcon /> : <TuneIcon />} 
-                          label={Math.abs(range.days - tripData.preferredTripLength.average) <= 1 ? "Ideal" : "Adjust"}
+                          icon={Math.abs(range.days - tripData.preferredTripLength.average) <= 1 ? <CheckCircleIcon /> : <TuneIcon />}
+                          label={Math.abs(range.days - tripData.preferredTripLength.average) <= 1 ? 'Ideal' : 'Adjust'}
                           size="small"
-                          color={Math.abs(range.days - tripData.preferredTripLength.average) <= 1 ? "success" : "default"}
+                          color={Math.abs(range.days - tripData.preferredTripLength.average) <= 1 ? 'success' : 'default'}
                           variant="outlined"
                         />
                       </Tooltip>
@@ -735,29 +735,29 @@ const WinnerPage = () => {
         )}
 
         {/* What's Next section */}
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 4, 
-            borderRadius: 3, 
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            borderRadius: 3,
             maxWidth: '700px',
             mx: 'auto',
             position: 'relative',
             zIndex: 1
           }}
         >
-          <Typography 
-            variant="h4" 
-            component="h2" 
-            gutterBottom 
+          <Typography
+            variant="h4"
+            component="h2"
+            gutterBottom
             align="center"
             sx={{ mb: 4 }}
           >
             What's Next?
           </Typography>
-          
-          <Box sx={{ 
-            display: 'flex', 
+
+          <Box sx={{
+            display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             justifyContent: 'center',
             gap: 2,
@@ -772,7 +772,7 @@ const WinnerPage = () => {
             >
               Share on Socials
             </Button>
-            
+
             <Button
               variant="outlined"
               startIcon={<GetAppIcon />}
@@ -782,7 +782,7 @@ const WinnerPage = () => {
             >
               Download Trip PDF
             </Button>
-            
+
             <Button
               variant="contained"
               startIcon={<LocalCafeIcon />}
@@ -798,8 +798,8 @@ const WinnerPage = () => {
       </Container>
 
       {/* Footer */}
-      <footer className="footer" style={{ 
-        position: 'relative', 
+      <footer className="footer" style={{
+        position: 'relative',
         zIndex: 1,
         width: '100%',
         marginTop: 'auto',
@@ -814,7 +814,7 @@ const WinnerPage = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -836,4 +836,4 @@ const WinnerPage = () => {
   );
 };
 
-export default WinnerPage; 
+export default WinnerPage;

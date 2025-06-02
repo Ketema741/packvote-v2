@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, Typography, Card, CardMedia, CircularProgress, Alert, ButtonGroup, Divider, Chip } from '@mui/material';
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Card,
+  CardMedia,
+  CircularProgress,
+  Alert,
+  ButtonGroup,
+  Divider,
+  Chip
+} from '@mui/material';
 import { getDestinationImage } from '../utils/imageService';
 import DevSettings from './DevSettings';
 
@@ -28,43 +40,43 @@ const UnsplashApiTest = () => {
     setLoading(true);
     setError('');
     setImageTags([]);
-    
+
     try {
       // Create a destination object similar to what our app uses
       const destObj = {
         city: destination.split(',')[0].trim(),
         country: destination.includes(',') ? destination.split(',')[1].trim() : ''
       };
-      
+
       console.log('Testing Unsplash API with destination:', destObj);
       const startTime = Date.now();
-      
+
       // Set up a listener to capture image metadata from the console logs
       const originalConsoleLog = console.log;
       const capturedLogs = [];
-      
+
       console.log = (...args) => {
         capturedLogs.push(args);
         originalConsoleLog(...args);
       };
-      
+
       const url = await getDestinationImage(destObj);
-      
+
       // Restore console.log
       console.log = originalConsoleLog;
-      
+
       // Process the captured logs to find image metadata
       let tags = [];
       let usesFeaturedCollection = false;
-      
+
       capturedLogs.forEach(logEntry => {
         const logString = JSON.stringify(logEntry);
-        
+
         // Check for collection info
         if (logString.includes('collection')) {
           usesFeaturedCollection = true;
         }
-        
+
         // Try to extract tags if they were logged
         if (logString.includes('tags') && logString.includes('title')) {
           try {
@@ -83,26 +95,26 @@ const UnsplashApiTest = () => {
           }
         }
       });
-      
+
       const endTime = Date.now();
       setImageUrl(url);
-      
+
       // Set tags if found
       if (tags.length > 0) {
         setImageTags(tags);
       } else {
         setImageTags([usesFeaturedCollection ? 'Using featured collection' : 'No collection used']);
       }
-      
+
       // Check if the URL is from Unsplash or a fallback
       const isUnsplashUrl = url.includes('unsplash.com');
       console.log('Received URL:', url);
       console.log('Is Unsplash URL:', isUnsplashUrl);
-      
+
       if (!isUnsplashUrl) {
         setError('Received a fallback image instead of an Unsplash image. Check the console for details.');
       }
-      
+
       // Add to test results
       setTestResults(prev => [
         {
@@ -113,7 +125,7 @@ const UnsplashApiTest = () => {
         },
         ...prev.slice(0, 4) // Keep last 5 tests
       ]);
-      
+
     } catch (err) {
       console.error('Error testing Unsplash API:', err);
       setError(`Error: ${err.message}`);
@@ -121,7 +133,7 @@ const UnsplashApiTest = () => {
       setLoading(false);
     }
   };
-  
+
   const handleTestLandmark = async (landmark) => {
     setDestination(`${landmark.city}, ${landmark.country}`);
     await new Promise(resolve => setTimeout(resolve, 10)); // Small delay to ensure state updates
@@ -140,21 +152,21 @@ const UnsplashApiTest = () => {
       <Typography variant="h4" gutterBottom>
         Unsplash API Test
       </Typography>
-      
+
       {/* Development Settings Panel */}
       <DevSettings />
-      
+
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-      
+
       <Box sx={{ mb: 3 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           API Key Status: {apiKey ? '✅ Found' : '❌ Not found'}
         </Typography>
-        
+
         <TextField
           label="Destination (City, Country)"
           value={destination}
@@ -162,23 +174,23 @@ const UnsplashApiTest = () => {
           fullWidth
           sx={{ mb: 2 }}
         />
-        
-        <Button 
-          variant="contained" 
+
+        <Button
+          variant="contained"
           onClick={handleTest}
           disabled={loading || !destination}
           sx={{ mb: 2 }}
         >
           {loading ? <CircularProgress size={24} /> : 'Test API'}
         </Button>
-        
+
         <Typography variant="body2" sx={{ mb: 1, mt: 2 }}>
           Quick Test with Popular Landmarks:
         </Typography>
-        
+
         <ButtonGroup variant="outlined" sx={{ flexWrap: 'wrap', gap: 1 }}>
           {POPULAR_LANDMARKS.map((landmark) => (
-            <Button 
+            <Button
               key={landmark.name}
               onClick={() => handleTestLandmark(landmark)}
               disabled={loading}
@@ -189,7 +201,7 @@ const UnsplashApiTest = () => {
           ))}
         </ButtonGroup>
       </Box>
-      
+
       {imageUrl && (
         <Card sx={{ mb: 4 }}>
           <CardMedia
@@ -202,7 +214,7 @@ const UnsplashApiTest = () => {
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Image Source: {imageUrl.includes('unsplash.com') ? '✅ Unsplash API' : '⚠️ Fallback Image'}
             </Typography>
-            
+
             {imageTags.length > 0 && (
               <Box sx={{ mt: 1, mb: 1.5 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
@@ -210,25 +222,25 @@ const UnsplashApiTest = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {imageTags.map((tag, idx) => (
-                    <Chip 
-                      key={idx} 
-                      label={tag} 
-                      size="small" 
+                    <Chip
+                      key={idx}
+                      label={tag}
+                      size="small"
                       variant="outlined"
-                      color={tag.toLowerCase().includes(destination.split(',')[0].toLowerCase()) ? 'primary' : 'default'} 
+                      color={tag.toLowerCase().includes(destination.split(',')[0].toLowerCase()) ? 'primary' : 'default'}
                     />
                   ))}
                 </Box>
               </Box>
             )}
-            
+
             <Typography variant="caption" component="div" sx={{ wordBreak: 'break-all', mt: 1 }}>
               URL: {imageUrl}
             </Typography>
           </Box>
         </Card>
       )}
-      
+
       {testResults.length > 0 && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom>Recent Test Results</Typography>
@@ -237,10 +249,10 @@ const UnsplashApiTest = () => {
               <React.Fragment key={index}>
                 {index > 0 && <Divider />}
                 <Box sx={{ p: 1.5, display: 'flex', alignItems: 'center' }}>
-                  <Box sx={{ 
-                    width: 20, 
-                    height: 20, 
-                    borderRadius: '50%', 
+                  <Box sx={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
                     backgroundColor: result.success ? 'success.main' : 'error.main',
                     mr: 1.5,
                     display: 'flex',
@@ -263,7 +275,7 @@ const UnsplashApiTest = () => {
           </Box>
         </Box>
       )}
-      
+
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" gutterBottom>Troubleshooting</Typography>
         <Typography variant="body2">
@@ -280,4 +292,4 @@ const UnsplashApiTest = () => {
   );
 };
 
-export default UnsplashApiTest; 
+export default UnsplashApiTest;

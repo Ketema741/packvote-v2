@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '../../test-utils/test-utils';
+import { render, screen, waitFor } from '../../test-utils/test-utils';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CreateTrip from '../CreateTrip';
@@ -33,19 +33,11 @@ const mockApiResponse = {
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  useNavigate: () => mockNavigate,
+  useNavigate: () => mockNavigate
 }));
 
 describe('CreateTrip', () => {
-  beforeEach(async () => {
-    // Clear mocks before each test
-    mockNavigate.mockClear();
-    api.createTrip.mockClear();
-    
-    // Set up the API mock to resolve successfully
-    api.createTrip.mockImplementation(() => Promise.resolve(mockApiResponse));
-    
-    // Render the component using our custom render function
+  const renderComponent = async () => {
     await render(
       <ThemeProvider theme={theme}>
         <BrowserRouter>
@@ -53,9 +45,19 @@ describe('CreateTrip', () => {
         </BrowserRouter>
       </ThemeProvider>
     );
+  };
+
+  beforeEach(() => {
+    // Clear mocks before each test
+    mockNavigate.mockClear();
+    api.createTrip.mockClear();
+
+    // Set up the API mock to resolve successfully
+    api.createTrip.mockImplementation(() => Promise.resolve(mockApiResponse));
   });
 
-  it('renders the form with all required fields', () => {
+  it('renders the form with all required fields', async () => {
+    await renderComponent();
     expect(screen.getByLabelText(/trip name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/your name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/your phone/i)).toBeInTheDocument();
@@ -64,6 +66,7 @@ describe('CreateTrip', () => {
   });
 
   it('allows adding participants', async () => {
+    await renderComponent();
     // Fill in trip name
     await userEvent.type(screen.getByLabelText(/trip name/i), 'Test Trip');
 
@@ -74,16 +77,19 @@ describe('CreateTrip', () => {
     await waitFor(() => {
       // After adding a participant, we should have inputs with label "Name" and "Phone"
       const nameInputs = screen.getAllByLabelText(/name/i);
-      const phoneInputs = screen.getAllByLabelText(/phone/i);
-      
       // We should have 3 name inputs (trip name, your name, participant name)
       expect(nameInputs.length).toBe(3);
+    });
+
+    await waitFor(() => {
+      const phoneInputs = screen.getAllByLabelText(/phone/i);
       // And 2 phone inputs (your phone, participant phone)
       expect(phoneInputs.length).toBe(2);
     });
   });
 
   it('allows removing participants', async () => {
+    await renderComponent();
     // Fill in trip name
     await userEvent.type(screen.getByLabelText(/trip name/i), 'Test Trip');
 
@@ -108,14 +114,17 @@ describe('CreateTrip', () => {
     // Verify participant was removed - should have fewer inputs now
     await waitFor(() => {
       const nameInputsAfter = screen.getAllByLabelText(/name/i);
-      const phoneInputsAfter = screen.getAllByLabelText(/phone/i);
-      
       expect(nameInputsAfter.length).toBeLessThan(nameInputsBefore.length);
+    });
+
+    await waitFor(() => {
+      const phoneInputsAfter = screen.getAllByLabelText(/phone/i);
       expect(phoneInputsAfter.length).toBeLessThan(phoneInputsBefore.length);
     });
   });
 
   it('validates required fields', async () => {
+    await renderComponent();
     // Try to submit without filling required fields
     await userEvent.click(screen.getByRole('button', { name: /create trip/i }));
 
@@ -128,6 +137,7 @@ describe('CreateTrip', () => {
   });
 
   it('submits the form with valid data', async () => {
+    await renderComponent();
     // Fill in trip name
     await userEvent.type(screen.getByLabelText(/trip name/i), 'Test Trip');
 
@@ -147,7 +157,7 @@ describe('CreateTrip', () => {
     // Find participant inputs by labels
     const nameInputs = screen.getAllByLabelText(/name/i);
     const phoneInputs = screen.getAllByLabelText(/phone/i);
-    
+
     // The last name input should be the participant name input
     const participantNameInput = nameInputs[nameInputs.length - 1];
     // The last phone input should be the participant phone input
@@ -186,4 +196,4 @@ describe('CreateTrip', () => {
       });
     });
   });
-}); 
+});

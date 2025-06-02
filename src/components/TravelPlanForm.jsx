@@ -31,4 +31,4 @@ const TravelPlanForm = () => {
   );
 };
 
-export default TravelPlanForm; 
+export default TravelPlanForm;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { render as rtlRender } from '@testing-library/react';
 import { act } from 'react';
 
@@ -21,4 +20,4 @@ async function render(ui, options = {}) {
 export * from '@testing-library/react';
 
 // Export the custom render function
-export { render }; 
+export { render };

@@ -1,8 +1,7 @@
-import { 
-  rateLimitedFetch, 
-  checkRateLimit, 
-  getRateLimiterStatus,
-  waitForRateLimit 
+import {
+  rateLimitedFetch,
+  checkRateLimit,
+  getRateLimiterStatus
 } from '../rateLimiter';
 
 // Mock the loggingSanitizer
@@ -18,11 +17,16 @@ jest.mock('../loggingSanitizer', () => ({
 // Mock fetch
 global.fetch = jest.fn();
 
+// Constants to avoid magic numbers
+const MAX_REQUESTS_FOR_TEST = 25;
+const SMS_ENDPOINT_LIMIT = 25;
+const DEFAULT_ENDPOINT_LIMIT = 20;
+
 describe('Rate Limiter', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     fetch.mockClear();
-    
+
     // Clear any existing rate limiter state
     // Since we're using a singleton, we need to clear localStorage to reset state
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -55,43 +59,54 @@ describe('Rate Limiter', () => {
     expect(fetch).toHaveBeenCalledWith(url, options);
   });
 
-  it('should reject requests that exceed the rate limit', async () => {
+  it('should handle rate limit scenarios appropriately', async () => {
     const url = '/api/test-high-limit';
     const options = { method: 'POST' };
 
-    let rateLimitExceeded = false;
-    let errorThrown = null;
+    const requestResults = [];
 
-    // Make multiple requests rapidly to trigger rate limiting
-    for (let i = 0; i < 25; i++) {
+    // Make multiple requests rapidly and collect results
+    for (let i = 0; i < MAX_REQUESTS_FOR_TEST; i++) {
       try {
         await rateLimitedFetch(url, options);
+        requestResults.push({ success: true, index: i });
       } catch (error) {
+        requestResults.push({
+          success: false,
+          index: i,
+          error: error,
+          isRateLimit: error.code === 'RATE_LIMIT_EXCEEDED'
+        });
+        // Break on first rate limit error since that's what we're testing
         if (error.code === 'RATE_LIMIT_EXCEEDED') {
-          rateLimitExceeded = true;
-          errorThrown = error;
           break;
         }
       }
     }
 
-    // We should eventually hit the rate limit
-    if (rateLimitExceeded) {
-      expect(errorThrown.code).toBe('RATE_LIMIT_EXCEEDED');
-      expect(errorThrown.retryAfter).toBeGreaterThan(0);
-    } else {
-      // If no rate limit was hit, that's also acceptable since the limits might be high
-      console.log('Rate limit not exceeded during test - this may be expected with high limits');
-    }
+    // Find rate limit errors
+    const rateLimitErrors = requestResults.filter(result => result.isRateLimit);
+
+    // Test that we collected results properly
+    expect(requestResults.length).toBeGreaterThan(0);
+
+    // If we got rate limit errors, verify their properties
+    rateLimitErrors.forEach(result => {
+      expect(result.error.code).toBe('RATE_LIMIT_EXCEEDED');
+      expect(result.error.retryAfter).toBeGreaterThan(0);
+    });
+
+    // This test passes regardless of whether rate limiting occurred or not
+    // since rate limiting behavior can depend on the specific limits configured
   });
 
   it('should normalize endpoint paths correctly', () => {
     const tripDetailStatus = getRateLimiterStatus('/api/trips/123');
     const tripCreateStatus = getRateLimiterStatus('/api/trips');
-    
+
     // Trip detail requests should be grouped under /api/trips/:id
     expect(tripDetailStatus.endpoint).toBe('/api/trips/:id');
-    
+
     // Trip creation should use the exact endpoint
     expect(tripCreateStatus.endpoint).toBe('/api/trips');
   });
@@ -107,7 +122,7 @@ describe('Rate Limiter', () => {
     expect(status).toHaveProperty('resetTime');
     expect(status).toHaveProperty('windowDuration');
 
-    expect(status.limit).toBe(25); // Should match the configured limit for SMS
+    expect(status.limit).toBe(SMS_ENDPOINT_LIMIT); // Should match the configured limit for SMS
     expect(status.used).toBeGreaterThanOrEqual(0);
     expect(status.remaining).toBeGreaterThanOrEqual(0);
   });
@@ -115,7 +130,7 @@ describe('Rate Limiter', () => {
   it('should handle URL objects and extract paths', () => {
     const fullUrl = 'http://localhost:3000/api/trips/456';
     const status = getRateLimiterStatus(fullUrl);
-    
+
     // Should extract the path and normalize it
     expect(status.endpoint).toBe('/api/trips/:id');
   });
@@ -136,8 +151,8 @@ describe('Rate Limiter', () => {
   it('should handle default endpoint for unknown paths', () => {
     const unknownUrl = '/api/unknown/endpoint';
     const status = getRateLimiterStatus(unknownUrl);
-    
+
     expect(status.endpoint).toBe('default');
-    expect(status.limit).toBe(20); // Default limit
+    expect(status.limit).toBe(DEFAULT_ENDPOINT_LIMIT); // Default limit
   });
-}); 
+});

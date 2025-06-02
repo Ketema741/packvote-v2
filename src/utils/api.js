@@ -5,7 +5,9 @@ import { startApiRequest, trackApiRequest, captureError } from './monitoring';
 import { safeLog, sanitizeForLogging } from './loggingSanitizer';
 import { rateLimitedFetch, checkRateLimit } from './rateLimiter';
 
+// Constants
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
+const HTTP_TOO_MANY_REQUESTS = 429;
 
 /**
  * Enhanced fetch wrapper that handles rate limiting and standard error processing
@@ -25,19 +27,19 @@ const apiRequest = async (url, options = {}, respectRateLimit = true) => {
       throw error;
     }
   }
-  
+
   // Use rate limited fetch
   const response = await rateLimitedFetch(url, options, respectRateLimit);
-  
+
   // Handle rate limit responses from server
-  if (response.status === 429) {
+  if (response.status === HTTP_TOO_MANY_REQUESTS) {
     const retryAfter = response.headers.get('Retry-After') || 60;
     const error = new Error(`Server rate limit exceeded. Please wait ${retryAfter} seconds before retrying.`);
     error.code = 'SERVER_RATE_LIMIT_EXCEEDED';
     error.retryAfter = parseInt(retryAfter);
     throw error;
   }
-  
+
   return response;
 };
 
@@ -106,14 +108,14 @@ export const createTrip = async (tripData) => {
     return await response.json();
   } catch (error) {
     safeLog.error('Error creating trip:', error);
-    
+
     // Handle rate limit errors specifically
     if (error.code === 'RATE_LIMIT_EXCEEDED' || error.code === 'SERVER_RATE_LIMIT_EXCEEDED') {
       safeLog.warn(`Rate limit hit for trip creation: ${error.message}`);
       // Don't capture rate limit errors as they're expected behavior
       throw error;
     }
-    
+
     // If the error wasn't already captured (e.g., network error)
     if (!error.message.includes('A trip with this name') && !error.message.includes('HTTP error')) {
       captureError(error, {
@@ -159,13 +161,13 @@ export const sendSMS = async (participantId) => {
     return await response.json();
   } catch (error) {
     safeLog.error('Error sending SMS:', error);
-    
+
     // Handle rate limit errors specifically
     if (error.code === 'RATE_LIMIT_EXCEEDED' || error.code === 'SERVER_RATE_LIMIT_EXCEEDED') {
       safeLog.warn(`Rate limit hit for SMS sending: ${error.message}`);
       throw error;
     }
-    
+
     if (!error.message.includes('HTTP error')) {
       captureError(error, {
         endpoint: url,
@@ -281,13 +283,13 @@ export const saveSurveyResponse = async (participantId, responseData) => {
     return await response.json();
   } catch (error) {
     safeLog.error('Error saving survey response:', error);
-    
+
     // Handle rate limit errors specifically
     if (error.code === 'RATE_LIMIT_EXCEEDED' || error.code === 'SERVER_RATE_LIMIT_EXCEEDED') {
       safeLog.warn(`Rate limit hit for survey response: ${error.message}`);
       throw error;
     }
-    
+
     if (!error.message.includes('HTTP error')) {
       captureError(error, {
         endpoint: url,
@@ -714,13 +716,13 @@ export const generateTravelRecommendations = async (tripId, options = {}) => {
     return data;
   } catch (error) {
     safeLog.error('Error generating travel recommendations:', error);
-    
+
     // Handle rate limit errors specifically
     if (error.code === 'RATE_LIMIT_EXCEEDED' || error.code === 'SERVER_RATE_LIMIT_EXCEEDED') {
       safeLog.warn(`Rate limit hit for recommendation generation: ${error.message}`);
       throw error;
     }
-    
+
     throw error;
   }
 };
@@ -936,13 +938,13 @@ export const submitVotes = async (voteData) => {
     return responseData;
   } catch (error) {
     safeLog.error('Error submitting votes:', error);
-    
+
     // Handle rate limit errors specifically
     if (error.code === 'RATE_LIMIT_EXCEEDED' || error.code === 'SERVER_RATE_LIMIT_EXCEEDED') {
       safeLog.warn(`Rate limit hit for vote submission: ${error.message}`);
       throw error;
     }
-    
+
     throw error;
   }
 };

@@ -1,6 +1,6 @@
 /**
  * Client-side rate limiting utility
- * 
+ *
  * This module provides rate limiting functionality for API calls to complement
  * the server-side rate limiting and improve user experience by preventing
  * excessive requests that would be rejected by the server.
@@ -12,7 +12,7 @@ class RateLimiter {
   constructor() {
     this.limits = new Map();
     this.requestCounts = new Map();
-    
+
     // Default rate limits (requests per minute)
     this.defaultLimits = {
       '/api/trips': { limit: 8, window: 60000 }, // 8 requests per minute (buffer from server's 10)
@@ -23,17 +23,17 @@ class RateLimiter {
       '/api/recommendations/vote': { limit: 25, window: 60000 }, // 25 requests per minute (buffer from server's 30)
       'default': { limit: 20, window: 60000 } // Default limit for other endpoints
     };
-    
+
     // Initialize limits
     Object.entries(this.defaultLimits).forEach(([endpoint, config]) => {
       this.limits.set(endpoint, config);
       this.requestCounts.set(endpoint, []);
     });
-    
+
     // Clean up old requests every minute
     setInterval(() => this.cleanup(), 30000);
   }
-  
+
   /**
    * Check if a request to the given endpoint is allowed
    * @param {string} endpoint - API endpoint path
@@ -43,19 +43,19 @@ class RateLimiter {
     const normalizedEndpoint = this.normalizeEndpoint(endpoint);
     const config = this.limits.get(normalizedEndpoint) || this.limits.get('default');
     const requests = this.requestCounts.get(normalizedEndpoint) || [];
-    
+
     const now = Date.now();
     const windowStart = now - config.window;
-    
+
     // Filter out requests outside the current window
     const recentRequests = requests.filter(timestamp => timestamp > windowStart);
-    
+
     if (recentRequests.length >= config.limit) {
       const oldestRequest = Math.min(...recentRequests);
       const retryAfter = Math.ceil((oldestRequest + config.window - now) / 1000);
-      
+
       safeLog.warn(`Rate limit exceeded for ${normalizedEndpoint}. Retry after ${retryAfter} seconds.`);
-      
+
       return {
         allowed: false,
         retryAfter,
@@ -63,14 +63,14 @@ class RateLimiter {
         resetTime: oldestRequest + config.window
       };
     }
-    
+
     return {
       allowed: true,
       remaining: config.limit - recentRequests.length - 1, // -1 for the current request
       resetTime: now + config.window
     };
   }
-  
+
   /**
    * Record a request to the given endpoint
    * @param {string} endpoint - API endpoint path
@@ -78,13 +78,13 @@ class RateLimiter {
   recordRequest(endpoint) {
     const normalizedEndpoint = this.normalizeEndpoint(endpoint);
     const requests = this.requestCounts.get(normalizedEndpoint) || [];
-    
+
     requests.push(Date.now());
     this.requestCounts.set(normalizedEndpoint, requests);
-    
+
     safeLog.debug(`Recorded request to ${normalizedEndpoint}. Total recent requests: ${requests.length}`);
   }
-  
+
   /**
    * Normalize endpoint path for consistent tracking
    * @param {string} endpoint - Full URL or endpoint path
@@ -98,53 +98,53 @@ class RateLimiter {
     } catch (e) {
       // Not a full URL, assume it's already a path
     }
-    
+
     // Normalize specific patterns
     if (endpoint.startsWith('/api/trips/') && endpoint !== '/api/trips') {
       return '/api/trips/:id'; // Group trip detail requests
     }
-    
+
     if (endpoint.startsWith('/api/recommendations/votes/')) {
       return '/api/recommendations/votes/:id';
     }
-    
+
     if (endpoint.startsWith('/api/recommendations/calculate-winner/')) {
       return '/api/recommendations/calculate-winner/:id';
     }
-    
+
     if (endpoint.startsWith('/api/recommendations/winner/')) {
       return '/api/recommendations/winner/:id';
     }
-    
+
     if (endpoint.startsWith('/api/recommendations/') && endpoint.endsWith('/generate')) {
       return '/api/recommendations/generate';
     }
-    
+
     // Check if we have a specific limit for this endpoint
     if (this.limits.has(endpoint)) {
       return endpoint;
     }
-    
+
     return 'default';
   }
-  
+
   /**
    * Clean up old request records to prevent memory leaks
    */
   cleanup() {
     const now = Date.now();
-    
+
     this.requestCounts.forEach((requests, endpoint) => {
       const config = this.limits.get(endpoint) || this.limits.get('default');
       const windowStart = now - config.window;
-      
+
       const recentRequests = requests.filter(timestamp => timestamp > windowStart);
       this.requestCounts.set(endpoint, recentRequests);
     });
-    
+
     safeLog.debug('Rate limiter cleanup completed');
   }
-  
+
   /**
    * Get current status for an endpoint
    * @param {string} endpoint - API endpoint path
@@ -154,11 +154,11 @@ class RateLimiter {
     const normalizedEndpoint = this.normalizeEndpoint(endpoint);
     const config = this.limits.get(normalizedEndpoint) || this.limits.get('default');
     const requests = this.requestCounts.get(normalizedEndpoint) || [];
-    
+
     const now = Date.now();
     const windowStart = now - config.window;
     const recentRequests = requests.filter(timestamp => timestamp > windowStart);
-    
+
     return {
       endpoint: normalizedEndpoint,
       limit: config.limit,
@@ -168,7 +168,7 @@ class RateLimiter {
       windowDuration: config.window
     };
   }
-  
+
   /**
    * Wait for rate limit to reset if needed
    * @param {string} endpoint - API endpoint path
@@ -176,13 +176,13 @@ class RateLimiter {
    */
   async waitForLimit(endpoint) {
     const status = this.checkLimit(endpoint);
-    
+
     if (status.allowed) {
       return Promise.resolve();
     }
-    
+
     safeLog.info(`Waiting ${status.retryAfter} seconds for rate limit reset on ${endpoint}`);
-    
+
     return new Promise(resolve => {
       setTimeout(resolve, status.retryAfter * 1000);
     });
@@ -202,7 +202,7 @@ const rateLimiter = new RateLimiter();
 export const rateLimitedFetch = async (url, options = {}, respectRateLimit = true) => {
   if (respectRateLimit) {
     const limitCheck = rateLimiter.checkLimit(url);
-    
+
     if (!limitCheck.allowed) {
       const error = new Error(`Rate limit exceeded. Please wait ${limitCheck.retryAfter} seconds before retrying.`);
       error.code = 'RATE_LIMIT_EXCEEDED';
@@ -210,11 +210,11 @@ export const rateLimitedFetch = async (url, options = {}, respectRateLimit = tru
       error.resetTime = limitCheck.resetTime;
       throw error;
     }
-    
+
     // Record the request
     rateLimiter.recordRequest(url);
   }
-  
+
   // Make the actual request
   return fetch(url, options);
 };
@@ -228,7 +228,7 @@ export const getRateLimiterStatus = (endpoint = null) => {
   if (endpoint) {
     return rateLimiter.getStatus(endpoint);
   }
-  
+
   // Return status for all tracked endpoints
   const allStatuses = {};
   rateLimiter.limits.forEach((config, endpointPath) => {
@@ -236,7 +236,7 @@ export const getRateLimiterStatus = (endpoint = null) => {
       allStatuses[endpointPath] = rateLimiter.getStatus(endpointPath);
     }
   });
-  
+
   return allStatuses;
 };
 
@@ -258,4 +258,4 @@ export const waitForRateLimit = (endpoint) => {
   return rateLimiter.waitForLimit(endpoint);
 };
 
-export default rateLimiter; 
+export default rateLimiter;

@@ -619,7 +619,7 @@ const AIRecommendationsPage = () => {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [effectiveTripId]);
+  }, [effectiveTripId, generating, regenerationsRemaining]);
 
   // Manual check to ensure generating state isn't stuck
   useEffect(() => {

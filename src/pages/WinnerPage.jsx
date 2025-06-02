@@ -191,8 +191,12 @@ const WinnerPage = () => {
       } else if (winnerData.message === 'No winner yet' || winnerData.message === 'Voting in progress') {
         // No winner yet - need to check if we should calculate one
 
+        // Recalculate pending participants in this scope
+        const votedParticipants = new Set(tripDetails.votes ? tripDetails.votes.map(vote => vote.user_id) : []);
+        const currentPendingParticipants = tripDetails.participants.filter(p => !votedParticipants.has(p.id));
+
         // Check if all participants have voted or if voting deadline has passed
-        const allVoted = pendingParticipants.length === 0;
+        const allVoted = currentPendingParticipants.length === 0;
         const deadlinePassed = tripDetails.voting_deadline && new Date() > new Date(tripDetails.voting_deadline);
 
         if (allVoted || deadlinePassed) {

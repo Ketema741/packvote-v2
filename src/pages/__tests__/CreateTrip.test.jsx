@@ -20,13 +20,15 @@ const mockApiResponse = {
   organizer: {
     id: '456',
     name: 'John Doe',
-    phone: '+12025550101'
+    phone: '+15551000401'
   },
-  participants: [{
-    id: '789',
-    name: 'Jane Doe',
-    phone: '+12025550102'
-  }]
+  participants: [
+    {
+      id: '789',
+      name: 'Jane Doe',
+      phone: '+15551000402'
+    }
+  ]
 };
 
 // Mock the useNavigate hook
@@ -143,7 +145,7 @@ describe('CreateTrip', () => {
 
     // Fill in organizer details
     await userEvent.type(screen.getByLabelText(/your name/i), 'John Doe');
-    await userEvent.type(screen.getByLabelText(/your phone/i), '2025550101');
+    await userEvent.type(screen.getByLabelText(/your phone/i), '5555550101');
 
     // Add a participant
     await userEvent.click(screen.getByRole('button', { name: /add participant/i }));
@@ -174,7 +176,7 @@ describe('CreateTrip', () => {
     await waitFor(() => {
       expect(api.createTrip).toHaveBeenCalledWith({
         organizer_name: 'John Doe',
-        organizer_phone: '+12025550101',
+        organizer_phone: '+15555550101',
         trip_name: 'Test Trip',
         participants: [{
           name: 'Jane Doe',

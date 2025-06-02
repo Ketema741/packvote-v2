@@ -316,70 +316,51 @@ const DashboardPage = () => {
     try {
       setGeneratingRecommendations(true);
 
-      // Get trip data to check if it needs regeneration
+      // Get trip data to check regenerations remaining
       const tripDetails = await getTripDetails(tripId);
 
-      const hasRecentRecommendations = tripDetails.has_recommendations === true;
-
       // Get regenerations count directly from the API response
-      // This ensures we're always using the most up-to-date value
       const regenerationsRemaining = tripDetails.regenerations_remaining !== undefined
         ? parseInt(tripDetails.regenerations_remaining, 10)
         : 3; // Default to 3 if not specified
 
-      if (!hasRecentRecommendations) {
-        // Only generate if needed
+      // Always show generation message since we're generating recommendations
+      setToast({
+        open: true,
+        message: 'Generating destination recommendations (this could take a few minutes)...',
+        severity: 'info'
+      });
+
+      // Always generate recommendations when the button is clicked
+      // This ensures SMS messages are sent and each trip gets unique recommendations
+      const generatedRecs = await generateTravelRecommendations(tripId);
+
+      // Verify we got valid recommendations back
+      if (!generatedRecs || !generatedRecs.recommendations) {
         setToast({
           open: true,
-          message: 'Generating new destination recommendations (this could take a few minutes)...',
-          severity: 'info'
+          message: 'Failed to generate recommendations. Please try again.',
+          severity: 'error'
         });
-
-        // Generate recommendations
-        const generatedRecs = await generateTravelRecommendations(tripId);
-
-        // Verify we got valid recommendations back
-        if (!generatedRecs || !generatedRecs.recommendations) {
-          setToast({
-            open: true,
-            message: 'Failed to generate recommendations. Please try again.',
-            severity: 'error'
-          });
-          setGeneratingRecommendations(false);
-          return;
-        }
-
-        // Navigate to AI recommendations page where existing recommendations will be shown if available
-        navigate(`/recommendations/${tripId}`, {
-          state: {
-            tripId,
-            fromDashboard: true,
-            regenerationsRemaining,
-            timestamp: Date.now() // Add a timestamp to force refresh
-          }
-        });
-      } else {
-        setToast({
-          open: true,
-          message: 'Loading destination recommendations...',
-          severity: 'info'
-        });
-
-        // Navigate to AI recommendations page where existing recommendations will be shown
-        navigate(`/recommendations/${tripId}`, {
-          state: {
-            tripId,
-            fromDashboard: true,
-            regenerationsRemaining,
-            timestamp: Date.now() // Add a timestamp to force refresh
-          }
-        });
+        setGeneratingRecommendations(false);
+        return;
       }
+
+      // Navigate to AI recommendations page where the new recommendations will be shown
+      navigate(`/recommendations/${tripId}`, {
+        state: {
+          tripId,
+          fromDashboard: true,
+          regenerationsRemaining: regenerationsRemaining - 1, // Decrement since we just used one
+          timestamp: Date.now() // Add a timestamp to force refresh
+        }
+      });
+
     } catch (error) {
       safeLog.error('Error in handleGetAIDestinations:', error);
       setToast({
         open: true,
-        message: `Failed to load recommendations: ${error.message}`,
+        message: `Failed to generate recommendations: ${error.message}`,
         severity: 'error'
       });
     } finally {

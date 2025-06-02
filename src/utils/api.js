@@ -49,7 +49,7 @@ const apiRequest = async (url, options = {}, respectRateLimit = true) => {
  * @returns {Promise<Object>} Trip creation result
  */
 export const createTrip = async (tripData) => {
-  const url = `${API_BASE_URL}/trips/`;
+  const url = `${API_BASE_URL}/trips`;
   const startTime = startApiRequest(url, 'POST');
 
   try {

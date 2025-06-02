@@ -15,7 +15,7 @@ class RateLimiter {
 
     // Default rate limits (requests per minute)
     this.defaultLimits = {
-      '/api/trips': { limit: 8, window: 60000 }, // 8 requests per minute (buffer from server's 10)
+      '/api/trips': { limit: 50, window: 60000 }, // 50 requests per minute (increased for development)
       '/api/send-sms': { limit: 25, window: 60000 }, // 25 requests per minute (buffer from server's 30)
       '/api/send-all-sms': { limit: 8, window: 60000 }, // 8 requests per minute (buffer from server's 10)
       '/api/survey-response': { limit: 50, window: 60000 }, // 50 requests per minute (buffer from server's 60)

@@ -619,7 +619,7 @@ const AIRecommendationsPage = () => {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [effectiveTripId, regenerationsRemaining, generating]);
+  }, [effectiveTripId, generating, regenerationsRemaining]);
 
   // Manual check to ensure generating state isn't stuck
   useEffect(() => {
@@ -1012,7 +1012,6 @@ const AIRecommendationsPage = () => {
                 {recommendations.map((recommendation, index) => {
                   // Extract ID for clarity and debugging
                   const recId = recommendation.id;
-                  safeLog.info(`Rendering recommendation ${index}:`, recId);
 
                   // Check if this recommendation is selected
                   const isSelected = selectedRecIds.includes(recId);

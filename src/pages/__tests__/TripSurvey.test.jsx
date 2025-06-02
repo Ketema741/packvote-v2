@@ -19,13 +19,18 @@ api.getTripDetails.mockImplementation(() => Promise.resolve({
   name: 'Test Trip',
   organizer: {
     name: 'John Doe',
-    phone: '+12025550101'
+    phone: '+15551000301'
   },
-  participants: [{
-    id: '789',
-    name: 'Jane Doe',
-    phone: '+12025550102'
-  }]
+  participants: [
+    {
+      name: 'John Doe',
+      phone: '+15551000301'
+    },
+    {
+      name: 'Jane Smith',
+      phone: '+15551000302'
+    }
+  ]
 }));
 
 // Mock the useNavigate hook

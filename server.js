@@ -1,10 +1,10 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = 3000;
+const PORT = process.env.PORT || DEFAULT_PORT;
 
 // Simple server-side logging function that sanitizes sensitive data
 const serverLog = {
@@ -39,8 +39,9 @@ const metrics = {
 
 // Metrics endpoint - returns Prometheus-compatible metrics
 app.get('/metrics', (req, res) => {
-  const uptime = (Date.now() - metrics.startTime) / 1000;
-  
+  const MILLISECONDS_PER_SECOND = 1000;
+  const uptime = (Date.now() - metrics.startTime) / MILLISECONDS_PER_SECOND;
+
   // Format metrics for Prometheus
   const prometheusMetrics = [
     '# HELP packvote_ui_page_loads_total Total number of page loads',
@@ -57,17 +58,18 @@ app.get('/metrics', (req, res) => {
     `packvote_ui_navigation_total ${metrics.navigationCount}`,
     '# HELP packvote_ui_uptime_seconds Uptime in seconds',
     '# TYPE packvote_ui_uptime_seconds gauge',
-    `packvote_ui_uptime_seconds ${uptime}`,
+    `packvote_ui_uptime_seconds ${uptime}`
   ].join('\n');
-  
+
   res.set('Content-Type', 'text/plain');
   res.send(prometheusMetrics);
 });
 
 // API endpoint to update metrics from the client
 app.post('/api/metrics', express.json(), (req, res) => {
-  const { metric, value = 1 } = req.body;
-  
+  const DEFAULT_METRIC_VALUE = 1;
+  const { metric, value = DEFAULT_METRIC_VALUE } = req.body;
+
   // Map frontend metrics to server metrics if needed
   const metricMap = {
     'navigationCount': 'navigationCount',
@@ -75,15 +77,16 @@ app.post('/api/metrics', express.json(), (req, res) => {
     'apiCalls': 'apiCalls',
     'totalErrors': 'totalErrors'
   };
-  
+
   const serverMetric = metricMap[metric] || metric;
-  
+
   // Only update known metrics
   if (serverMetric in metrics) {
     metrics[serverMetric] += value;
   }
-  
-  res.status(200).json({ success: true });
+
+  const SUCCESS_STATUS = 200;
+  res.status(SUCCESS_STATUS).json({ success: true });
 });
 
 // For all other requests, serve the React app
@@ -94,4 +97,4 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   serverLog.info(`Server running on port ${PORT}`);
   serverLog.info(`Metrics available at http://localhost:${PORT}/metrics`);
-}); 
+});

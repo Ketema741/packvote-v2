@@ -160,16 +160,70 @@ const WinnerPage = () => {
         }
       }
 
-      // Get winner information which also checks voting status
-      const winnerData = await getTripWinner(tripId);
+      // Get winner information - try to get existing winner first
+      let winnerData = await getTripWinner(tripId);
 
       if (winnerData.status === 'success') {
-        // We have a winner
+        // We have an existing winner
         setVotingComplete(true);
         setWinnerDetails(winnerData.winner.winner_details);
+      } else if (winnerData.status === 'ready_to_calculate') {
+        // All votes are in, calculate winner and send SMS notification
+        safeLog.info('All votes in, calculating winner with SMS notification');
+        try {
+          const calculateResult = await calculateWinner(tripId);
+          if (calculateResult && calculateResult.status === 'success') {
+            // Get the updated winner data
+            winnerData = await getTripWinner(tripId);
+            if (winnerData.status === 'success') {
+              setVotingComplete(true);
+              setWinnerDetails(winnerData.winner.winner_details);
+            }
+          } else {
+            // Calculation failed, show voting in progress
+            setVotingComplete(false);
+          }
+        } catch (calcError) {
+          safeLog.error('Error calculating winner:', calcError);
+          // Fall back to voting in progress view
+          setVotingComplete(false);
+        }
       } else if (winnerData.message === 'No winner yet' || winnerData.message === 'Voting in progress') {
-        // No winner yet, keep the voting view
-        setVotingComplete(false);
+        // No winner yet - need to check if we should calculate one
+
+        // Recalculate pending participants in this scope
+        const votedParticipants = new Set(tripDetails.votes ? tripDetails.votes.map(vote => vote.user_id) : []);
+        const currentPendingParticipants = tripDetails.participants.filter(p => !votedParticipants.has(p.id));
+
+        // Check if all participants have voted or if voting deadline has passed
+        const allVoted = currentPendingParticipants.length === 0;
+        const deadlinePassed = tripDetails.voting_deadline && new Date() > new Date(tripDetails.voting_deadline);
+
+        if (allVoted || deadlinePassed) {
+          // Calculate winner and send SMS notification
+          safeLog.info('All votes in or deadline passed, calculating winner with SMS notification');
+          try {
+            const calculateResult = await calculateWinner(tripId);
+            if (calculateResult && calculateResult.status === 'success') {
+              // Get the updated winner data
+              winnerData = await getTripWinner(tripId);
+              if (winnerData.status === 'success') {
+                setVotingComplete(true);
+                setWinnerDetails(winnerData.winner.winner_details);
+              }
+            } else {
+              // Calculation failed, show voting in progress
+              setVotingComplete(false);
+            }
+          } catch (calcError) {
+            safeLog.error('Error calculating winner:', calcError);
+            // Fall back to voting in progress view
+            setVotingComplete(false);
+          }
+        } else {
+          // Not ready to calculate winner yet, keep voting view
+          setVotingComplete(false);
+        }
       } else {
         // Some error occurred
         setError(winnerData.message || 'Failed to get winner data');

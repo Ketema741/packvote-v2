@@ -29,6 +29,23 @@ import { safeLog } from '../utils/loggingSanitizer';
 import '../styles/AIRecommendationsPage.css';
 import '../styles/LandingPage.css';
 
+/*
+ * TODO: Break this large component (1191 lines) into smaller, manageable components:
+ * - RecommendationCard: Individual recommendation display with actions
+ * - RecommendationsList: Grid/list of recommendations with filtering
+ * - TripSummaryCard: Display trip overview and participant info
+ * - RegenerationDialog: Handle recommendation regeneration with options
+ * - FeedbackDialog: Handle feedback submission for recommendations
+ * - RecommendationFilters: Filter and sort recommendations
+ * - VotingProgress: Show voting status if voting has started
+ * 
+ * TODO: Implement virtualization for large recommendation lists
+ * TODO: Add proper loading skeletons for each component section
+ * TODO: Implement recommendation caching to avoid unnecessary API calls
+ * TODO: Add image lazy loading for recommendation photos
+ * TODO: Implement infinite scroll or pagination for recommendations
+ */
+
 const AIRecommendationsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();

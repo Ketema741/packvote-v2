@@ -36,6 +36,21 @@ import { safeLog } from '../utils/loggingSanitizer';
 import '../styles/DashboardPage.css';
 import '../styles/LandingPage.css';
 
+/*
+ * TODO: Break this large component (999 lines) into smaller, manageable components:
+ * - TripProgressCard: Display trip progress and participant status
+ * - ParticipantsList: Handle participant list with SMS functionality
+ * - TripStatsCard: Display budget, dates, and vibes statistics
+ * - VotingStatusCard: Handle voting status and countdown timer
+ * - RecommendationsCard: Handle AI recommendations generation
+ * - TripActionsBar: Handle navigation and main actions
+ * 
+ * TODO: Implement state management (Context/Redux) for trip data
+ * TODO: Add proper error boundaries for component isolation
+ * TODO: Implement lazy loading for better performance
+ * TODO: Add skeleton loading states for better UX
+ */
+
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { tripId } = useParams();

@@ -42,7 +42,7 @@ describe('API utilities with monitoring', () => {
 
     // Verify API call was made
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/trips/'),
+      expect.stringContaining('/trips'),
       expect.objectContaining({
         method: 'POST',
         headers: expect.any(Object),

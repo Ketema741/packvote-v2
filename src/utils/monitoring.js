@@ -1,6 +1,6 @@
 /**
  * Monitoring utilities for the PackVote UI
- * 
+ *
  * This module provides functions for monitoring and error tracking
  * in the frontend application.
  */
@@ -17,7 +17,7 @@ export const initPerformanceMonitoring = () => {
       const perfData = window.performance.timing;
       const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
       const domLoadTime = perfData.domComplete - perfData.domLoading;
-      
+
       // Log performance data (would send to backend in production)
       console.log('Performance metrics:', {
         pageLoadTime,
@@ -26,10 +26,10 @@ export const initPerformanceMonitoring = () => {
         dnsLookupTime: perfData.domainLookupEnd - perfData.domainLookupStart,
         serverResponseTime: perfData.responseEnd - perfData.requestStart,
         resourceLoadTime: perfData.loadEventEnd - perfData.responseEnd,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString()
       });
     });
-    
+
     // Monitor client-side navigation performance
     if ('PerformanceObserver' in window) {
       const navigationObserver = new PerformanceObserver((entryList) => {
@@ -41,12 +41,12 @@ export const initPerformanceMonitoring = () => {
               domContentLoaded: entry.domContentLoadedEventEnd - entry.startTime,
               firstPaint: entry.responseEnd,
               url: entry.name,
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString()
             });
           }
         });
       });
-      
+
       navigationObserver.observe({ entryTypes: ['navigation'] });
     }
   }
@@ -58,7 +58,7 @@ const metrics = {
   apiCalls: 0,
   totalErrors: 0,
   navigationCount: 0,
-  lastUpdateTime: Date.now(),
+  lastUpdateTime: Date.now()
 };
 
 // Update metrics
@@ -67,16 +67,16 @@ export const trackMetric = (metricName, increment = 1) => {
     metrics[metricName] += increment;
   }
   metrics.lastUpdateTime = Date.now();
-  
+
   // Send to server for Prometheus scraping (in production/development)
   if (process.env.NODE_ENV !== 'test') {
     try {
       fetch('/api/metrics', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ metric: metricName, value: increment }),
+        body: JSON.stringify({ metric: metricName, value: increment })
       }).catch(error => {
         console.error('Failed to update server metrics:', error);
       });
@@ -107,9 +107,9 @@ export const generatePrometheusMetrics = () => {
     `packvote_ui_navigation_total ${metrics.navigationCount}`,
     '# HELP packvote_ui_uptime_seconds Uptime in seconds',
     '# TYPE packvote_ui_uptime_seconds gauge',
-    `packvote_ui_uptime_seconds ${uptime}`,
+    `packvote_ui_uptime_seconds ${uptime}`
   ];
-  
+
   return lines.join('\n');
 };
 
@@ -122,11 +122,11 @@ export const errorTracker = {
       message: error.message,
       stack: error.stack,
       context,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
-    
+
     // Could send to backend API endpoint in production
-    // fetch('/api/errors/log', { 
+    // fetch('/api/errors/log', {
     //   method: 'POST',
     //   body: JSON.stringify({
     //     message: error.message,
@@ -138,7 +138,7 @@ export const errorTracker = {
     //   }
     // }).catch(console.error);
   },
-  
+
   // Set up global error handlers
   setupGlobalHandlers: () => {
     if (typeof window !== 'undefined') {
@@ -148,18 +148,18 @@ export const errorTracker = {
           source: event.filename,
           line: event.lineno,
           column: event.colno,
-          type: 'uncaught',
+          type: 'uncaught'
         });
       });
-      
+
       // Handle unhandled promise rejections
       window.addEventListener('unhandledrejection', (event) => {
-        const error = event.reason instanceof Error 
-          ? event.reason 
+        const error = event.reason instanceof Error
+          ? event.reason
           : new Error(String(event.reason));
-        
+
         errorTracker.captureError(error, {
-          type: 'unhandledrejection',
+          type: 'unhandledrejection'
         });
       });
     }
@@ -173,31 +173,31 @@ export const userExperienceMonitor = {
     if (actionType === 'navigation') {
       trackMetric('navigationCount');
     }
-    
+
     // In production, would send this to analytics or monitoring service
     console.log('User interaction:', {
       actionType,
       ...details,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
   },
-  
+
   // Track API calls
   trackApiCall: (endpoint, startTime, status, error = null) => {
     const duration = Date.now() - startTime;
     trackMetric('apiCalls');
-    
+
     if (error || status >= 400) {
       trackMetric('totalErrors');
     }
-    
+
     // In production, would send this to monitoring service
     console.log('API call tracked:', {
       endpoint,
       duration,
       status,
       error: error ? error.message : null,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
   }
 };
@@ -207,7 +207,7 @@ export const networkMonitor = {
   // Wrap fetch calls to monitor performance
   monitorFetch: (url, options = {}) => {
     const startTime = Date.now();
-    
+
     return fetch(url, options)
       .then(response => {
         userExperienceMonitor.trackApiCall(
@@ -233,18 +233,18 @@ export const networkMonitor = {
 export const initMonitoring = () => {
   // Initialize performance monitoring
   initPerformanceMonitoring();
-  
+
   // Set up global error handlers
   errorTracker.setupGlobalHandlers();
-  
+
   // Track initial page load
   trackMetric('pageLoads');
-  
+
   // Log initialization
   console.log('Monitoring initialized', {
     environment: process.env.NODE_ENV,
     version: process.env.REACT_APP_VERSION || '0.1.0',
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   });
 };
 
@@ -253,25 +253,25 @@ export const initMonitoring = () => {
  */
 export const setupMonitoring = () => {
   const dsn = process.env.REACT_APP_SENTRY_DSN;
-  
+
   // Only initialize if DSN is provided
   if (!dsn) {
     console.warn('Sentry DSN not provided. Monitoring will be limited to console logs.');
   }
-  
+
   Sentry.init({
     dsn: dsn,
     integrations: [new BrowserTracing()],
     environment: process.env.REACT_APP_ENVIRONMENT || 'development',
     release: process.env.REACT_APP_VERSION || '0.1.0',
-    
+
     // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring
     // We recommend adjusting this value in production
     tracesSampleRate: 0.5,
-    
+
     // Only enable in production to reduce noise during development
     enabled: process.env.NODE_ENV === 'production' || !!dsn,
-    
+
     // Capture errors from failed API requests
     beforeSend(event) {
       if (event.exception) {
@@ -280,7 +280,7 @@ export const setupMonitoring = () => {
       return event;
     }
   });
-  
+
   // Log initialization
   console.log(`[Monitoring] Initialized for ${process.env.REACT_APP_ENVIRONMENT || 'development'} environment`);
 };
@@ -292,8 +292,8 @@ export const setupMonitoring = () => {
  */
 export const captureError = (error, context = {}) => {
   console.error('[Error]', error, context);
-  
-  Sentry.captureException(error, { 
+
+  Sentry.captureException(error, {
     tags: context
   });
 };
@@ -332,10 +332,10 @@ export const withPerformanceMonitoring = (Component, name) => {
  */
 export const trackApiRequest = (url, method, startTime, status) => {
   const duration = Date.now() - startTime;
-  
+
   // Log API request timing
   console.debug(`[API] ${method} ${url} - ${status} (${duration}ms)`);
-  
+
   // Add breadcrumb for API call
   addBreadcrumb({
     category: 'api',
@@ -348,7 +348,7 @@ export const trackApiRequest = (url, method, startTime, status) => {
     },
     level: status >= 400 ? 'error' : 'info'
   });
-  
+
   // Track as performance metric
   if (window.performance && window.performance.mark) {
     window.performance.mark(`api-${method}-${url}-end`);
@@ -373,16 +373,16 @@ export const trackApiRequest = (url, method, startTime, status) => {
  */
 export const startApiRequest = (url, method) => {
   const startTime = Date.now();
-  
+
   // Mark the start of the request
   if (window.performance && window.performance.mark) {
     window.performance.mark(`api-${method}-${url}-start`);
   }
-  
+
   return startTime;
 };
 
 // Initialize monitoring on script load if enabled
 if (process.env.NODE_ENV === 'production') {
   setupMonitoring();
-} 
+}

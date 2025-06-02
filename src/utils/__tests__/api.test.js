@@ -8,7 +8,7 @@ global.fetch = jest.fn();
 jest.mock('../monitoring', () => ({
   startApiRequest: jest.fn(),
   trackApiRequest: jest.fn(),
-  captureError: jest.fn(),
+  captureError: jest.fn()
 }));
 
 describe('API utilities with monitoring', () => {
@@ -23,7 +23,7 @@ describe('API utilities with monitoring', () => {
     const mockResponse = {
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue({ trip_id: 'trip123' }),
+      json: jest.fn().mockResolvedValue({ trip_id: 'trip123' })
     };
     fetch.mockResolvedValue(mockResponse);
 
@@ -46,13 +46,13 @@ describe('API utilities with monitoring', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.any(Object),
-        body: expect.any(String),
+        body: expect.any(String)
       })
     );
 
     // Verify startApiRequest was called
     expect(monitoring.startApiRequest).toHaveBeenCalled();
-    
+
     // Verify trackApiRequest was called
     expect(monitoring.trackApiRequest).toHaveBeenCalled();
 
@@ -65,9 +65,9 @@ describe('API utilities with monitoring', () => {
     const errorResponse = {
       ok: false,
       status: 400,
-      json: jest.fn().mockResolvedValue({ 
-        detail: { message: 'Invalid data', code: 'VALIDATION_ERROR' } 
-      }),
+      json: jest.fn().mockResolvedValue({
+        detail: { message: 'Invalid data', code: 'VALIDATION_ERROR' }
+      })
     };
     fetch.mockResolvedValue(errorResponse);
 
@@ -84,7 +84,7 @@ describe('API utilities with monitoring', () => {
 
     // Verify startApiRequest was called
     expect(monitoring.startApiRequest).toHaveBeenCalled();
-    
+
     // Verify trackApiRequest was called
     expect(monitoring.trackApiRequest).toHaveBeenCalled();
 
@@ -97,7 +97,7 @@ describe('API utilities with monitoring', () => {
     const mockResponse = {
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue({ status: 'success' }),
+      json: jest.fn().mockResolvedValue({ status: 'success' })
     };
     fetch.mockResolvedValue(mockResponse);
 
@@ -110,13 +110,13 @@ describe('API utilities with monitoring', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.any(Object),
-        body: expect.any(String),
+        body: expect.any(String)
       })
     );
 
     // Verify startApiRequest was called
     expect(monitoring.startApiRequest).toHaveBeenCalled();
-    
+
     // Verify trackApiRequest was called
     expect(monitoring.trackApiRequest).toHaveBeenCalled();
 
@@ -129,7 +129,7 @@ describe('API utilities with monitoring', () => {
     const mockResponse = {
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue({ status: 'success' }),
+      json: jest.fn().mockResolvedValue({ status: 'success' })
     };
     fetch.mockResolvedValue(mockResponse);
 
@@ -153,17 +153,17 @@ describe('API utilities with monitoring', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.any(Object),
-        body: expect.any(String),
+        body: expect.any(String)
       })
     );
 
     // Verify startApiRequest was called
     expect(monitoring.startApiRequest).toHaveBeenCalled();
-    
+
     // Verify trackApiRequest was called
     expect(monitoring.trackApiRequest).toHaveBeenCalled();
 
     // Check result
     expect(result).toEqual({ status: 'success' });
   });
-}); 
+});

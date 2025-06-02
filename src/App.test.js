@@ -8,12 +8,12 @@ import * as monitoring from './utils/monitoring';
 // Mock the useNavigate hook
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  useNavigate: () => jest.fn(),
+  useNavigate: () => jest.fn()
 }));
 
 // Mock the monitoring setup function
 jest.mock('./utils/monitoring', () => ({
-  setupMonitoring: jest.fn(),
+  setupMonitoring: jest.fn()
 }));
 
 test('renders Navbar with correct title', async () => {
@@ -33,4 +33,4 @@ test('initializes monitoring on app mount', async () => {
     </BrowserRouter>
   );
   expect(monitoring.setupMonitoring).toHaveBeenCalled();
-}); 
+});

@@ -73,10 +73,10 @@ const TripLinks = () => {
     }
 
     setSendingState(prev => ({ ...prev, [participant.id]: true }));
-    
+
     try {
       const result = await sendSMS(participant.id);
-      
+
       if (result.status === 'sent' || result.status === 'simulated') {
         setToast({
           open: true,
@@ -108,10 +108,10 @@ const TripLinks = () => {
     }
 
     setLoading(true);
-    
+
     try {
       const result = await sendAllSMS(tripData.tripId);
-      
+
       if (result.status === 'completed') {
         setToast({
           open: true,
@@ -150,11 +150,11 @@ const TripLinks = () => {
         {/* Navigation */}
         <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                color: 'primary.main', 
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                color: 'primary.main',
                 fontWeight: 600,
                 cursor: 'pointer'
               }}
@@ -169,8 +169,8 @@ const TripLinks = () => {
               <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
                 Donate
               </Link>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={() => navigate('/create-trip')}
                 className="primary-button"
               >
@@ -185,8 +185,8 @@ const TripLinks = () => {
             <Typography variant="h6" color="error" gutterBottom>
               No trip information available
             </Typography>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -204,7 +204,7 @@ const TripLinks = () => {
                   <LightbulbIcon />
                   <Typography>Keep the API lights on</Typography>
                 </div>
-                <Button 
+                <Button
                   variant="contained"
                   onClick={() => navigate('/donate')}
                   className="footer-donate-button"
@@ -231,11 +231,11 @@ const TripLinks = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -250,8 +250,8 @@ const TripLinks = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
               size="small"
@@ -268,7 +268,7 @@ const TripLinks = () => {
           sx={{
             position: 'relative',
             p: 2,
-            borderRadius: 2,
+            borderRadius: 2
           }}
         >
           <IconButton
@@ -276,7 +276,7 @@ const TripLinks = () => {
             sx={{
               position: 'absolute',
               right: 4,
-              top: 4,
+              top: 4
             }}
             size="small"
           >
@@ -298,7 +298,7 @@ const TripLinks = () => {
                 gap: 1,
                 p: 1,
                 bgcolor: 'grey.50',
-                borderRadius: 1,
+                borderRadius: 1
               }}
             >
               <Typography
@@ -331,72 +331,72 @@ const TripLinks = () => {
                     // Filter out the organizer from participants list to prevent duplicate display
                     .filter(participant => participant.id !== tripData.organizer?.id)
                     .map((participant) => (
-                    <TableRow key={participant.id || participant.name}>
-                      <TableCell sx={{ py: 0.5 }}>{participant.name}</TableCell>
-                      <TableCell sx={{ py: 0.5, display: { xs: 'none', sm: 'table-cell' } }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontFamily: 'monospace',
-                              color: 'text.secondary',
-                              fontSize: '0.75rem',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxWidth: '150px'
-                            }}
-                          >
-                            {participant.link}
-                          </Typography>
+                      <TableRow key={participant.id || participant.name}>
+                        <TableCell sx={{ py: 0.5 }}>{participant.name}</TableCell>
+                        <TableCell sx={{ py: 0.5, display: { xs: 'none', sm: 'table-cell' } }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontFamily: 'monospace',
+                                color: 'text.secondary',
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '150px'
+                              }}
+                            >
+                              {participant.link}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleCopyLink(participant.link)}
+                            >
+                              <ContentCopyIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ py: 0.5 }}>
                           <IconButton
                             size="small"
-                            onClick={() => handleCopyLink(participant.link)}
+                            onClick={() => handleSendSMS(participant)}
+                            sx={{ color: 'primary.main' }}
+                            disabled={sendingState[participant.id]}
                           >
-                            <ContentCopyIcon fontSize="small" />
+                            {sendingState[participant.id] ? (
+                              <CircularProgress size={14} color="inherit" />
+                            ) : (
+                              <MessageIcon fontSize="small" />
+                            )}
                           </IconButton>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right" sx={{ py: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSendSMS(participant)}
-                          sx={{ color: 'primary.main' }}
-                          disabled={sendingState[participant.id]}
-                        >
-                          {sendingState[participant.id] ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : (
-                            <MessageIcon fontSize="small" />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
             </TableContainer>
           )}
 
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            mt: 2, 
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            mt: 2,
             alignItems: 'center',
-            flexDirection: { xs: 'column', sm: 'row' } 
+            flexDirection: { xs: 'column', sm: 'row' }
           }}>
             <Typography
               variant="body2"
               color="text.secondary"
-              sx={{ 
-                fontSize: '0.75rem', 
+              sx={{
+                fontSize: '0.75rem',
                 flex: 1,
                 mb: { xs: 1, sm: 0 }
               }}
             >
               Friends don't need an account—just tap and answer.
             </Typography>
-            
+
             <Button
               variant="contained"
               startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <MessageIcon />}
@@ -404,7 +404,7 @@ const TripLinks = () => {
               className="primary-button"
               disabled={loading}
               size="small"
-              sx={{ 
+              sx={{
                 ml: { xs: 0, sm: 1 },
                 width: { xs: '100%', sm: 'auto' }
               }}
@@ -440,7 +440,7 @@ const TripLinks = () => {
                 <LightbulbIcon fontSize="small" />
                 <Typography variant="body2">Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -463,4 +463,4 @@ const TripLinks = () => {
   );
 };
 
-export default TripLinks; 
+export default TripLinks;

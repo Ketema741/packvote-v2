@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Button, 
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
   AppBar,
   Toolbar,
-  Link,
+  Link
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -38,8 +38,8 @@ const LandingPage = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -70,8 +70,8 @@ const LandingPage = () => {
             </Button>
           </div>
           <div className="hero-image">
-            <img 
-              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" 
+            <img
+              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
               alt="Scenic mountain road trip view"
             />
           </div>
@@ -142,7 +142,7 @@ const LandingPage = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -164,4 +164,4 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage; 
+export default LandingPage;

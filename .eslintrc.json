@@ -1,7 +1,62 @@
 {
-  "extends": "react-app",
+  "extends": [
+    "react-app",
+    "react-app/jest"
+  ],
   "rules": {
     "react/react-in-jsx-scope": "off",
-    "react/prop-types": "off"
+    "react/prop-types": "off",
+    "no-console": "off",
+    "no-unused-vars": "warn",
+    "prefer-const": "error",
+    "no-var": "error",
+    "eqeqeq": "error",
+    "curly": "error",
+    "no-trailing-spaces": "error",
+    "semi": ["error", "always"],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "indent": ["error", 2],
+    "object-curly-spacing": ["error", "always"],
+    "array-bracket-spacing": ["error", "never"],
+    "comma-dangle": ["error", "never"],
+    "max-len": ["warn", { 
+      "code": 140, 
+      "ignoreUrls": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true,
+      "ignoreRegExpLiterals": true
+    }],
+    "camelcase": ["warn", { 
+      "properties": "never",
+      "ignoreDestructuring": true,
+      "ignoreImports": true,
+      "allow": [
+        "trip_id", "user_id", "participant_id", "recommendation_id", 
+        "organizer_name", "organizer_phone", "trip_name", "organizer_id",
+        "live_location", "preferred_dates", "blackout_dates", "min_trip_days",
+        "max_trip_days", "vibe_choices", "more_questions", "past_liked", 
+        "past_disliked", "wish_list", "num_recommendations", "previous_recommendations",
+        "survey_responses", "winner_details", "image_urls", "budget_tier", 
+        "ideal_months", "trip_length", "rank_position", "has_temp_id"
+      ]
+    }],
+    "no-magic-numbers": ["warn", { 
+      "ignore": [0, 1, -1, 2, 3, 4, 7, 10, 12, 24, 30, 48, 50, 60, 66.67, 100, 210, 297, 360, 400, 404, 500, 1000, 2000, 2500, 3000, 30000, 3600000, 0.7],
+      "ignoreArrayIndexes": true,
+      "enforceConst": false,
+      "detectObjects": false
+    }]
+  },
+  "env": {
+    "browser": true,
+    "es6": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
   }
 } 

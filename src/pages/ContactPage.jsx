@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Paper, 
-  Link, 
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Link,
   AppBar,
   Toolbar,
   Button
@@ -22,11 +22,11 @@ const ContactPage = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -41,8 +41,8 @@ const ContactPage = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -57,16 +57,16 @@ const ContactPage = () => {
           <Typography variant="h3" component="h1" gutterBottom>
             Contact Us
           </Typography>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
+
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             gap: 2,
-            my: 4 
+            my: 4
           }}>
             <EmailIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-            <Link 
+            <Link
               href="mailto:packvote@gmail.com"
               variant="h5"
               underline="hover"
@@ -77,7 +77,7 @@ const ContactPage = () => {
           </Box>
 
           <Typography variant="body1" color="text.secondary" sx={{ mt: 4 }}>
-            Have questions, suggestions, or just want to say hello? 
+            Have questions, suggestions, or just want to say hello?
             We'd love to hear from you! Drop us an email and we'll get back to you as soon as possible.
           </Typography>
         </Paper>
@@ -92,7 +92,7 @@ const ContactPage = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -114,4 +114,4 @@ const ContactPage = () => {
   );
 };
 
-export default ContactPage; 
+export default ContactPage;

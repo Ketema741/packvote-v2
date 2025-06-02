@@ -19,7 +19,7 @@ class ErrorBoundary extends React.Component {
     // Log the error to our error tracking system
     errorTracker.captureError(error, {
       componentStack: errorInfo.componentStack,
-      componentName: this.props.componentName || 'Unknown',
+      componentName: this.props.componentName || 'Unknown'
     });
   }
 
@@ -31,7 +31,7 @@ class ErrorBoundary extends React.Component {
       ) : (
         <div className="error-boundary">
           <h2>Something went wrong.</h2>
-          <button 
+          <button
             onClick={() => this.setState({ hasError: false, error: null })}
           >
             Try again
@@ -46,26 +46,26 @@ class ErrorBoundary extends React.Component {
 
 /**
  * Higher-order component to wrap components with error boundary
- * 
+ *
  * @param {React.Component} Component - Component to wrap
  * @param {object} options - Configuration options
  * @returns {React.Component} Wrapped component with error boundary
  */
 export function withErrorBoundary(Component, options = {}) {
   const ComponentName = Component.displayName || Component.name || 'Component';
-  
+
   const WrappedComponent = (props) => (
-    <ErrorBoundary 
+    <ErrorBoundary
       componentName={ComponentName}
       fallback={options.fallback}
     >
       <Component {...props} />
     </ErrorBoundary>
   );
-  
+
   WrappedComponent.displayName = `withErrorBoundary(${ComponentName})`;
-  
+
   return WrappedComponent;
 }
 
-export default ErrorBoundary; 
+export default ErrorBoundary;

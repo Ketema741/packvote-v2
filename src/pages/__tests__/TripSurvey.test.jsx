@@ -1,23 +1,11 @@
 import React from 'react';
-import { render, screen, waitFor } from '../../test-utils/test-utils';
+import { render, screen } from '../../test-utils/test-utils';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import * as api from '../../utils/api';
 
 // Create a theme instance
 const theme = createTheme();
-
-// Create a dummy survey data object
-const surveyData = {
-  name: 'John Doe',
-  liveLocation: 'New York',
-  budget: '$1,000 - $1,500',
-  preferredDates: 'July 1-15, 2024',
-  minTripDays: '5',
-  maxTripDays: '10',
-  vibe: ['Beach & chill'],
-  moreQuestions: 'No, save my results and finish'
-};
 
 // Mock the API calls
 jest.mock('../../utils/api', () => ({
@@ -53,18 +41,18 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
 
-// Mock the survey-react module 
+// Mock the survey-react module
 jest.mock('survey-react', () => {
   const mockModel = {
     onComplete: { add: jest.fn() },
     onCurrentPageChanged: { add: jest.fn() },
-    pages: [{ name: "page1", title: "Who Are You?" }],
+    pages: [{ name: 'page1', title: 'Who Are You?' }],
     applyTheme: jest.fn(),
-    questionTitleLocation: "",
-    questionDescriptionLocation: "",
-    questionErrorLocation: "",
+    questionTitleLocation: '',
+    questionDescriptionLocation: '',
+    questionErrorLocation: '',
     showQuestionNumbers: false,
-    questionStartIndex: "",
+    questionStartIndex: '',
     maxTextLength: 0,
     maxOthersLength: 0,
     showClearButton: false,
@@ -72,7 +60,7 @@ jest.mock('survey-react', () => {
     getAllQuestions: jest.fn().mockReturnValue([]),
     css: {}
   };
-  
+
   return {
     Model: jest.fn().mockImplementation(() => mockModel),
     StylesManager: {
@@ -89,7 +77,7 @@ jest.mock('survey-react', () => {
 jest.mock('../../data/survey.json', () => ({
   default: {
     pages: [
-      { name: "page1", title: "Who Are You?" }
+      { name: 'page1', title: 'Who Are You?' }
     ]
   }
 }), { virtual: true });
@@ -103,7 +91,7 @@ jest.mock('../TripSurvey', () => {
       <h6>Helps us match budgets, dates & vibes for everyone.</h6>
     </div>
   );
-  
+
   return {
     __esModule: true,
     default: MockTripSurvey
@@ -114,17 +102,11 @@ jest.mock('../TripSurvey', () => {
 jest.useFakeTimers();
 
 describe('TripSurvey', () => {
-  beforeEach(async () => {
-    // Clear mocks before each test
-    mockNavigate.mockClear();
-    api.saveSurveyResponse.mockClear();
-    
-    // Render the mocked TripSurvey component
+  const renderComponent = async () => {
     await render(
       <ThemeProvider theme={theme}>
         <BrowserRouter>
           <React.Suspense fallback={<div>Loading...</div>}>
-            {/* We import the mocked version that's defined above */}
             {(() => {
               const TripSurvey = require('../TripSurvey').default;
               return <TripSurvey />;
@@ -133,6 +115,12 @@ describe('TripSurvey', () => {
         </BrowserRouter>
       </ThemeProvider>
     );
+  };
+
+  beforeEach(() => {
+    // Clear mocks before each test
+    mockNavigate.mockClear();
+    api.saveSurveyResponse.mockClear();
   });
 
   afterEach(() => {
@@ -142,8 +130,9 @@ describe('TripSurvey', () => {
 
   // Simple test just to check if the component renders
   it('renders the survey form heading', async () => {
+    await renderComponent();
     // Check that the static content renders
-    expect(screen.getByText("Travel Preferences")).toBeInTheDocument();
-    expect(screen.getByText("Helps us match budgets, dates & vibes for everyone.")).toBeInTheDocument();
+    expect(screen.getByText('Travel Preferences')).toBeInTheDocument();
+    expect(screen.getByText('Helps us match budgets, dates & vibes for everyone.')).toBeInTheDocument();
   });
 });

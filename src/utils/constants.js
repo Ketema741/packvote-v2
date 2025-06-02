@@ -1,0 +1,58 @@
+// Time constants (in milliseconds)
+export const TIME_CONSTANTS = {
+  SECOND: 1000,
+  MINUTE: 60 * 1000,
+  HOUR: 60 * 60 * 1000,
+  DAY: 24 * 60 * 60 * 1000,
+  WEEK: 7 * 24 * 60 * 60 * 1000
+};
+
+// Survey and recommendation constants
+export const SURVEY_CONSTANTS = {
+  MAX_RECOMMENDATIONS: 3,
+  TIMEOUT_DURATION: 3000,
+  POLLING_INTERVAL: 30000
+};
+
+// UI constants
+export const UI_CONSTANTS = {
+  MAX_PARTICIPANTS: 10,
+  DEBOUNCE_DELAY: 500,
+  LONG_DEBOUNCE_DELAY: 2500,
+  SHORT_TIMEOUT: 2000,
+  PERCENTAGE_COMPLETE: 100,
+  HALF_PERCENTAGE: 50,
+  THIRD_PERCENTAGE: 33.33,
+  TWO_THIRDS_PERCENTAGE: 66.67
+};
+
+// HTTP status codes
+export const HTTP_STATUS = {
+  BAD_REQUEST: 400,
+  NOT_FOUND: 404,
+  INTERNAL_SERVER_ERROR: 500
+};
+
+// PDF constants
+export const PDF_CONSTANTS = {
+  PAGE_WIDTH: 210,
+  PAGE_HEIGHT: 297
+};
+
+// Date constants
+export const DATE_CONSTANTS = {
+  MIN_TRIP_DAYS: 2,
+  MAX_TRIP_DAYS: 12,
+  HOURS_IN_DAY: 24,
+  MINUTES_IN_HOUR: 60,
+  SECONDS_IN_MINUTE: 60,
+  CACHE_DAYS: 7
+};
+
+// Animation and timing
+export const ANIMATION_CONSTANTS = {
+  ROTATION_DEGREES: 360,
+  HALF_ROTATION: 180,
+  QUARTER_ROTATION: 90,
+  TENTH_ROTATION: 36
+};

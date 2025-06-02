@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Button, 
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
   AppBar,
   Toolbar,
   Link,
@@ -21,27 +21,27 @@ import '../styles/LandingPage.css';
 import '../styles/TripSurvey.css';
 
 // Apply custom styling
-StylesManager.applyTheme("defaultV2");
+StylesManager.applyTheme('defaultV2');
 
 // Override default styles globally
-StylesManager.ThemeColors["default"] = {
-  "$main-color": "#4263eb",
-  "$text-color": "#111827",
-  "$header-color": "#111827",
-  "$header-background-color": "#ffffff",
-  "$body-container-background-color": "#ffffff",
-  "$error-color": "#ef4444",
-  "$border-color": "#e5e7eb",
-  "$main-hover-color": "#364fc7",
-  "$selection-border-color": "#4263eb",
-  "$clean-button-color": "#6b7280",
-  "$disabled-text-color": "#9ca3af",
-  "$disabled-label-color": "#6b7280",
-  "$slider-color": "#4263eb",
-  "$progress-text-color": "#6b7280",
-  "$disable-color": "#e5e7eb",
-  "$progress-buttons-color": "#ffffff",
-  "$progress-buttons-background-color": "#4263eb"
+StylesManager.ThemeColors['default'] = {
+  '$main-color': '#4263eb',
+  '$text-color': '#111827',
+  '$header-color': '#111827',
+  '$header-background-color': '#ffffff',
+  '$body-container-background-color': '#ffffff',
+  '$error-color': '#ef4444',
+  '$border-color': '#e5e7eb',
+  '$main-hover-color': '#364fc7',
+  '$selection-border-color': '#4263eb',
+  '$clean-button-color': '#6b7280',
+  '$disabled-text-color': '#9ca3af',
+  '$disabled-label-color': '#6b7280',
+  '$slider-color': '#4263eb',
+  '$progress-text-color': '#6b7280',
+  '$disable-color': '#e5e7eb',
+  '$progress-buttons-color': '#ffffff',
+  '$progress-buttons-background-color': '#4263eb'
 };
 
 const TripSurvey = () => {
@@ -62,131 +62,131 @@ const TripSurvey = () => {
     // Import survey JSON
     import('../data/survey.json').then((surveyJson) => {
       const surveyModel = new Model(surveyJson.default);
-      
+
       // Initialize the total number of pages
       setTotalPages(surveyModel.pages.length);
-      
+
       // Add event handlers for page changes
       surveyModel.onCurrentPageChanged.add((sender, options) => {
         // SurveyJS uses 0-based indexing for pages
         setCurrentPage(sender.currentPageNo + 1);
       });
-      
+
       // Set initial page
       setCurrentPage(1);
-      
+
       // Customize the survey appearance
       surveyModel.applyTheme({
         header: {
-          height: "0px",
-          background: "transparent"
+          height: '0px',
+          background: 'transparent'
         },
         isPanelless: false
       });
 
       // Improve spacing between questions
-      surveyModel.questionTitleLocation = "top";
-      surveyModel.questionDescriptionLocation = "underTitle";
-      surveyModel.questionErrorLocation = "bottom";
+      surveyModel.questionTitleLocation = 'top';
+      surveyModel.questionDescriptionLocation = 'underTitle';
+      surveyModel.questionErrorLocation = 'bottom';
       surveyModel.showQuestionNumbers = false;
-      surveyModel.questionStartIndex = "";
+      surveyModel.questionStartIndex = '';
       surveyModel.maxTextLength = 0;
       surveyModel.maxOthersLength = 0;
 
       // Configure dropdown appearance
       surveyModel.showClearButton = false; // Hide the X button altogether
-      
+
       // Customize error styling
       surveyModel.onValidateQuestion.add((sender, options) => {
         if (options.error) {
           options.errorText = `<span style="color: #ef4444;">${options.error}</span>`;
         }
       });
-      
+
       // Set spacing for all questions in the survey
       surveyModel.setDesignMode(true);
       surveyModel.getAllQuestions().forEach(question => {
-        question.titleLocation = "top";
+        question.titleLocation = 'top';
         question.indent = 0;
         question.marginBottom = 30;
-        
+
         // Handle dropdown properties
-        if (question.getType() === "dropdown") {
-          question.renderAs = "select";
+        if (question.getType() === 'dropdown') {
+          question.renderAs = 'select';
           question.searchEnabled = false;
         }
-        
+
         // Hide variable name display for specific questions
-        if (["addSecondPreferredRange", "addThirdPreferredRange", "hasBlackoutDates", 
-             "addSecondBlackoutRange", "addThirdBlackoutRange"].includes(question.name)) {
+        if (['addSecondPreferredRange', 'addThirdPreferredRange', 'hasBlackoutDates',
+          'addSecondBlackoutRange', 'addThirdBlackoutRange'].includes(question.name)) {
           question.hideNumber = true;
           question.showTitle = false;
         }
       });
-      
+
       // Customize panel appearance
       surveyModel.getAllPanels().forEach(panel => {
-        panel.titleLocation = "left";
-        panel.title = panel.title.replace("Preferred Date Range", "Date Range").replace("Blackout Date Range", "Blackout Range");
+        panel.titleLocation = 'left';
+        panel.title = panel.title.replace('Preferred Date Range', 'Date Range').replace('Blackout Date Range', 'Blackout Range');
         panel.showQuestionNumbers = false;
         panel.showTitle = true;
       });
-      
+
       surveyModel.setDesignMode(false);
 
       // Custom CSS classes
       surveyModel.css = {
-        root: "sv_main sv_custom_root",
-        container: "sv_container sv_custom_container",
+        root: 'sv_main sv_custom_root',
+        container: 'sv_container sv_custom_container',
         navigation: {
-          complete: "sv_complete_btn sv_custom_btn",
-          prev: "sv_prev_btn sv_custom_btn",
-          next: "sv_next_btn sv_custom_btn",
-          start: "sv_start_btn sv_custom_btn"
+          complete: 'sv_complete_btn sv_custom_btn',
+          prev: 'sv_prev_btn sv_custom_btn',
+          next: 'sv_next_btn sv_custom_btn',
+          start: 'sv_start_btn sv_custom_btn'
         },
-        navigationBar: "sv_nav",
-        body: "sv_body sv_custom_body",
+        navigationBar: 'sv_nav',
+        body: 'sv_body sv_custom_body',
         page: {
-          root: "sv_page sv_custom_page",
-          title: "sv_page_title sv_custom_page_title"
+          root: 'sv_page sv_custom_page',
+          title: 'sv_page_title sv_custom_page_title'
         },
-        pageTitle: "sv_page_title sv_custom_page_title",
-        pageDescription: "sv_page_description sv_custom_page_description",
-        row: "sv_row sv_custom_row",
+        pageTitle: 'sv_page_title sv_custom_page_title',
+        pageDescription: 'sv_page_description sv_custom_page_description',
+        row: 'sv_row sv_custom_row',
         question: {
-          root: "sv_q sv_custom_question",
-          title: "sv_q_title sv_custom_question_title",
-          description: "sv_q_description sv_custom_question_description"
+          root: 'sv_q sv_custom_question',
+          title: 'sv_q_title sv_custom_question_title',
+          description: 'sv_q_description sv_custom_question_description'
         },
         error: {
-          root: "sv_q_erbox sv_custom_error"
+          root: 'sv_q_erbox sv_custom_error'
         },
         checkbox: {
-          root: "sv_qcbc sv_custom_checkbox",
-          item: "sv_q_checkbox sv_custom_checkbox_item",
-          itemChecked: "sv_q_checkbox_checked sv_custom_checkbox_item_checked",
-          itemHover: "sv_q_checkbox_hover sv_custom_checkbox_item_hover",
-          label: "sv_q_checkbox_label sv_custom_checkbox_label"
+          root: 'sv_qcbc sv_custom_checkbox',
+          item: 'sv_q_checkbox sv_custom_checkbox_item',
+          itemChecked: 'sv_q_checkbox_checked sv_custom_checkbox_item_checked',
+          itemHover: 'sv_q_checkbox_hover sv_custom_checkbox_item_hover',
+          label: 'sv_q_checkbox_label sv_custom_checkbox_label'
         },
         radiogroup: {
-          root: "sv_qcbx sv_custom_radiogroup",
-          item: "sv_q_radiogroup sv_custom_radiogroup_item",
-          itemChecked: "sv_q_radiogroup_checked sv_custom_radiogroup_item_checked",
-          itemHover: "sv_q_radiogroup_hover sv_custom_radiogroup_item_hover",
-          label: "sv_q_radiogroup_label sv_custom_radiogroup_label"
+          root: 'sv_qcbx sv_custom_radiogroup',
+          item: 'sv_q_radiogroup sv_custom_radiogroup_item',
+          itemChecked: 'sv_q_radiogroup_checked sv_custom_radiogroup_item_checked',
+          itemHover: 'sv_q_radiogroup_hover sv_custom_radiogroup_item_hover',
+          label: 'sv_q_radiogroup_label sv_custom_radiogroup_label'
         },
         dropdown: {
-          root: "sv_q_dropdown sv_custom_dropdown",
-          control: "sv_q_dropdown_control sv_custom_dropdown_control",
-          selectWrapper: "",
-          other: "sv_q_dd_other sv_custom_dropdown_other",
-          cleanButton: "sv_q_dropdown_clean-button sv_custom_dropdown_clean_button"
+          root: 'sv_q_dropdown sv_custom_dropdown',
+          control: 'sv_q_dropdown_control sv_custom_dropdown_control',
+          selectWrapper: '',
+          other: 'sv_q_dd_other sv_custom_dropdown_other',
+          cleanButton: 'sv_q_dropdown_clean-button sv_custom_dropdown_clean_button'
         },
-        text: "sv_q_text sv_custom_input",
+        text: 'sv_q_text sv_custom_input',
         panel: {
-          title: "sv_p_title sv_custom_panel_title custom-panel-title",
-          description: "sv_p_description sv_custom_panel_description",
-          container: "sv_p_container sv_custom_panel_container custom-panel-container"
+          title: 'sv_p_title sv_custom_panel_title custom-panel-title',
+          description: 'sv_p_description sv_custom_panel_description',
+          container: 'sv_p_container sv_custom_panel_container custom-panel-container'
         }
       };
 
@@ -201,7 +201,7 @@ const TripSurvey = () => {
     }
 
     setLoading(true);
-    
+
     try {
       // Format the date ranges
       const preferredDates = [];
@@ -263,14 +263,14 @@ const TripSurvey = () => {
 
       // Send survey results to the API
       const result = await saveSurveyResponse(participantId, surveyData);
-      
+
       if (result.status === 'success') {
         setToast({
           open: true,
           message: 'Your responses have been saved. Thank you!',
           severity: 'success'
         });
-        
+
         // After a short delay, navigate to the next step page
         setTimeout(() => {
           navigate('/next-step', { state: { tripId } });
@@ -306,11 +306,11 @@ const TripSurvey = () => {
       <div className="landing-page">
         <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                color: 'primary.main', 
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                color: 'primary.main',
                 fontWeight: 600,
                 cursor: 'pointer'
               }}
@@ -325,8 +325,8 @@ const TripSurvey = () => {
               <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
                 Donate
               </Link>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={() => navigate('/create-trip')}
                 className="primary-button"
               >
@@ -341,8 +341,8 @@ const TripSurvey = () => {
             <Typography variant="h6" color="error" gutterBottom>
               Invalid survey link. Please check your link and try again.
             </Typography>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/')}
               className="primary-button"
               sx={{ mt: 2 }}
@@ -361,7 +361,7 @@ const TripSurvey = () => {
                   <LightbulbIcon />
                   <Typography>Keep the API lights on</Typography>
                 </div>
-                <Button 
+                <Button
                   variant="contained"
                   onClick={() => navigate('/donate')}
                   className="footer-donate-button"
@@ -388,11 +388,11 @@ const TripSurvey = () => {
       {/* Navigation */}
       <AppBar position="fixed" elevation={0} sx={{ bgcolor: 'background.paper' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              color: 'primary.main', 
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              color: 'primary.main',
               fontWeight: 600,
               cursor: 'pointer'
             }}
@@ -407,8 +407,8 @@ const TripSurvey = () => {
             <Link href="/donate" color="text.secondary" underline="none" sx={{ '&:hover': { color: 'text.primary' } }}>
               Donate
             </Link>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/create-trip')}
               className="primary-button"
             >
@@ -436,17 +436,17 @@ const TripSurvey = () => {
                 {Math.round(progressPercentage)}%
               </Typography>
             </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={progressPercentage} 
-              sx={{ 
-                height: 8, 
+            <LinearProgress
+              variant="determinate"
+              value={progressPercentage}
+              sx={{
+                height: 8,
                 borderRadius: 4,
                 backgroundColor: 'rgba(0, 0, 0, 0.1)',
                 '& .MuiLinearProgress-bar': {
                   backgroundColor: 'var(--color-primary, #4263eb)'
                 }
-              }} 
+              }}
             />
           </Box>
 
@@ -466,7 +466,7 @@ const TripSurvey = () => {
               <Survey
                 model={survey}
                 onComplete={handleComplete}
-                css={{ root: "survey-custom" }}
+                css={{ root: 'survey-custom' }}
               />
             )}
             {loading && (
@@ -503,7 +503,7 @@ const TripSurvey = () => {
                 <LightbulbIcon />
                 <Typography>Keep the API lights on</Typography>
               </div>
-              <Button 
+              <Button
                 variant="contained"
                 onClick={() => navigate('/donate')}
                 className="footer-donate-button"
@@ -525,4 +525,4 @@ const TripSurvey = () => {
   );
 };
 
-export default TripSurvey; 
+export default TripSurvey;

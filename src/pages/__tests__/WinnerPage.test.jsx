@@ -1,59 +1,72 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '../../test-utils/test-utils';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import WinnerPage from '../WinnerPage';
 import * as api from '../../utils/api';
 
-// Create a theme instance
-const theme = createTheme();
+// Mock the API module
+jest.mock('../../utils/api');
 
-// Mock the API calls
-jest.mock('../../utils/api', () => ({
-  getTripDetails: jest.fn(),
-  getTripWinner: jest.fn(),
-  calculateWinner: jest.fn(),
-  calculateSurveyStats: jest.fn()
-}));
-
-// Mock the html2canvas library
-jest.mock('html2canvas', () => jest.fn(() => Promise.resolve({
-  toDataURL: jest.fn(() => 'data:image/png;base64,mocked'),
-  height: 400,
-  width: 600
-})));
-
-// Mock the jsPDF library
+// Mock jsPDF to prevent canvas issues in tests
 jest.mock('jspdf', () => {
   return jest.fn().mockImplementation(() => ({
-    setProperties: jest.fn(),
-    setFontSize: jest.fn(),
+    setFont: jest.fn(),
+    setFillColor: jest.fn(),
+    rect: jest.fn(),
     setTextColor: jest.fn(),
+    setFontSize: jest.fn(),
     text: jest.fn(),
+    roundedRect: jest.fn(),
+    setDrawColor: jest.fn(),
+    setLineWidth: jest.fn(),
     addImage: jest.fn(),
-    save: jest.fn(),
-    internal: {
-      pageSize: {
-        getWidth: jest.fn(() => 210),
-        getHeight: jest.fn(() => 297)
-      }
-    }
+    splitTextToSize: jest.fn(() => ['line1', 'line2']),
+    save: jest.fn()
   }));
 });
 
-// Mock the useNavigate and useParams hook
+// Mock the imageService
+jest.mock('../../utils/imageService', () => ({
+  getDestinationImage: jest.fn(() => Promise.resolve('https://example.com/image.jpg')),
+  getImageSync: jest.fn(() => 'https://example.com/sync-image.jpg')
+}));
+
+// Mock react-router-dom
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useLocation: () => ({ state: null }),
   useParams: () => ({ tripId: 'mock-trip-id' })
 }));
+
+const theme = createTheme();
 
 describe('WinnerPage', () => {
 
   beforeEach(() => {
-    // Reset all mocks
+    // Clear all mocks before each test
     jest.clearAllMocks();
+    
+    // Reset API mocks to default implementations
+    api.getTripDetails.mockResolvedValue({
+      participants: [],
+      survey_responses: []
+    });
+    
+    api.getTripWinner.mockResolvedValue({
+      status: 'error',
+      message: 'No winner yet'
+    });
+    
+    api.calculateWinner.mockResolvedValue({
+      status: 'success'
+    });
+    
+    api.calculateSurveyStats.mockReturnValue({
+      overlappingRanges: []
+    });
   });
 
   it('displays loading state initially', async () => {
@@ -184,9 +197,9 @@ describe('WinnerPage', () => {
       }
     });
 
-    // Mock window.alert
-    const originalAlert = window.alert;
-    window.alert = jest.fn();
+    api.calculateSurveyStats.mockReturnValue({
+      overlappingRanges: []
+    });
 
     await render(
       <ThemeProvider theme={theme}>
@@ -202,13 +215,23 @@ describe('WinnerPage', () => {
 
     // Click the share button
     const shareButton = screen.getByText(/share on socials/i);
-    shareButton.click();
+    fireEvent.click(shareButton);
 
-    // The button calls copyToClipboard which shows an alert
-    expect(window.alert).toHaveBeenCalledWith('Link copied to clipboard!');
-
-    // Clean up the mock
-    window.alert = originalAlert;
+    // The button should navigate to the share page
+    expect(mockNavigate).toHaveBeenCalledWith('/share', {
+      state: {
+        winnerDestination: {
+          destination: 'Paris',
+          city: 'Paris',
+          country: 'France',
+          location: 'Paris'
+        },
+        dates: 'Dates to be determined',
+        travelers: '1 travelers',
+        tripId: 'mock-trip-id',
+        imageUrl: '' // The image might still be loading or empty in tests
+      }
+    });
   });
 
   it('calculates winner when the button is clicked', async () => {

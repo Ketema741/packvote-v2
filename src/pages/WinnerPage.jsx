@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import {
   Container,
@@ -34,6 +33,18 @@ import { getDestinationImage, getImageSync } from '../utils/imageService';
 import { safeLog } from '../utils/loggingSanitizer';
 import '../styles/LandingPage.css';
 import '../styles/WinnerPage.css';
+
+// PDF Color Constants
+/* eslint-disable no-magic-numbers */
+const PDF_COLORS = {
+  WHITE: [255, 255, 255],
+  PRIMARY_ORANGE: [255, 107, 44], // #FF6B2C
+  BACKGROUND_BEIGE: [255, 248, 243], // #FFF8F3
+  DARK_NAVY: [26, 34, 56], // #1A2238
+  MEDIUM_GRAY: [102, 102, 102], // #666666
+  GREEN: [76, 175, 80] // Green for optimal label
+};
+/* eslint-enable no-magic-numbers */
 
 const WinnerPage = () => {
   const navigate = useNavigate();
@@ -167,6 +178,7 @@ const WinnerPage = () => {
         // We have an existing winner
         setVotingComplete(true);
         setWinnerDetails(winnerData.winner.winner_details);
+        safeLog.info('Winner details loaded:', winnerData.winner.winner_details);
       } else if (winnerData.status === 'ready_to_calculate') {
         // All votes are in, calculate winner and send SMS notification
         safeLog.info('All votes in, calculating winner with SMS notification');
@@ -178,6 +190,7 @@ const WinnerPage = () => {
             if (winnerData.status === 'success') {
               setVotingComplete(true);
               setWinnerDetails(winnerData.winner.winner_details);
+              safeLog.info('Winner details calculated:', winnerData.winner.winner_details);
             }
           } else {
             // Calculation failed, show voting in progress
@@ -210,6 +223,7 @@ const WinnerPage = () => {
               if (winnerData.status === 'success') {
                 setVotingComplete(true);
                 setWinnerDetails(winnerData.winner.winner_details);
+                safeLog.info('Winner details calculated after deadline:', winnerData.winner.winner_details);
               }
             } else {
               // Calculation failed, show voting in progress
@@ -311,89 +325,297 @@ const WinnerPage = () => {
   const handleShare = () => {
     if (!winnerDetails || !tripData) {return;}
 
-    // Create share URL
-    const shareUrl = `${window.location.origin}/share-trip/${tripId}`;
-
-    // Use Web Share API if available
-    if (navigator.share) {
-      navigator.share({
-        title: `We're going to ${winnerDetails.location}!`,
-        text: `Check out our upcoming trip to ${winnerDetails.location}`,
-        url: shareUrl
-      }).catch(() => {
-        // Fallback to copying link on error
-        copyToClipboard(shareUrl);
-      });
-    } else {
-      // Fallback for browsers that don't support the Web Share API
-      copyToClipboard(shareUrl);
-    }
+    // Navigate to the SocialSharePage with trip data
+    navigate('/share', {
+      state: {
+        winnerDestination: {
+          destination: winnerDetails.location,
+          city: winnerDetails.location,
+          country: winnerDetails.country,
+          location: winnerDetails.location
+        },
+        dates: optimalDateRanges.length > 0
+          ? `${optimalDateRanges[0].start} - ${optimalDateRanges[0].end.split(',')[0]}`
+          : 'Dates to be determined',
+        travelers: tripData.participants ? `${tripData.participants.length} travelers` : 'Unknown number of travelers',
+        tripId: tripId,
+        imageUrl: destinationImage
+      }
+    });
   };
 
   const handleDownload = async () => {
-    if (!tripCardRef.current) {return;}
+    if (!winnerDetails || !tripData) {return;}
 
     try {
-      const canvas = await html2canvas(tripCardRef.current, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true
-      });
+      setLoading(true);
 
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
 
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+      const tripDetails = getTripDetailsObject();
+      if (!tripDetails) {
+        setError('Trip details not available for PDF generation');
+        setLoading(false);
+        return;
+      }
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`PackVote-Trip-${tripData.trip_name.replace(/\s+/g, '-')}.pdf`);
+      // PDF Constants
+      const PAGE_WIDTH = 210;
+      const PAGE_HEIGHT = 297;
+      const MARGIN = 20;
+      const WHITE_COLOR = PDF_COLORS.WHITE;
+      const BORDER_RADIUS = 8;
+      const HEADER_HEIGHT = 60;
+      const OVERLAY_OPACITY = 0.6;
+
+      let currentY = MARGIN;
+
+      // Set default font
+      pdf.setFont('helvetica');
+
+      // Background color for the page
+      pdf.setFillColor(...PDF_COLORS.BACKGROUND_BEIGE);
+      pdf.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F');
+
+      // Header section with orange theme
+      pdf.setFillColor(...PDF_COLORS.PRIMARY_ORANGE);
+      pdf.rect(0, 0, PAGE_WIDTH, HEADER_HEIGHT, 'F');
+
+      /* eslint-disable no-magic-numbers */
+      // Header text - clean and professional
+      pdf.setTextColor(...WHITE_COLOR);
+      pdf.setFontSize(32);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Trip Confirmed!', PAGE_WIDTH / 2, 25, { align: 'center' });
+
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Your group adventure awaits!', PAGE_WIDTH / 2, 40, { align: 'center' });
+
+      currentY = 70; // Moved up from 80
+
+      // Try to add destination image if available
+      if (destinationImage) {
+        try {
+          // Add image
+          pdf.addImage(destinationImage, 'JPEG', MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), 70, null, 'FAST');
+
+          // Add overlay with destination name
+          pdf.setFillColor(0, 0, 0, OVERLAY_OPACITY);
+          pdf.rect(MARGIN, currentY + 40, PAGE_WIDTH - (MARGIN * 2), 30, 'F');
+
+          pdf.setTextColor(...WHITE_COLOR);
+          pdf.setFontSize(28);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(tripDetails.destination, PAGE_WIDTH / 2, currentY + 57, { align: 'center' });
+
+          if (tripDetails.country) {
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(tripDetails.country, PAGE_WIDTH / 2, currentY + 65, { align: 'center' });
+          }
+
+          currentY += 85;
+        } catch (imageError) {
+          // If image fails, fall back to text-only destination section
+          pdf.setFillColor(...WHITE_COLOR);
+          pdf.roundedRect(MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), 40, BORDER_RADIUS, BORDER_RADIUS, 'F');
+
+          pdf.setDrawColor(...PDF_COLORS.PRIMARY_ORANGE);
+          pdf.setLineWidth(2);
+          pdf.roundedRect(MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), 40, BORDER_RADIUS, BORDER_RADIUS, 'S');
+
+          pdf.setTextColor(...PDF_COLORS.PRIMARY_ORANGE);
+          pdf.setFontSize(32);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(tripDetails.destination, PAGE_WIDTH / 2, currentY + 22, { align: 'center' });
+
+          if (tripDetails.country) {
+            pdf.setTextColor(...PDF_COLORS.MEDIUM_GRAY);
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(tripDetails.country, PAGE_WIDTH / 2, currentY + 35, { align: 'center' });
+          }
+
+          currentY += 55;
+        }
+      } else {
+        // No image available, use text-only destination section
+        pdf.setFillColor(...WHITE_COLOR);
+        pdf.roundedRect(MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), 40, BORDER_RADIUS, BORDER_RADIUS, 'F');
+
+        pdf.setDrawColor(...PDF_COLORS.PRIMARY_ORANGE);
+        pdf.setLineWidth(2);
+        pdf.roundedRect(MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), 40, BORDER_RADIUS, BORDER_RADIUS, 'S');
+
+        pdf.setTextColor(...WHITE_COLOR);
+        pdf.setFontSize(32);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(tripDetails.destination, PAGE_WIDTH / 2, currentY + 22, { align: 'center' });
+
+        if (tripDetails.country) {
+          pdf.setTextColor(...PDF_COLORS.MEDIUM_GRAY);
+          pdf.setFontSize(16);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(tripDetails.country, PAGE_WIDTH / 2, currentY + 35, { align: 'center' });
+        }
+
+        currentY += 55;
+      }
+
+      // Trip details section - now positioned higher and more centered
+      pdf.setFillColor(...WHITE_COLOR);
+      pdf.roundedRect(MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), 70, BORDER_RADIUS, BORDER_RADIUS, 'F');
+
+      pdf.setTextColor(...PDF_COLORS.PRIMARY_ORANGE);
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Trip Details', PAGE_WIDTH / 2, currentY + 20, { align: 'center' });
+
+      // Calculate optimal duration from overlapping ranges
+      let optimalDuration = tripDetails.duration;
+      if (optimalDateRanges && optimalDateRanges.length > 0) {
+        // Find the longest overlapping segment
+        const longestRange = optimalDateRanges.reduce((longest, current) =>
+          current.days > longest.days ? current : longest, optimalDateRanges[0]);
+        optimalDuration = `${longestRange.days} days`;
+      }
+
+      // Details in a clean list format
+      const details = [
+        { label: 'Dates', value: tripDetails.dates },
+        { label: 'Duration', value: optimalDuration },
+        { label: 'Group Size', value: tripDetails.travelers }
+      ];
+
+      let detailY = currentY + 35;
+      pdf.setFontSize(14);
+
+      details.forEach((detail) => {
+        // Add bullet point
+        pdf.setTextColor(...PDF_COLORS.PRIMARY_ORANGE);
+        pdf.text('•', MARGIN + 15, detailY);
+
+        // Add label
+        pdf.setTextColor(...PDF_COLORS.DARK_NAVY);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${detail.label}:`, MARGIN + 25, detailY);
+
+        // Add value
+        pdf.setTextColor(...PDF_COLORS.MEDIUM_GRAY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(detail.value, MARGIN + 75, detailY);
+
+        detailY += 15;
+      });
+
+      currentY += 90;
+
+      // Date options section
+      if (optimalDateRanges && optimalDateRanges.length > 0) {
+        pdf.setFillColor(...WHITE_COLOR);
+        const sectionHeight = 40 + (optimalDateRanges.length * 15);
+        pdf.roundedRect(MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), sectionHeight, BORDER_RADIUS, BORDER_RADIUS, 'F');
+
+        pdf.setTextColor(...PDF_COLORS.PRIMARY_ORANGE);
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Available Dates', PAGE_WIDTH / 2, currentY + 20, { align: 'center' });
+
+        let dateY = currentY + 35;
+        pdf.setFontSize(12);
+
+        optimalDateRanges.slice(0, 4).forEach((range, index) => {
+          const isRecommended = index === 0;
+
+          if (isRecommended) {
+            pdf.setTextColor(...PDF_COLORS.PRIMARY_ORANGE);
+          } else {
+            pdf.setTextColor(...PDF_COLORS.DARK_NAVY);
+          }
+          pdf.setFont('helvetica', isRecommended ? 'bold' : 'normal');
+
+          const dateText = `${range.start} - ${range.end.split(',')[0]} (${range.days} days)`;
+          pdf.text('•', MARGIN + 15, dateY);
+          pdf.text(dateText, MARGIN + 25, dateY);
+
+          if (isRecommended) {
+            pdf.setTextColor(...PDF_COLORS.GREEN);
+            pdf.setFontSize(10);
+            pdf.text('OPTIMAL', PAGE_WIDTH - MARGIN - 35, dateY);
+          }
+
+          dateY += 15;
+        });
+
+        currentY += sectionHeight + 20;
+      }
+
+      // Description section (if available and not too long)
+      if (tripDetails.description && tripDetails.description !== 'No description available' && tripDetails.description.length < 200) {
+        pdf.setFillColor(...WHITE_COLOR);
+        pdf.roundedRect(MARGIN, currentY, PAGE_WIDTH - (MARGIN * 2), 60, BORDER_RADIUS, BORDER_RADIUS, 'F');
+
+        pdf.setTextColor(...PDF_COLORS.PRIMARY_ORANGE);
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('About This Destination', PAGE_WIDTH / 2, currentY + 20, { align: 'center' });
+
+        pdf.setTextColor(...PDF_COLORS.DARK_NAVY);
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'normal');
+
+        // Split text to fit width
+        const lines = pdf.splitTextToSize(tripDetails.description, PAGE_WIDTH - (MARGIN * 2) - 20);
+        pdf.text(lines.slice(0, 3), MARGIN + 10, currentY + 35);
+
+        currentY += 80;
+      }
+
+      // Footer with orange theme
+      pdf.setFillColor(...PDF_COLORS.PRIMARY_ORANGE);
+      pdf.rect(0, PAGE_HEIGHT - 40, PAGE_WIDTH, 40, 'F');
+
+      pdf.setTextColor(...WHITE_COLOR);
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Created with PackVote', PAGE_WIDTH / 2, PAGE_HEIGHT - 25, { align: 'center' });
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Plan your perfect group trip together', PAGE_WIDTH / 2, PAGE_HEIGHT - 15, { align: 'center' });
+      /* eslint-enable no-magic-numbers */
+
+      // Generate clean filename
+      const cleanDestination = tripDetails.destination.replace(/[^a-zA-Z0-9]/g, '-');
+      const today = new Date().toISOString().split('T')[0];
+      const filename = `PackVote-${cleanDestination}-${today}.pdf`;
+
+      pdf.save(filename);
+
     } catch (error) {
       safeLog.error('Error generating PDF:', error);
       setError('Failed to generate PDF. Please try again later.');
-    }
-  };
-
-  const copyToClipboard = (text) => {
-    // Check if clipboard API is available (not available in test environment)
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          alert('Link copied to clipboard!');
-        })
-        .catch(() => {
-          // Fallback method for older browsers
-          const textArea = document.createElement('textarea');
-          textArea.value = text;
-          document.body.appendChild(textArea);
-          textArea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textArea);
-          alert('Link copied to clipboard!');
-        });
-    } else {
-      // Handle test environment or browsers without clipboard API
-      console.log('Clipboard API not available, would copy:', text);
-      // In tests, we can just simulate success
-      alert('Link copied to clipboard!');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleBuyCoffee = () => {
-    window.open('https://www.buymeacoffee.com/packvote', '_blank');
+    window.open('https://www.paypal.com/donate/?hosted_button_id=J68S3LM4HXDGU', '_blank');
   };
 
   const getTripDetailsObject = () => {
     if (!winnerDetails || !tripData) {return null;}
 
     return {
-      location: winnerDetails.location,
-      country: winnerDetails.country,
+      location: winnerDetails.location || winnerDetails.city || winnerDetails.destination || 'Unknown Location',
+      country: winnerDetails.country || '',
+      destination: winnerDetails.location || winnerDetails.city || winnerDetails.destination || 'Unknown Location',
       dates: optimalDateRanges.length > 0
         ? `${optimalDateRanges[0].start} - ${optimalDateRanges[0].end}`
         : 'Dates to be determined',
@@ -401,8 +623,8 @@ const WinnerPage = () => {
         ? `${tripData.preferredTripLength.average} days`
         : 'Duration to be determined',
       travelers: tripData.participants ? `${tripData.participants.length} travelers` : 'Unknown number of travelers',
-      organizer: tripData.organizer_name || 'Unknown organizer',
-      description: winnerDetails.description || 'No description available'
+      description: winnerDetails.description || 'No description available',
+      price: 'Price varies'
     };
   };
 
@@ -566,6 +788,20 @@ const WinnerPage = () => {
   // Otherwise, show the winner
   const tripDetails = getTripDetailsObject();
 
+  // Add safety check for missing trip details
+  if (!tripDetails) {
+    return (
+      <Container maxWidth="md" sx={{ pt: 12, pb: 8 }}>
+        <Alert severity="warning" sx={{ mb: 4 }}>
+          Winner details are not available yet. Please try refreshing the page.
+        </Alert>
+        <Button variant="contained" onClick={() => window.location.reload()}>
+          Refresh Page
+        </Button>
+      </Container>
+    );
+  }
+
   return (
     <div className="landing-page winner-page">
       {/* Confetti animation container - positioned fixed to appear behind content */}
@@ -648,7 +884,7 @@ const WinnerPage = () => {
               component="img"
               height="400"
               image={destinationImage || getImageSync(winnerDetails)}
-              alt={`${tripDetails.destination} view`}
+              alt={`${tripDetails?.destination || 'Destination'} view`}
               crossOrigin="anonymous"
             />
             <Box
@@ -672,7 +908,7 @@ const WinnerPage = () => {
                   textShadow: '1px 1px 3px rgba(0,0,0,0.7)'
                 }}
               >
-                {tripDetails.destination}
+                {tripDetails?.destination || winnerDetails?.location || winnerDetails?.city || 'Winning Destination'}
               </Typography>
               <Box sx={{
                 display: 'flex',
@@ -685,13 +921,13 @@ const WinnerPage = () => {
                 }
               }}>
                 <Typography variant="body1">
-                  📅 {tripDetails.dates}
+                  📅 {tripDetails?.dates || 'Dates TBD'}
                 </Typography>
                 <Typography variant="body1">
-                  👥 {tripDetails.travelers}
+                  👥 {tripDetails?.travelers || 'Group size TBD'}
                 </Typography>
                 <Typography variant="body1">
-                  💰 {tripDetails.price}
+                  💰 {tripDetails?.price || 'Price varies'}
                 </Typography>
               </Box>
             </Box>
@@ -699,7 +935,7 @@ const WinnerPage = () => {
         </Card>
 
         {/* Additional Date Options */}
-        {optimalDateRanges && optimalDateRanges.length > 1 && (
+        {optimalDateRanges && optimalDateRanges.length > 0 && (
           <Paper
             elevation={3}
             sx={{
@@ -719,7 +955,7 @@ const WinnerPage = () => {
               align="center"
               sx={{ mb: 3 }}
             >
-              Date Options
+              {optimalDateRanges.length > 1 ? 'Date Options' : 'Optimal Dates'}
             </Typography>
 
             {/* Add preferred trip length info */}
@@ -737,7 +973,10 @@ const WinnerPage = () => {
             )}
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-              These dates work for everyone based on your survey responses:
+              {optimalDateRanges.length > 1
+                ? 'These dates work for everyone based on your survey responses:'
+                : 'These dates work best for everyone based on your survey responses:'
+              }
             </Typography>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>

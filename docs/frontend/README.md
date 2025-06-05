@@ -329,65 +329,61 @@ const RecommendationCard = ({ recommendation }) => {
 **Collaborative voting interface**
 
 **Features:**
-- Button-based ranking interface with up/down arrows
+- Drag-and-drop ranking interface
 - Real-time vote submission
 - Progress tracking
 - Recommendation comparison
-- User identification for voting
 
 **Voting Interface:**
 ```jsx
 const VotingInterface = ({ recommendations, onVoteSubmit }) => {
   const [rankings, setRankings] = useState([]);
 
-  const handleMoveUp = (index) => {
-    if (index === 0) return;
-    const newRankings = [...rankings];
-    [newRankings[index], newRankings[index - 1]] = 
-      [newRankings[index - 1], newRankings[index]];
-    setRankings(newRankings);
-  };
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
 
-  const handleMoveDown = (index) => {
-    if (index === rankings.length - 1) return;
-    const newRankings = [...rankings];
-    [newRankings[index], newRankings[index + 1]] = 
-      [newRankings[index + 1], newRankings[index]];
-    setRankings(newRankings);
+    const items = Array.from(rankings);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setRankings(items);
   };
 
   const submitVotes = async () => {
     const votes = rankings.map((rec, index) => ({
-      recommendation_id: rec.id,
-      rank_position: index + 1
+      recommendationId: rec.id,
+      rank: index + 1
     }));
 
     await onVoteSubmit(votes);
   };
 
   return (
-    <Box>
-      {rankings.map((rec, index) => (
-        <Paper key={rec.id} sx={{ mb: 2, p: 2 }}>
-          <Box display="flex" alignItems="center">
-            <Typography variant="h6" sx={{ mr: 2 }}>
-              #{index + 1}
-            </Typography>
-            <Box flexGrow={1}>
-              <RankingCard recommendation={rec} />
-            </Box>
-            <Box>
-              <IconButton onClick={() => handleMoveUp(index)}>
-                <ArrowUpwardIcon />
-              </IconButton>
-              <IconButton onClick={() => handleMoveDown(index)}>
-                <ArrowDownwardIcon />
-              </IconButton>
-            </Box>
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <Droppable droppableId="recommendations">
+        {(provided) => (
+          <Box {...provided.droppableProps} ref={provided.innerRef}>
+            {rankings.map((rec, index) => (
+              <Draggable key={rec.id} draggableId={rec.id} index={index}>
+                {(provided) => (
+                  <Box
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}
+                  >
+                    <RankingCard
+                      recommendation={rec}
+                      rank={index + 1}
+                    />
+                  </Box>
+                )}
+              </Draggable>
+            ))}
+            {provided.placeholder}
           </Box>
-        </Paper>
-      ))}
-    </Box>
+        )}
+      </Droppable>
+    </DragDropContext>
   );
 };
 ```

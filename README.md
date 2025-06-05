@@ -15,18 +15,27 @@ This repository contains the frontend interface for the PackVote App. The applic
 - `src/components/` - Reusable UI components
   - `Navbar.jsx` - Navigation bar component
   - `TravelPlanForm.jsx` - Form for creating travel plans
+  - `DevSettings.jsx` - Development settings component
+  - `UnsplashApiTest.jsx` - Image API testing component
 - `src/pages/` - Page components
   - `CreateTrip.jsx` - Trip creation page
   - `TripSurvey.jsx` - Survey form for participants
   - `DashboardPage.jsx` - Trip management dashboard
   - `VotingPage.jsx` - Destination voting interface
   - `WinnerPage.jsx` - Trip results display
+  - `AIRecommendationsPage.jsx` - AI recommendation generation
+  - `SocialSharePage.jsx` - Social sharing features
+  - `TripLinks.jsx` - SMS distribution management
 - `src/styles/` - CSS and styling files
 - `src/utils/` - Frontend utility functions
   - `api.js` - API integration functions
-  - `validation.js` - Form validation utilities
+  - `rateLimiter.js` - Rate limiting utilities
+  - `monitoring.js` - Application monitoring
+  - `imageService.js` - Image handling utilities
+- `src/data/` - Static data files
+  - `survey.json` - Survey configuration
 - `public/` - Static assets and HTML templates
-- `tests/` - Test files for components and pages
+- Tests are in `__tests__/` subdirectories within each module
 
 ## Setup
 
@@ -88,25 +97,34 @@ The test suite covers:
 
 This is a React-based application using:
 - React Router for navigation
-- React Testing Library for testing
-- CSS Modules for styling
+- React Testing Library for testing  
+- Material-UI (MUI) for UI components and styling
+- Regular CSS files for custom styling
 - Axios for API requests
+- SurveyJS for survey functionality
 
 ### Key Components
 
 - `CreateTrip`: Handles trip creation with participant management
-- `TripSurvey`: Collects participant preferences and availability
+- `TripSurvey`: Collects participant preferences and availability (7-step survey using SurveyJS)
 - `Dashboard`: Displays trip status and management options
-- `VotingPage`: Facilitates destination voting
+- `VotingPage`: Facilitates destination voting with ranking interface
 - `WinnerPage`: Shows final trip details
+- `AIRecommendationsPage`: AI-powered destination recommendation generation
+- `SocialSharePage`: Social sharing and communication features
+
+### Development Components (Development mode only)
+
+- `DevSettings`: Development configuration and testing tools
+- `UnsplashApiTest`: Image API testing and integration verification
 
 ### Best Practices
 
 1. Write tests for new components
 2. Follow component structure guidelines
-3. Use TypeScript for type safety
-4. Maintain responsive design
-5. Handle loading and error states
+3. Maintain responsive design using Material-UI breakpoints
+4. Handle loading and error states consistently
+5. Use inline validation in components
 
 ## Contributing
 

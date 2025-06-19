@@ -83,7 +83,17 @@ export const createTrip = async (tripData) => {
     trackApiRequest(url, 'POST', startTime, response.status);
 
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        const responseText = await response.text();
+        if (responseText) {
+          errorData = JSON.parse(responseText);
+        } else {
+          errorData = { detail: 'Empty response body' };
+        }
+      } catch (parseError) {
+        errorData = { detail: 'Invalid JSON response' };
+      }
 
       // Handle duplicate trip error
       if (errorData.detail && errorData.detail.code === 'DUPLICATE_TRIP') {
@@ -105,7 +115,18 @@ export const createTrip = async (tripData) => {
       throw error;
     }
 
-    return await response.json();
+    // Try to parse the successful response
+    try {
+      const responseText = await response.text();
+      
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Empty response body from server');
+      }
+      
+      return JSON.parse(responseText);
+    } catch (parseError) {
+      throw new Error('Invalid JSON response from server');
+    }
   } catch (error) {
     safeLog.error('Error creating trip:', error);
 

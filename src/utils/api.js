@@ -116,10 +116,11 @@ export const createTrip = async (tripData) => {
     }
 
     // Try to parse the successful response
+    let responseText;
     try {
-      const responseText = await response.text();
-      console.log('📏 Response length:', responseText?.length);
-      console.log('📋 Response has content:', !!responseText?.trim());
+      responseText = await response.text();
+      console.log('📏 Response length:', responseText ? responseText.length : 0);
+      console.log('📋 Response has content:', !!(responseText && responseText.trim()));
 
       if (!responseText || responseText.trim() === '') {
         console.error('❌ Empty response body from server');
@@ -127,17 +128,15 @@ export const createTrip = async (tripData) => {
       }
 
       const parsed = JSON.parse(responseText);
-      console.log('✅ Response structure:', {
-        hasTrip_id: !!parsed.trip_id,
-        hasOrganizer: !!parsed.organizer,
-        hasParticipants: !!parsed.participants,
-        participantCount: parsed.participants?.length || 0,
-        hasError: !!parsed.error
-      });
+      console.log('✅ Response has trip_id:', !!parsed.trip_id);
+      console.log('✅ Response has organizer:', !!parsed.organizer);
+      console.log('✅ Response has participants:', !!parsed.participants);
+      console.log('✅ Participant count:', parsed.participants ? parsed.participants.length : 0);
+      console.log('✅ Response has error:', !!parsed.error);
       return parsed;
     } catch (parseError) {
       console.error('❌ JSON parse error:', parseError.message);
-      console.error('📏 Failed response length:', responseText?.length);
+      console.error('📏 Failed response length:', responseText ? responseText.length : 0);
       throw new Error('Invalid JSON response from server');
     }
   } catch (error) {

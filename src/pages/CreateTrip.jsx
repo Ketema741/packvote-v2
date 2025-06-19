@@ -190,14 +190,14 @@ const CreateTrip = () => {
         trip_name: tripName,
         participants: formattedParticipants
       });
-      
+
       const result = await createTrip({
         organizer_name: formattedOrganizer.name,
         organizer_phone: formattedOrganizer.phone,
         trip_name: tripName,
         participants: formattedParticipants
       });
-      
+
       console.log('createTrip result:', result);
 
       // Navigate to the trip links page with the result data

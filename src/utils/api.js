@@ -118,11 +118,11 @@ export const createTrip = async (tripData) => {
     // Try to parse the successful response
     try {
       const responseText = await response.text();
-      
+
       if (!responseText || responseText.trim() === '') {
         throw new Error('Empty response body from server');
       }
-      
+
       return JSON.parse(responseText);
     } catch (parseError) {
       throw new Error('Invalid JSON response from server');

@@ -30,11 +30,39 @@ import '../styles/LandingPage.css';
 const TripLinks = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const tripData = location.state?.tripData || {
+  
+  // Debug logging
+  console.log('TripLinks location.state:', location.state);
+  console.log('TripLinks tripData:', location.state?.tripData);
+  
+  const rawTripData = location.state?.tripData || {
     tripId: null,
     organizerLink: 'No link available',
     participants: []
   };
+
+  // Generate survey links for participants
+  const generateSurveyLink = (participantId, tripId) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/survey/${tripId}/${participantId}`;
+  };
+
+  // Process trip data to ensure participants is always an array and has links
+  const tripData = {
+    ...rawTripData,
+    participants: Array.isArray(rawTripData.participants) ? rawTripData.participants.map(participant => ({
+      ...participant,
+      link: participant.link || generateSurveyLink(participant.id || participant.user_id, rawTripData.tripId)
+    })) : []
+  };
+
+  // Generate organizer link if missing
+  if (tripData.organizer && !tripData.organizer.link) {
+    tripData.organizer.link = generateSurveyLink(tripData.organizer.id, tripData.tripId);
+  }
+
+  console.log('Processed tripData:', tripData);
+  console.log('Participants count:', tripData.participants.length);
 
   // State for UI feedback
   const [loading, setLoading] = useState(false);
@@ -316,7 +344,7 @@ const TripLinks = () => {
             </Box>
           </Box>
 
-          {tripData.participants.length > 0 && (
+          {tripData.participants && tripData.participants.length > 0 && (
             <TableContainer sx={{ maxHeight: '30vh' }}>
               <Table size="small" stickyHeader>
                 <TableHead>

@@ -184,12 +184,21 @@ const CreateTrip = () => {
       }));
 
       // Call the API to create the trip
+      console.log('About to call createTrip with data:', {
+        organizer_name: formattedOrganizer.name,
+        organizer_phone: formattedOrganizer.phone,
+        trip_name: tripName,
+        participants: formattedParticipants
+      });
+      
       const result = await createTrip({
         organizer_name: formattedOrganizer.name,
         organizer_phone: formattedOrganizer.phone,
         trip_name: tripName,
         participants: formattedParticipants
       });
+      
+      console.log('createTrip result:', result);
 
       // Navigate to the trip links page with the result data
       navigate('/trip-links', {
@@ -203,6 +212,9 @@ const CreateTrip = () => {
       });
     } catch (err) {
       console.error('Failed to create trip:', err);
+      console.error('Error details:', err.stack);
+      console.error('Error type:', typeof err);
+      console.error('Error keys:', Object.keys(err));
 
       // Display a user-friendly error message
       const errorMessage = err.message || 'Something went wrong. Please try again.';

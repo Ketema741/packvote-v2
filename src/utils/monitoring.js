@@ -68,8 +68,9 @@ export const trackMetric = (metricName, increment = 1) => {
   }
   metrics.lastUpdateTime = Date.now();
 
-  // Send to server for Prometheus scraping (in production/development)
-  if (process.env.NODE_ENV !== 'test') {
+  // Send to server for Prometheus scraping (disabled to prevent 405 errors in deployed environment)
+  // TODO: Re-enable when metrics endpoint is properly configured in production
+  if (false && process.env.NODE_ENV !== 'test') {
     try {
       fetch('/api/metrics', {
         method: 'POST',

@@ -101,8 +101,10 @@ const CreateTrip = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('🚀 Form submission started');
 
     // Form validation
+    console.log('🔍 Checking trip name:', tripName.trim());
     if (!tripName.trim()) {
       setToast({
         open: true,
@@ -112,7 +114,9 @@ const CreateTrip = () => {
       return;
     }
 
+    console.log('🔍 Checking organizer:', { name: organizer.name.trim(), phone: organizer.phone.trim() });
     if (!organizer.name.trim() || !organizer.phone.trim()) {
+      console.log('❌ Organizer validation failed');
       setToast({
         open: true,
         message: 'Organizer name and phone are required',
@@ -168,6 +172,7 @@ const CreateTrip = () => {
     }
 
     // Create the trip through the API
+    console.log('✅ All validations passed, proceeding with API call');
     setLoading(true);
     setError(null);
 

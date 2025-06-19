@@ -30,11 +30,11 @@ import '../styles/LandingPage.css';
 const TripLinks = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Debug logging
   console.log('TripLinks location.state:', location.state);
   console.log('TripLinks tripData:', location.state?.tripData);
-  
+
   const rawTripData = location.state?.tripData || {
     tripId: null,
     organizerLink: 'No link available',

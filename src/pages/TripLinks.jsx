@@ -44,8 +44,7 @@ const TripLinks = () => {
   // Generate survey links for participants
   const generateSurveyLink = (participantId, tripId) => {
     // const baseUrl = window.location.origin;
-    const baseUrl = process.env.WEB_APP_PUBLIC_BASE_URL;
-
+    const baseUrl = process.env.WEB_APP_PUBLIC_BASE_URL || 'https://packvote-ui.vercel.app';
     return `${baseUrl}/survey/${tripId}/${participantId}`;
   };
 

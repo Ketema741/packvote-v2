@@ -179,7 +179,9 @@ const SocialSharePage = () => {
     }
 
     // Create a share link to the winner page for this trip
-    const baseUrl = window.location.origin;
+    // const baseUrl = window.location.origin;
+    const baseUrl = process.env.WEB_APP_PUBLIC_BASE_URL || 'https://packvote-ui.vercel.app';
+
     const shareLink = `${baseUrl}/winner/${tripData.tripId}`;
 
     // Copy to clipboard

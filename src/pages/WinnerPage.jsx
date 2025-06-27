@@ -325,22 +325,34 @@ const WinnerPage = () => {
   const handleShare = () => {
     if (!winnerDetails || !tripData) {return;}
 
+    console.log('WinnerPage - winnerDetails:', winnerDetails);
+    console.log('WinnerPage - winnerDetails.city:', winnerDetails.city);
+    console.log('WinnerPage - winnerDetails.location:', winnerDetails.location);
+    console.log('WinnerPage - winnerDetails.country:', winnerDetails.country);
+
+    // Use the same priority order as getTripDetailsObject
+    const destinationName = winnerDetails.city || winnerDetails.location || winnerDetails.destination || 'Unknown Location';
+
+    const shareData = {
+      winnerDestination: {
+        destination: destinationName,
+        city: destinationName,
+        country: winnerDetails.country,
+        location: destinationName
+      },
+      dates: optimalDateRanges.length > 0
+        ? `${optimalDateRanges[0].start} - ${optimalDateRanges[0].end.split(',')[0]}`
+        : 'Dates to be determined',
+      travelers: tripData.participants ? `${tripData.participants.length} travelers` : 'Unknown number of travelers',
+      tripId: tripId,
+      imageUrl: destinationImage
+    };
+
+    console.log('WinnerPage - sharing data:', shareData);
+
     // Navigate to the SocialSharePage with trip data
     navigate('/share', {
-      state: {
-        winnerDestination: {
-          destination: winnerDetails.location,
-          city: winnerDetails.location,
-          country: winnerDetails.country,
-          location: winnerDetails.location
-        },
-        dates: optimalDateRanges.length > 0
-          ? `${optimalDateRanges[0].start} - ${optimalDateRanges[0].end.split(',')[0]}`
-          : 'Dates to be determined',
-        travelers: tripData.participants ? `${tripData.participants.length} travelers` : 'Unknown number of travelers',
-        tripId: tripId,
-        imageUrl: destinationImage
-      }
+      state: shareData
     });
   };
 

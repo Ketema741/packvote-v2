@@ -39,8 +39,16 @@ const SocialSharePage = () => {
   useEffect(() => {
     if (location.state && (location.state.winnerDestination || location.state.tripId)) {
       const destination = location.state.winnerDestination || {};
+
+      // Extract destination name with proper fallback logic
+      const destinationName = destination.city ||
+                             destination.location ||
+                             destination.destination ||
+                             (destination.location && destination.location !== 'our trip' ? destination.location : null) ||
+                             'Amazing Destination';
+
       setTripData({
-        destination: destination.city || destination.destination || 'our trip',
+        destination: destinationName,
         country: destination.country || '',
         dates: location.state.dates || 'soon',
         travelers: location.state.travelers || '',
@@ -57,13 +65,12 @@ const SocialSharePage = () => {
       }
 
       // Set a default caption
-      const destName = destination.city || destination.destination || 'our trip';
-      setCaption(`I'm excited to announce we're going to ${destName}${destination.country ? `, ${destination.country}` : ''}!`);
+      setCaption(`I'm excited to announce we're going to ${destinationName}${destination.country ? `, ${destination.country}` : ''}!`);
     } else {
       setLoading(false);
       // If no data was passed, use default values
       setTripData({
-        destination: 'our trip',
+        destination: 'Amazing Destination',
         country: '',
         dates: 'soon',
         travelers: '',

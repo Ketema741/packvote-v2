@@ -958,8 +958,15 @@ const AIRecommendationsPage = () => {
         )}
 
         <Box className="content-container">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box>
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', md: 'center' },
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 2, md: 0 },
+            mb: 3
+          }}>
+            <Box sx={{ flex: 1 }}>
               <Typography variant="h4" component="h1" className="page-title">
                 Destination Recommendations
               </Typography>
@@ -967,18 +974,34 @@ const AIRecommendationsPage = () => {
                 Tailored to your group's budgets, dates & vibes
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{
+              display: 'flex',
+              gap: { xs: 1, sm: 2 },
+              alignItems: 'center',
+              flexDirection: { xs: 'column', sm: 'row' },
+              width: { xs: '100%', md: 'auto' }
+            }}>
               {regenerationsRemaining >= 0 && (
                 <Chip
                   label={`${regenerationsRemaining} regeneration${regenerationsRemaining === 1 ? '' : 's'} remaining`}
                   color={regenerationsRemaining === 0 ? 'error' : regenerationsRemaining === 1 ? 'warning' : 'success'}
-                  sx={{ mr: 1 }}
+                  sx={{
+                    mr: { xs: 0, sm: 1 },
+                    mb: { xs: 1, sm: 0 },
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                  }}
                 />
               )}
               <Button
                 variant="outlined"
                 onClick={handleGoBack}
                 className="secondary-button"
+                sx={{
+                  minWidth: { xs: '120px', sm: 'auto' },
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  py: { xs: 0.5, sm: 1 },
+                  px: { xs: 1, sm: 2 }
+                }}
               >
                 Back to Trip
               </Button>
@@ -986,6 +1009,12 @@ const AIRecommendationsPage = () => {
                 variant="contained"
                 onClick={handleStartVote}
                 className="primary-button"
+                sx={{
+                  minWidth: { xs: '120px', sm: 'auto' },
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  py: { xs: 0.5, sm: 1 },
+                  px: { xs: 1, sm: 2 }
+                }}
               >
                 Start Vote
               </Button>
@@ -994,13 +1023,23 @@ const AIRecommendationsPage = () => {
 
           {recommendations.length > 0 && (
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Box sx={{
+                display: 'flex',
+                justifyContent: { xs: 'center', md: 'flex-end' },
+                mb: 2,
+                px: { xs: 1, sm: 0 }
+              }}>
                 <Button
                   variant="outlined"
                   startIcon={<RefreshIcon />}
                   onClick={handleRegenerateRecommendations}
                   disabled={generating || regenerationsRemaining <= 0}
                   className="secondary-button"
+                  sx={{
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 0.5, sm: 1 }
+                  }}
                 >
                   {selectedRecIds.length > 0
                     ? `Regenerate Selected (${selectedRecIds.length})`
@@ -1056,7 +1095,7 @@ const AIRecommendationsPage = () => {
                         )}
 
                         <Box className={`card-image ${!imagesLoaded[index] ? 'loading' : ''}`} sx={{
-                          height: '180px',
+                          height: { xs: '160px', sm: '180px' },
                           overflow: 'hidden'
                         }}>
                           <img
@@ -1066,12 +1105,51 @@ const AIRecommendationsPage = () => {
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         </Box>
-                        <Box className="card-content" sx={{ p: 2, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                          <Box className="destination-header">
-                            <Typography variant="h5" component="h3">{recommendation.locationDisplayName || recommendation.city || recommendation.destination || 'Unknown Location'}</Typography>
-                            <Typography variant="body1" className="country">{recommendation.country || 'Unknown Country'}</Typography>
+                        <Box className="card-content" sx={{
+                          p: { xs: 1.5, sm: 2 },
+                          display: 'flex',
+                          flexDirection: 'column',
+                          flexGrow: 1,
+                          gap: { xs: 0.75, sm: 1 }
+                        }}>
+                          <Box className="destination-header" sx={{
+                            display: 'flex',
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            justifyContent: 'space-between',
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                            gap: { xs: 0.25, sm: 0 },
+                            mb: { xs: 0.75, sm: 1 }
+                          }}>
+                            <Typography
+                              variant="h5"
+                              component="h3"
+                              sx={{
+                                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                lineHeight: 1.3,
+                                fontWeight: 600
+                              }}
+                            >
+                              {recommendation.locationDisplayName || recommendation.city || recommendation.destination || 'Unknown Location'}
+                            </Typography>
+                            <Typography
+                              variant="body1"
+                              className="country"
+                              sx={{
+                                fontSize: { xs: '0.85rem', sm: '1rem' },
+                                color: 'text.secondary'
+                              }}
+                            >
+                              {recommendation.country || 'Unknown Country'}
+                            </Typography>
                           </Box>
-                          <Box className="destination-details" sx={{ my: 1 }}>
+                          <Box className="destination-details" sx={{
+                            my: { xs: 0.75, sm: 1 },
+                            '& .detail': {
+                              fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                              mb: { xs: 0.5, sm: 0.75 },
+                              lineHeight: 1.4
+                            }
+                          }}>
                             <Box className="detail">
                               <span>💰 {getBudgetTierText(recommendation.budget_tier)}</span>
                             </Box>
@@ -1086,16 +1164,17 @@ const AIRecommendationsPage = () => {
                           </Box>
 
                           <Typography variant="body2" sx={{
-                            my: 1.5,
+                            my: { xs: 1, sm: 1.5 },
                             transition: 'all 0.3s ease',
                             lineHeight: 1.6,
+                            fontSize: { xs: '0.85rem', sm: '0.875rem' },
                             ...(expandedRecIds.includes(recommendation.id) && {
                               backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                              p: 1.5,
+                              p: { xs: 1, sm: 1.5 },
                               borderRadius: 1,
                               borderLeft: '3px solid',
                               borderColor: 'primary.light',
-                              mb: 2
+                              mb: { xs: 1.5, sm: 2 }
                             })
                           }}>
                             {expandedRecIds.includes(recommendation.id)
@@ -1121,8 +1200,8 @@ const AIRecommendationsPage = () => {
                               }}
                               sx={{
                                 alignSelf: 'flex-start',
-                                mb: 1.5,
-                                fontSize: '0.8rem',
+                                mb: { xs: 1, sm: 1.5 },
+                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
                                 textTransform: 'none',
                                 p: 0,
                                 minWidth: 'auto',
@@ -1137,8 +1216,8 @@ const AIRecommendationsPage = () => {
                           <Box sx={{
                             display: 'flex',
                             flexWrap: 'wrap',
-                            gap: 0.8,
-                            mb: 2,
+                            gap: { xs: 0.5, sm: 0.8 },
+                            mb: { xs: 1.5, sm: 2 },
                             mt: 'auto'
                           }}>
                             {recommendation.displayActivities && recommendation.displayActivities.map((activity, i) => (
@@ -1148,7 +1227,15 @@ const AIRecommendationsPage = () => {
                                 size="small"
                                 variant="outlined"
                                 color="primary"
-                                sx={{ borderRadius: '4px' }}
+                                sx={{
+                                  borderRadius: '4px',
+                                  fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                                  height: { xs: '24px', sm: '28px' },
+                                  '& .MuiChip-label': {
+                                    px: { xs: 0.75, sm: 1 },
+                                    fontSize: { xs: '0.7rem', sm: '0.8rem' }
+                                  }
+                                }}
                               />
                             ))}
                             {recommendation.extraActivitiesCount > 0 && (
@@ -1156,7 +1243,15 @@ const AIRecommendationsPage = () => {
                                 label={`+${recommendation.extraActivitiesCount} more`}
                                 size="small"
                                 variant="outlined"
-                                sx={{ borderRadius: '4px' }}
+                                sx={{
+                                  borderRadius: '4px',
+                                  fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                                  height: { xs: '24px', sm: '28px' },
+                                  '& .MuiChip-label': {
+                                    px: { xs: 0.75, sm: 1 },
+                                    fontSize: { xs: '0.7rem', sm: '0.8rem' }
+                                  }
+                                }}
                               />
                             )}
                           </Box>
